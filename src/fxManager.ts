@@ -1,0 +1,218 @@
+import { create, all, Fraction } from 'mathjs';
+import { currency, FXRate, FXPath } from './types';
+
+const config = {
+    number: 'Fraction',
+};
+const math = create(all, config as any);
+
+const { multiply, divide, fraction } = math;
+
+export default class fxManager {
+    public fxRateList: {
+        [currency in keyof currency]: {
+            [currency in keyof currency]: {
+                cash: Fraction;
+                remit: Fraction;
+                middle: Fraction;
+            };
+        };
+    } = {} as any;
+
+    constructor(FXRates: FXRate[]) {
+        FXRates.forEach((fxRate) => {
+            try {
+                this.update(fxRate);
+            } catch (e) {
+                console.error(e, fxRate);
+            }
+        });
+        return this;
+    }
+
+    public update(FXRate: FXRate): void {
+        const { currency, unit } = FXRate;
+        let { rate } = FXRate;
+        const { from, to } = currency;
+
+        if (!rate.buy && !rate.sell) {
+            rate = {
+                buy: {
+                    cash: rate.middle,
+                    remit: rate.middle,
+                },
+                sell: {
+                    cash: rate.middle,
+                    remit: rate.middle,
+                },
+                middle: rate.middle,
+            };
+        } else if (!rate.buy && rate.sell) {
+            rate.buy = rate.sell;
+        } else if (!rate.sell && rate.buy) {
+            rate.sell = rate.buy;
+        } else if (!rate.middle) {
+            rate.middle = math.min(
+                rate.buy.cash,
+                rate.buy.remit,
+                rate.sell.cash,
+                rate.sell.remit,
+            );
+        } else if (!rate.buy && !rate.sell && !rate.middle) {
+            console.log(FXRate);
+            throw new Error('Invalid FXRate');
+        }
+
+        if (!this.fxRateList[from]) {
+            this.fxRateList[from] = {
+                [from]: {
+                    cash: fraction(1),
+                    remit: fraction(1),
+                    middle: fraction(1),
+                },
+            };
+        }
+        this.fxRateList[from][to] = {
+            middle: divide(fraction(rate.middle), unit),
+        };
+        if (!this.fxRateList[to]) {
+            this.fxRateList[to] = {
+                [to]: {
+                    cash: fraction(1),
+                    remit: fraction(1),
+                    middle: fraction(1),
+                },
+            };
+        }
+        this.fxRateList[to][from] = {
+            middle: divide(unit, fraction(rate.middle)),
+        };
+
+        if (rate.buy.cash) {
+            this.fxRateList[from][to].cash = divide(
+                fraction(rate.buy.cash),
+                unit,
+            );
+            this.fxRateList[to][from].cash = divide(
+                unit,
+                fraction(rate.sell.cash),
+            );
+        }
+
+        if (rate.buy.remit) {
+            this.fxRateList[from][to].remit = divide(
+                fraction(rate.buy.remit),
+                unit,
+            );
+            this.fxRateList[to][from].remit = divide(
+                unit,
+                fraction(rate.sell.remit),
+            );
+        }
+    }
+
+    private convertDirect(
+        from: currency,
+        to: currency,
+        type: 'cash' | 'remit' | 'middle',
+        amount: number | Fraction,
+        reverse: boolean = false,
+    ): Fraction {
+        if (!this.fxRateList[from][to][type]) {
+            throw new Error(
+                `FX Path from ${from} to ${to} not support ${type} now`,
+            );
+        }
+        if (reverse) {
+            return divide(
+                fraction(amount),
+                this.fxRateList[from][to][type],
+            ) as unknown as Fraction;
+        }
+        return multiply(
+            this.fxRateList[from][to][type],
+            fraction(amount),
+        ) as unknown as Fraction;
+    }
+
+    getFXPath(from: currency, to: currency): FXPath {
+        const FXPath = {
+            from,
+            end: to,
+            path: [],
+        } as FXPath;
+
+        if (from === to) {
+            FXPath.path.push(from);
+            return FXPath;
+        }
+        if (this.fxRateList[from][to]) {
+            FXPath.path.push(to);
+            return FXPath;
+        }
+        if (!this.fxRateList[from] || !this.fxRateList[to]) {
+            throw new Error('Invalid currency');
+        }
+        const queue: { currency: currency; path: currency[] }[] = [];
+        const visited: currency[] = [];
+
+        queue.push({ currency: from, path: [from] });
+
+        while (queue.length > 0) {
+            const { currency, path } = queue.shift()!;
+            visited.push(currency);
+
+            if (currency === to) {
+                FXPath.path = path;
+                return FXPath;
+            }
+
+            const neighbors = Object.keys(
+                this.fxRateList[currency],
+            ) as currency[];
+            for (const neighbor of neighbors) {
+                if (!visited.includes(neighbor)) {
+                    queue.push({
+                        currency: neighbor,
+                        path: [...path, neighbor],
+                    });
+                }
+            }
+        }
+
+        throw new Error('No FX path found between ' + from + ' and ' + to);
+    }
+
+    convert(
+        from: currency,
+        to: currency,
+        type: 'cash' | 'remit' | 'middle',
+        amount: number,
+        reverse: boolean = false,
+    ): Fraction {
+        const FXPath = this.getFXPath(from, to);
+        if (reverse) FXPath.path = FXPath.path.reverse();
+
+        let current = from;
+        let result = fraction(amount);
+
+        try {
+            for (const next of FXPath.path) {
+                result = this.convertDirect(
+                    current,
+                    next,
+                    type,
+                    result,
+                    reverse,
+                );
+                current = next;
+            }
+        } catch (e) {
+            throw new Error(
+                `Cannot convert from ${from} to ${to} with ${type}: \n${e.message}`,
+            );
+        }
+
+        return result;
+    }
+}

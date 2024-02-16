@@ -1,0 +1,29 @@
+{
+    "compilerOptions": {
+        "module": "esnext",
+        "declaration": true,
+        "removeComments": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "allowSyntheticDefaultImports": true,
+        "target": "ES2021",
+        "sourceMap": true,
+        "outDir": "./dist",
+        "baseUrl": ".",
+        "incremental": true,
+        "skipLibCheck": true,
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
+    },
+    "exclude": [
+        "dist",
+        "test",
+        "**/*spec.ts"
+    ],
+    "include": [
+        "src/**/*.ts"
+    ],
+    "ts-node": {
+        "esm": true
+    }
+}
