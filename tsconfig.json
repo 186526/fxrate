@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "module": "esnext",
+        "module": "ESNext",
         "declaration": true,
         "removeComments": true,
         "emitDecoratorMetadata": true,
@@ -12,7 +12,7 @@
         "baseUrl": ".",
         "incremental": true,
         "skipLibCheck": true,
-        "moduleResolution": "node",
+        "moduleResolution": "Bundler",
         "resolveJsonModule": true,
     },
     "exclude": [

@@ -5,10 +5,16 @@ import FXRateManager from './fxManager';
 import { currency } from './types';
 import { round } from 'mathjs';
 
-export default (fxManager: FXRateManager, router: router) => {
+export default (
+    generateFXManager: () => Promise<FXRateManager>,
+    router: router,
+) => {
+    let fxManager: FXRateManager = null as any;
+
     router.binding(
         '/(.*)',
         router.create('ANY', async () => {
+            if (!fxManager) fxManager = await generateFXManager();
             return new response('Method Not Allowed', 405);
         }),
     );
