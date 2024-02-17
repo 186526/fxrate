@@ -82,51 +82,76 @@ const getBOCFXRatesFromRSSHub = async (
 };
 
 const getBOCFXRatesFromBOC = async (): Promise<FXRate[]> => {
-    const res = await axios.get('https://www.boc.cn/sourcedb/whpj/', {
-        headers: {
-            'User-Agent': 'fxrate axios/latest',
-        },
-    });
-    const $ = cheerio.load(res.data);
-    // Thanks to RSSHub for the code to get BOC's FX Rate
-    return $('div.publish table tbody tr')
-        .slice(2)
-        .toArray()
-        .map((el) => {
-            const e = $(el);
-            const zhName = e.find('td:nth-child(1)').text();
-            const enName = enNames[zhName] || '';
-            const date = e.find('td:nth-child(7)').text();
-
-            const xhmr = e.find('td:nth-child(2)').text();
-
-            const xcmr = e.find('td:nth-child(3)').text();
-
-            const xhmc = e.find('td:nth-child(4)').text();
-
-            const xcmc = e.find('td:nth-child(5)').text();
-
-            const FXRate: FXRate = {
-                currency: {
-                    from: enName as currency.unknown,
-                    to: 'CNY' as currency.CNY,
+    const result = await Promise.all(
+        [
+            'index.html',
+            'index_1.html',
+            'index_2.html',
+            'index_3.html',
+            'index_4.html',
+            'index_5.html',
+            'index_6.html',
+            'index_7.html',
+            'index_8.html',
+            'index_9.html',
+        ].map(async (index) => {
+            const res = await axios.get(
+                `https://www.boc.cn/sourcedb/whpj/${index}`,
+                {
+                    headers: {
+                        'User-Agent': 'fxrate axios/latest',
+                    },
                 },
-                rate: {
-                    buy: {},
-                    sell: {},
-                    middle: parseFloat(e.find('td:nth-child(6)').text()),
-                },
-                updated: new Date(date + 'UTC+8'),
-                unit: 100,
-            };
+            );
+            const $ = cheerio.load(res.data);
+            // Thanks to RSSHub for the code to get BOC's FX Rate
+            return Array.from(
+                new Set(
+                    $('div.publish table tbody tr')
+                        .slice(2)
+                        .toArray()
+                        .map((el) => {
+                            const e = $(el);
+                            const zhName = e.find('td:nth-child(1)').text();
+                            const enName = enNames[zhName] || '';
+                            const date = e.find('td:nth-child(7)').text();
 
-            if (xhmr) FXRate.rate.buy.remit = parseFloat(xhmr);
-            if (xcmr) FXRate.rate.buy.cash = parseFloat(xcmr);
-            if (xhmc) FXRate.rate.sell.remit = parseFloat(xhmc);
-            if (xcmc) FXRate.rate.sell.cash = parseFloat(xcmc);
+                            const xhmr = e.find('td:nth-child(2)').text();
 
-            return FXRate;
-        });
+                            const xcmr = e.find('td:nth-child(3)').text();
+
+                            const xhmc = e.find('td:nth-child(4)').text();
+
+                            const xcmc = e.find('td:nth-child(5)').text();
+
+                            const FXRate: FXRate = {
+                                currency: {
+                                    from: enName as currency.unknown,
+                                    to: 'CNY' as currency.CNY,
+                                },
+                                rate: {
+                                    buy: {},
+                                    sell: {},
+                                    middle: parseFloat(
+                                        e.find('td:nth-child(6)').text(),
+                                    ),
+                                },
+                                updated: new Date(date + ' UTC+8'),
+                                unit: 100,
+                            };
+
+                            if (xhmr) FXRate.rate.buy.remit = parseFloat(xhmr);
+                            if (xcmr) FXRate.rate.buy.cash = parseFloat(xcmr);
+                            if (xhmc) FXRate.rate.sell.remit = parseFloat(xhmc);
+                            if (xcmc) FXRate.rate.sell.cash = parseFloat(xcmc);
+
+                            return FXRate;
+                        }),
+                ),
+            ).sort();
+        }),
+    );
+    return result.flat().sort();
 };
 
 export default getBOCFXRatesFromBOC;

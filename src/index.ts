@@ -61,7 +61,7 @@ const App = new rootRouter();
                 setTimeout(
                     () =>
                         console.log(
-                            `[${new Date().toUTCString()}] ${request.ip} ${request.method} ${request.url}`,
+                            `[${new Date().toUTCString()}] ${request.ip} ${request.method} ${request.originURL.href}`,
                         ),
                     0,
                 );

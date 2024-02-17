@@ -15,6 +15,7 @@ export default class fxManager {
                 cash: Fraction;
                 remit: Fraction;
                 middle: Fraction;
+                updated: Date;
             };
         };
     } = {} as any;
@@ -34,6 +35,10 @@ export default class fxManager {
         const { currency, unit } = FXRate;
         let { rate } = FXRate;
         const { from, to } = currency;
+
+        if (this.fxRateList[from] && this.fxRateList[from][to]) {
+            if (this.fxRateList[from][to].updated > FXRate.updated) return;
+        }
 
         if (!rate.buy && !rate.sell) {
             rate = {
@@ -74,6 +79,7 @@ export default class fxManager {
         }
         this.fxRateList[from][to] = {
             middle: divide(fraction(rate.middle), unit),
+            updated: FXRate.updated,
         };
         if (!this.fxRateList[to]) {
             this.fxRateList[to] = {
@@ -86,6 +92,7 @@ export default class fxManager {
         }
         this.fxRateList[to][from] = {
             middle: divide(unit, fraction(rate.middle)),
+            updated: FXRate.updated,
         };
 
         if (rate.buy.cash) {
@@ -214,5 +221,12 @@ export default class fxManager {
         }
 
         return result;
+    }
+
+    public getUpdatedDate(from: currency, to: currency): Date {
+        if (!this.fxRateList[from][to]) {
+            throw new Error(`FX Path from ${from} to ${to} not found`);
+        }
+        return this.fxRateList[from][to].updated;
     }
 }

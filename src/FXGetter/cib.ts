@@ -105,27 +105,29 @@ function promotePrice(a: number, b: number) {
 
 const getCIBHuanyuFXRates = async (): Promise<FXRate[]> => {
     const origin = await getCIBFXRates();
-    return origin.map((rate) => {
-        const originRate = JSON.parse(JSON.stringify(rate.rate));
-        rate.rate.buy.cash = promotePrice(
-            originRate.buy.cash as number,
-            originRate.sell.cash as number,
-        );
-        rate.rate.sell.cash = promotePrice(
-            originRate.sell.cash as number,
-            originRate.buy.cash as number,
-        );
-        rate.rate.buy.remit = promotePrice(
-            originRate.buy.remit as number,
-            originRate.sell.remit as number,
-        );
-        rate.rate.sell.remit = promotePrice(
-            originRate.sell.remit as number,
-            originRate.buy.remit as number,
-        );
+    return origin
+        .map((rate) => {
+            const originRate = JSON.parse(JSON.stringify(rate.rate));
+            rate.rate.buy.cash = promotePrice(
+                originRate.buy.cash as number,
+                originRate.sell.cash as number,
+            );
+            rate.rate.sell.cash = promotePrice(
+                originRate.sell.cash as number,
+                originRate.buy.cash as number,
+            );
+            rate.rate.buy.remit = promotePrice(
+                originRate.buy.remit as number,
+                originRate.sell.remit as number,
+            );
+            rate.rate.sell.remit = promotePrice(
+                originRate.sell.remit as number,
+                originRate.buy.remit as number,
+            );
 
-        return rate;
-    });
+            return rate;
+        })
+        .sort();
 };
 
 export default getCIBFXRates;
