@@ -102,7 +102,7 @@ export default (
                 Number(request.query.get('precision')) !== -1
                     ? round(fxRate, Number(request.query.get('precision')) || 5)
                     : fxRate;
-            return Number(fxRate.toString()) || fxRate.toString();
+            return fxRate.toString();
         }),
     );
 };
