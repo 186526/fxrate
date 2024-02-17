@@ -48,10 +48,12 @@ export default (
                         Number(request.query.get('precision')) !== -1
                             ? round(
                                   result[to][type],
-                                  Number(request.query.get('precision')) || 2,
+                                  Number(request.query.get('precision')) || 5,
                               )
                             : result[to][type];
-                    result[to][type] = result[to][type].toString();
+                    result[to][type] =
+                        Number(result[to][type].toString()) ||
+                        result[to][type].toString();
                 }
             }
             return result;
@@ -75,10 +77,11 @@ export default (
                     Number(request.query.get('precision')) !== -1
                         ? round(
                               result[type],
-                              Number(request.query.get('precision')) || 2,
+                              Number(request.query.get('precision')) || 5,
                           )
                         : result[type];
-                result[type] = result[type].toString();
+                result[type] =
+                    Number(result[type].toString()) || result[type].toString();
             }
             return result;
         }),
@@ -97,9 +100,9 @@ export default (
             );
             fxRate =
                 Number(request.query.get('precision')) !== -1
-                    ? round(fxRate, Number(request.query.get('precision')) || 2)
+                    ? round(fxRate, Number(request.query.get('precision')) || 5)
                     : fxRate;
-            return fxRate.toString();
+            return Number(fxRate.toString()) || fxRate.toString();
         }),
     );
 };

@@ -5,14 +5,14 @@ import cheerio from 'cheerio';
 import crypto from 'crypto';
 import https from 'https';
 
+import { round, fraction, divide, subtract, add, Fraction } from 'mathjs';
+
 /**
  * Handle this problem with Node 18
  * write EPROTO B8150000:error:0A000152:SSL routines:final_renegotiate:unsafe legacy renegotiation disabled
  **/
 const allowLegacyRenegotiationforNodeJsOptions = {
     httpsAgent: new https.Agent({
-        // for self signed you could also add
-        // rejectUnauthorized: false,
         // allow sb CIB to use legacy renegotiation
         // 💩 CIB
         secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
@@ -97,22 +97,33 @@ const getCIBFXRates = async (): Promise<FXRate[]> => {
     return FXRates;
 };
 
+function promotePrice(a: number, b: number) {
+    const mid = divide(add(fraction(a), fraction(b)), 2);
+    const diff = subtract(fraction(a), mid);
+    return round(subtract(a, divide(diff, 2)) as Fraction, 2);
+}
+
 const getCIBHuanyuFXRates = async (): Promise<FXRate[]> => {
     const origin = await getCIBFXRates();
     return origin.map((rate) => {
-        const originRate = rate.rate;
-        rate.rate.buy.cash =
-            Number(originRate.buy.cash) * 0.75 +
-            Number(originRate.sell.cash) * 0.25;
-        rate.rate.buy.remit =
-            Number(originRate.buy.remit) * 0.75 +
-            Number(originRate.sell.remit) * 0.25;
-        rate.rate.sell.cash =
-            Number(originRate.sell.cash) * 0.75 +
-            Number(originRate.buy.cash) * 0.25;
-        rate.rate.sell.remit =
-            Number(originRate.sell.remit) * 0.75 +
-            Number(originRate.buy.remit) * 0.25;
+        const originRate = JSON.parse(JSON.stringify(rate.rate));
+        rate.rate.buy.cash = promotePrice(
+            originRate.buy.cash as number,
+            originRate.sell.cash as number,
+        );
+        rate.rate.sell.cash = promotePrice(
+            originRate.sell.cash as number,
+            originRate.buy.cash as number,
+        );
+        rate.rate.buy.remit = promotePrice(
+            originRate.buy.remit as number,
+            originRate.sell.remit as number,
+        );
+        rate.rate.sell.remit = promotePrice(
+            originRate.sell.remit as number,
+            originRate.buy.remit as number,
+        );
+
         return rate;
     });
 };
