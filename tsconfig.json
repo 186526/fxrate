@@ -12,7 +12,7 @@
         "baseUrl": ".",
         "incremental": true,
         "skipLibCheck": true,
-        "moduleResolution": "Bundler",
+        "moduleResolution": "node",
         "resolveJsonModule": true,
     },
     "exclude": [

@@ -1,5 +1,5 @@
 import { create, all, Fraction } from 'mathjs';
-import { currency, FXRate, FXPath } from './types';
+import { currency, FXRate, FXPath } from '../types';
 
 const config = {
     number: 'Fraction',
@@ -74,6 +74,7 @@ export default class fxManager {
                     cash: fraction(1),
                     remit: fraction(1),
                     middle: fraction(1),
+                    updated: new Date(`1970-1-1 00:00:00 UTC`),
                 },
             };
         }
@@ -87,6 +88,7 @@ export default class fxManager {
                     cash: fraction(1),
                     remit: fraction(1),
                     middle: fraction(1),
+                    updated: new Date(`1970-1-1 00:00:00 UTC`),
                 },
             };
         }

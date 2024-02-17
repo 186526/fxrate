@@ -4,47 +4,27 @@ import http from 'node:http';
 import rootRouter, { handler } from 'handlers.js';
 import packageJson from '../package.json';
 
-import fxmToHandler from './fxmToHandler';
-
 import getBOCFXRatesFromBOC from './FXGetter/boc';
 import getICBCFXRates from './FXGetter/icbc';
 import getCIBFXRates, { getCIBHuanyuFXRates } from './FXGetter/cib';
+import getCCBFXRates from './FXGetter/ccb';
 
-import fxManager from './fxManager';
+import fxmManager from './fxmManager';
+import getABCFXRates from './FXGetter/abc';
 
 const App = new rootRouter();
 
-(async () => {
-    await Promise.all(
-        [
-            { boc: getBOCFXRatesFromBOC },
-            { icbc: getICBCFXRates },
-            { cib: getCIBFXRates },
-            { cibHuanyu: getCIBHuanyuFXRates },
-        ].map(async (p) => {
-            console.log(
-                `[${new Date().toUTCString()}] ${Object.keys(p)[0]} FX Rate is waiting request...`,
-            );
-            const thisFXManager = async () =>
-                new fxManager(
-                    await Object.values(p)[0]().then((q) => {
-                        console.log(
-                            `[${new Date().toUTCString()}] ${Object.keys(p)[0]} FX Rate is ready.`,
-                        );
-                        return q;
-                    }),
-                );
-            fxmToHandler(
-                thisFXManager,
-                App.route(`/${Object.keys(p)[0]}/(.*)`),
-            );
-        }),
-    );
+const Manager = new fxmManager({
+    boc: getBOCFXRatesFromBOC,
+    icbc: getICBCFXRates,
+    cib: getCIBFXRates,
+    cibHuanyu: getCIBHuanyuFXRates,
+    ccb: getCCBFXRates,
+    abc: getABCFXRates,
+});
 
-    App.binding(
-        '/',
-        App.create('GET', async () => '200 OK'),
-    );
+(async () => {
+    App.use([Manager], '/(.*)');
 
     App.useMappingAdapter();
     if (process.env.VERCEL != '1')

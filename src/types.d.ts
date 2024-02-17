@@ -42,6 +42,10 @@ export enum currency {
     BDT = 'BDT',
     LKR = 'LKR',
     MOP = 'MOP',
+    KZT = 'KZT',
+    TJS = 'TJS',
+    MNT = 'MNT',
+    LAK = 'LAK',
     unknown,
 }
 
