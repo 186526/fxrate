@@ -175,4 +175,4 @@ out
 .ionide
 .vercel
 
-dist/[index.cjs]
+dist/[index.cjs,readme.md]
