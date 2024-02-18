@@ -4,13 +4,16 @@ import http from 'node:http';
 import rootRouter, { handler } from 'handlers.js';
 import packageJson from '../package.json';
 
+import fxmManager from './fxmManager';
+
 import getBOCFXRatesFromBOC from './FXGetter/boc';
 import getICBCFXRates from './FXGetter/icbc';
 import getCIBFXRates, { getCIBHuanyuFXRates } from './FXGetter/cib';
 import getCCBFXRates from './FXGetter/ccb';
-
-import fxmManager from './fxmManager';
 import getABCFXRates from './FXGetter/abc';
+import getBOCOMFXRates from './FXGetter/bocom';
+import getPSBCFXRates from './FXGetter/psbc';
+import getCMBFXRates from './FXGetter/cmb';
 
 const App = new rootRouter();
 
@@ -21,6 +24,9 @@ const Manager = new fxmManager({
     cibHuanyu: getCIBHuanyuFXRates,
     ccb: getCCBFXRates,
     abc: getABCFXRates,
+    bocom: getBOCOMFXRates,
+    psbc: getPSBCFXRates,
+    cmb: getCMBFXRates,
 });
 
 (async () => {
@@ -35,13 +41,18 @@ const Manager = new fxmManager({
     );
 
     App.binding(
+        '/',
+        App.create('ANY', async () => '200 OK\n\n/info - Instance Info\n'),
+    );
+
+    App.binding(
         '/(.*)',
         new handler('ANY', [
             async (request, response) => {
                 setTimeout(
                     () =>
                         console.log(
-                            `[${new Date().toUTCString()}] ${request.ip} ${request.method} ${request.originURL.href}`,
+                            `[${new Date().toUTCString()}] ${request.ip} ${request.method} ${request.url}`,
                         ),
                     0,
                 );

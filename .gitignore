@@ -108,7 +108,6 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Gatsby files
 .cache/
@@ -175,3 +174,5 @@ dist
 .history
 .ionide
 .vercel
+
+dist/[index.cjs]

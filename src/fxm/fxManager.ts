@@ -1,12 +1,11 @@
 import { create, all, Fraction } from 'mathjs';
 import { currency, FXRate, FXPath } from '../types';
 
-const config = {
+const math = create(all, {
     number: 'Fraction',
-};
-const math = create(all, config as any);
+});
 
-const { multiply, divide, fraction } = math;
+const { multiply, divide, fraction, add } = math;
 
 export default class fxManager {
     public fxRateList: {
@@ -57,12 +56,23 @@ export default class fxManager {
         } else if (!rate.sell && rate.buy) {
             rate.sell = rate.buy;
         } else if (!rate.middle) {
-            rate.middle = math.min(
-                rate.buy.cash,
-                rate.buy.remit,
-                rate.sell.cash,
-                rate.sell.remit,
-            );
+            rate.middle = divide(
+                add(
+                    math.min(
+                        rate.buy.cash || Infinity,
+                        rate.buy.remit || Infinity,
+                        rate.sell.cash || Infinity,
+                        rate.sell.remit || Infinity,
+                    ),
+                    math.max(
+                        rate.buy.cash || -Infinity,
+                        rate.buy.remit || -Infinity,
+                        rate.sell.cash || -Infinity,
+                        rate.sell.remit || -Infinity,
+                    ),
+                ),
+                2,
+            ) as Fraction;
         } else if (!rate.buy && !rate.sell && !rate.middle) {
             console.log(FXRate);
             throw new Error('Invalid FXRate');
@@ -102,6 +112,9 @@ export default class fxManager {
                 fraction(rate.buy.cash),
                 unit,
             );
+        }
+
+        if (rate.sell.cash) {
             this.fxRateList[to][from].cash = divide(
                 unit,
                 fraction(rate.sell.cash),
@@ -113,6 +126,9 @@ export default class fxManager {
                 fraction(rate.buy.remit),
                 unit,
             );
+        }
+
+        if (rate.sell.remit) {
             this.fxRateList[to][from].remit = divide(
                 unit,
                 fraction(rate.sell.remit),
