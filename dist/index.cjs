@@ -17956,7 +17956,7 @@ var dist_default = rootRouter;
 var package_default2 = {
   name: "fxrate",
   version: "0.0.1",
-  license: "MIT, Data copyright belongs to its source.",
+  license: "SEE LICENSE IN LICENSE",
   author: "Bo Xu <i@186526.xyz> (https://186526.xyz/)",
   dependencies: {
     axios: "^1.6.7",
@@ -75500,7 +75500,10 @@ var Manager = new fxmManager_default({
         );
         response3.headers.set("X-Powered-By", package_default2.name);
         response3.headers.set("X-Author", package_default2.author);
-        response3.headers.set("X-License", package_default2.license);
+        response3.headers.set(
+          "X-License",
+          "MIT, Data copyright belongs to its source. More details at https://github.com/186526/fxrate/blob/main/src/License."
+        );
       }
     ])
   );
