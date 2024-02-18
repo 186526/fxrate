@@ -46,7 +46,7 @@ interface result {
 export default result;
 ```
 
--   `GET /:source/:from(?reverse&precision&amount)` - show currency's FX rates to other curreny in source's db.
+-   `GET /:source/:from(?reverse&precision&amount)` - show currency's FX rates to other currency in source's db.
 
 ```typescript
 // query use ?reverse means calculating how much currency is needed to obtain the $amount $from currency is needed.
@@ -68,7 +68,7 @@ interface result {
 return result;
 ```
 
--   `GET /:source/:from/:to(?reverse&precision&amount)` - show currency's FX rates to other curreny in source's db.
+-   `GET /:source/:from/:to(?reverse&precision&amount)` - show currency's FX rates to other currency in source's db.
 
 ```typescript
 // query use ?reverse means calculating how much currency is needed to obtain the $amount $from currency is needed.
@@ -79,7 +79,7 @@ type result = FXRate;
 export default result;
 ```
 
--   `GET /:source/:from/:to/:type(/:amount)(?reverse&precision&amount)` - show currency's FX rates to other curreny in source's db.
+-   `GET /:source/:from/:to/:type(/:amount)(?reverse&precision&amount)` - show currency's FX rates to other currency in source's db.
 
 ```typescript
 // query use ?reverse means calculating how much currency is needed to obtain the $amount $from currency is needed.
