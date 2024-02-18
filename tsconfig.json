@@ -13,16 +13,10 @@
         "incremental": true,
         "skipLibCheck": true,
         "moduleResolution": "node",
-        "resolveJsonModule": true,
+        "resolveJsonModule": true
     },
-    "exclude": [
-        "dist",
-        "test",
-        "**/*spec.ts"
-    ],
-    "include": [
-        "src/**/*.ts"
-    ],
+    "exclude": ["dist", "test", "**/*spec.ts"],
+    "include": ["src/**/*.ts"],
     "ts-node": {
         "esm": true
     }

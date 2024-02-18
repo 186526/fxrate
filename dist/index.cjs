@@ -17979,11 +17979,12 @@ var package_default2 = {
   },
   type: "module",
   scripts: {
-    format: 'prettier --write "src/**/*" ',
+    format: 'prettier --write "**/*.{ts,json,md}" ',
     lint: 'eslint "src/**/*.ts" --fix',
     build: "yarn clean && esbuild src/index.ts --format=cjs --platform=node --bundle --outfile=dist/index.cjs",
-    clean: "rm -rf dist",
-    dev: "tsx src/index.ts"
+    clean: "rm -rf dist/index.cjs",
+    dev: "tsx src/index.ts",
+    start: "yarn build && node dist/index.cjs"
   }
 };
 
