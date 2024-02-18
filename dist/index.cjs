@@ -17232,7 +17232,7 @@ __export(src_exports, {
   default: () => src_default
 });
 module.exports = __toCommonJS(src_exports);
-var import_node_process = __toESM(require("node:process"), 1);
+var import_node_process2 = __toESM(require("node:process"), 1);
 
 // node_modules/handlers.js/dist/src/interface/request.js
 var request = class {
@@ -17956,7 +17956,8 @@ var dist_default = rootRouter;
 var package_default2 = {
   name: "fxrate",
   version: "0.0.1",
-  license: "MIT",
+  license: "MIT, Data copyright belongs to its source.",
+  author: "Bo Xu <i@186526.xyz> (https://186526.xyz/)",
   dependencies: {
     axios: "^1.6.7",
     cheerio: "^1.0.0-rc.12",
@@ -58242,6 +58243,7 @@ ${e2.message}`
 };
 
 // src/fxmManager.ts
+var import_node_process = __toESM(require("node:process"), 1);
 var useBasic = (response3) => {
   response3.status = 200;
   response3.headers.set("Date", (/* @__PURE__ */ new Date()).toUTCString());
@@ -58288,7 +58290,12 @@ var fxmManager = class extends router {
       this.create("GET", async () => {
         return {
           status: "ok",
-          sources: Object.keys(this.fxms)
+          sources: Object.keys(this.fxms),
+          version: import_node_process.default.env.NODE_ENV !== "deploy" ? `${package_default2.name}/${package_default2.version} ${Object.keys(
+            import_node_process.default.versions
+          ).map((k) => `${k}/${import_node_process.default.versions[k]}`).join(" ")}` : `${package_default2.name}/${package_default2.version}`,
+          apiVersion: "v1",
+          environment: import_node_process.default.env.NODE_ENV || "development"
         };
       })
     );
@@ -75472,10 +75479,10 @@ var Manager = new fxmManager_default({
 (async () => {
   App.use([Manager], "/(.*)");
   App.useMappingAdapter();
-  if (import_node_process.default.env.VERCEL != "1")
-    App.listen(Number(import_node_process.default?.env?.PORT) || 8080);
+  if (import_node_process2.default.env.VERCEL != "1")
+    App.listen(Number(import_node_process2.default?.env?.PORT) || 8080);
   console.log(
-    `[${(/* @__PURE__ */ new Date()).toUTCString()}] Server is started at ${Number(import_node_process.default?.env?.PORT) || 8080}.`
+    `[${(/* @__PURE__ */ new Date()).toUTCString()}] Server is started at ${Number(import_node_process2.default?.env?.PORT) || 8080}.`
   );
   App.binding(
     "/",
@@ -75491,10 +75498,9 @@ var Manager = new fxmManager_default({
           ),
           0
         );
-        response3.headers.set(
-          "X-Powered-By",
-          `${package_default2.name}/${package_default2.version} ${import_node_process.default.env.NODE_ENV || "development"}`
-        );
+        response3.headers.set("X-Powered-By", package_default2.name);
+        response3.headers.set("X-Author", package_default2.author);
+        response3.headers.set("X-License", package_default2.license);
       }
     ])
   );

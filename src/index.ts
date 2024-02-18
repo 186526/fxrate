@@ -56,10 +56,9 @@ const Manager = new fxmManager({
                         ),
                     0,
                 );
-                response.headers.set(
-                    'X-Powered-By',
-                    `${packageJson.name}/${packageJson.version} ${process.env.NODE_ENV || 'development'}`,
-                );
+                response.headers.set('X-Powered-By', packageJson.name);
+                response.headers.set('X-Author', packageJson.author);
+                response.headers.set('X-License', packageJson.license);
             },
         ]),
     );

@@ -7,6 +7,9 @@ import { FXRate, currency } from './types';
 
 import { round } from 'mathjs';
 
+import packageJson from '../package.json';
+import process from 'node:process';
+
 const useBasic = (response: response<any>): void => {
     response.status = 200;
     response.headers.set('Date', new Date().toUTCString());
@@ -82,6 +85,16 @@ class fxmManager extends router {
                 return {
                     status: 'ok',
                     sources: Object.keys(this.fxms),
+                    version:
+                        process.env.NODE_ENV !== 'deploy'
+                            ? `${packageJson.name}/${packageJson.version} ${Object.keys(
+                                  process.versions,
+                              )
+                                  .map((k) => `${k}/${process.versions[k]}`)
+                                  .join(' ')}`
+                            : `${packageJson.name}/${packageJson.version}`,
+                    apiVersion: 'v1',
+                    environment: process.env.NODE_ENV || 'development',
                 };
             }),
         );
