@@ -58291,9 +58291,7 @@ var fxmManager = class extends router {
         return {
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: import_node_process.default.env.NODE_ENV !== "deploy" ? `${package_default2.name}/${package_default2.version} ${Object.keys(
-            import_node_process.default.versions
-          ).map((k) => `${k}/${import_node_process.default.versions[k]}`).join(" ")}` : `${package_default2.name}/${package_default2.version}`,
+          version: `${package_default2.name}/${package_default2.version}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         };
@@ -75227,7 +75225,7 @@ var getCCBFXRates = async () => {
       updated: new Date(
         ((date, time) => {
           const dateStringArray = date.toString().split("");
-          const timeStringArray = time.toString().split("");
+          const timeStringArray = time.toString().padStart(6, "0").split("");
           dateStringArray.splice(4, 0, "-");
           dateStringArray.splice(7, 0, "-");
           timeStringArray.splice(2, 0, ":");
@@ -75416,7 +75414,7 @@ var getPSBCFXRates = async () => {
       updated: new Date(
         ((date, time) => {
           const dateStringArray = date.toString().split("");
-          const timeStringArray = time.toString().split("");
+          const timeStringArray = time.toString().padStart(6, "0").split("");
           dateStringArray.splice(4, 0, "-");
           dateStringArray.splice(7, 0, "-");
           timeStringArray.splice(2, 0, ":");
@@ -75502,7 +75500,7 @@ var Manager = new fxmManager_default({
         response3.headers.set("X-Author", package_default2.author);
         response3.headers.set(
           "X-License",
-          "MIT, Data copyright belongs to its source. More details at https://github.com/186526/fxrate/blob/main/src/License."
+          "MIT, Data copyright belongs to its source. More details at https://github.com/186526/fxrate."
         );
       }
     ])

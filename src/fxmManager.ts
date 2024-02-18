@@ -85,14 +85,7 @@ class fxmManager extends router {
                 return {
                     status: 'ok',
                     sources: Object.keys(this.fxms),
-                    version:
-                        process.env.NODE_ENV !== 'deploy'
-                            ? `${packageJson.name}/${packageJson.version} ${Object.keys(
-                                  process.versions,
-                              )
-                                  .map((k) => `${k}/${process.versions[k]}`)
-                                  .join(' ')}`
-                            : `${packageJson.name}/${packageJson.version}`,
+                    version: `${packageJson.name}/${packageJson.version}`,
                     apiVersion: 'v1',
                     environment: process.env.NODE_ENV || 'development',
                 };

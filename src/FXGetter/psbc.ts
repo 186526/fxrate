@@ -48,7 +48,10 @@ const getPSBCFXRates = async () => {
                 updated: new Date(
                     ((date: number, time: number) => {
                         const dateStringArray = date.toString().split('');
-                        const timeStringArray = time.toString().split('');
+                        const timeStringArray = time
+                            .toString()
+                            .padStart(6, '0')
+                            .split('');
                         dateStringArray.splice(4, 0, '-');
                         dateStringArray.splice(7, 0, '-');
                         timeStringArray.splice(2, 0, ':');

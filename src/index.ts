@@ -60,7 +60,7 @@ const Manager = new fxmManager({
                 response.headers.set('X-Author', packageJson.author);
                 response.headers.set(
                     'X-License',
-                    'MIT, Data copyright belongs to its source. More details at https://github.com/186526/fxrate/blob/main/src/License.',
+                    'MIT, Data copyright belongs to its source. More details at https://github.com/186526/fxrate.',
                 );
             },
         ]),
