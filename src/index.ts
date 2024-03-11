@@ -14,6 +14,7 @@ import getABCFXRates from './FXGetter/abc';
 import getBOCOMFXRates from './FXGetter/bocom';
 import getPSBCFXRates from './FXGetter/psbc';
 import getCMBFXRates from './FXGetter/cmb';
+import getPBOCFXRates from './FXGetter/pboc';
 
 const App = new rootRouter();
 
@@ -27,6 +28,7 @@ const Manager = new fxmManager({
     bocom: getBOCOMFXRates,
     psbc: getPSBCFXRates,
     cmb: getCMBFXRates,
+    pboc: getPBOCFXRates,
 });
 
 (async () => {
@@ -60,7 +62,7 @@ const Manager = new fxmManager({
                 response.headers.set('X-Author', packageJson.author);
                 response.headers.set(
                     'X-License',
-                    'MIT, Data copyright belongs to its source. More details at https://github.com/186526/fxrate.',
+                    'MIT, Data copyright belongs to its source. More details at <https://github.com/186526/fxrate>.',
                 );
             },
         ]),

@@ -17968,7 +17968,7 @@ var package_default2 = {
   devDependencies: {
     "@types/node": "^20.11.17",
     "@typescript-eslint/eslint-plugin": "^7.0.1",
-    "@typescript-eslint/parser": "^6.21.0",
+    "@typescript-eslint/parser": "^7.1.0",
     esbuild: "^0.20.0",
     eslint: "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
@@ -75461,6 +75461,99 @@ var getCMBFXRates = async () => {
 };
 var cmb_default = getCMBFXRates;
 
+// src/FXGetter/pboc.ts
+var currencyMap3 = {
+  \u7F8E\u5143: "USD",
+  \u6B27\u5143: "EUR",
+  \u65E5\u5143: "JPY",
+  \u6E2F\u5143: "HKD",
+  \u82F1\u9551: "GBP",
+  \u6FB3\u5143: "AUD",
+  \u65B0\u897F\u5170\u5143: "NZD",
+  \u65B0\u52A0\u5761\u5143: "SGD",
+  \u745E\u58EB\u6CD5\u90CE: "CHF",
+  \u52A0\u5143: "CAD",
+  \u6FB3\u95E8\u5143: "MOP",
+  \u6797\u5409\u7279: "MYR",
+  \u5362\u5E03: "RUB",
+  \u5170\u7279: "ZAR",
+  \u97E9\u5143: "KRW",
+  \u8FEA\u62C9\u59C6: "AED",
+  \u91CC\u4E9A\u5C14: "SAR",
+  \u798F\u6797: "HUF",
+  \u5179\u7F57\u63D0: "PLN",
+  \u4E39\u9EA6\u514B\u6717: "DKK",
+  \u745E\u5178\u514B\u6717: "SEK",
+  \u632A\u5A01\u514B\u6717: "NOK",
+  \u91CC\u62C9: "TRY",
+  \u6BD4\u7D22: "MXN",
+  \u6CF0\u94E2: "THB"
+};
+var undirectPrice = [
+  "MOP",
+  "MYR",
+  "RUB",
+  "ZAR",
+  "KRW",
+  "AED",
+  "SAR",
+  "HUF",
+  "PLN",
+  "DKK",
+  "SEK",
+  "NOK",
+  "TRY",
+  "MXN",
+  "THB"
+];
+var getPBOCFXRates = async () => {
+  const res = await axios_default.get(
+    "http://www.safe.gov.cn/AppStructured/hlw/RMBQuery.do",
+    {
+      headers: {
+        "User-Agent": "fxrate axios/latest"
+      }
+    }
+  );
+  const $2 = esm_default2.load(res.data);
+  const table = $2("table#InfoTable").children()[0];
+  return table.children.slice(1).map((el) => {
+    const row = $2(el);
+    const updateTime = /* @__PURE__ */ new Date(
+      $2(row.children()[0]).text() + " 00:00 UTC+8"
+    );
+    return row.children().slice(1).toArray().map((thisEL, index2) => {
+      const anz = {
+        currency: {
+          from: "unknown",
+          to: "unknown"
+        },
+        rate: {
+          middle: parseFloat($2(thisEL).text())
+        },
+        updated: updateTime,
+        unit: 100
+      };
+      const currencyZHName = $2(
+        $2(table.children[0]).children()[index2 + 1]
+      ).text().trim();
+      if (undirectPrice.includes(currencyMap3[currencyZHName])) {
+        anz.currency = {
+          from: "CNY",
+          to: currencyMap3[currencyZHName]
+        };
+      } else {
+        anz.currency = {
+          from: currencyMap3[currencyZHName],
+          to: "CNY"
+        };
+      }
+      return anz;
+    });
+  }).flat().sort();
+};
+var pboc_default = getPBOCFXRates;
+
 // src/index.ts
 var App = new dist_default();
 var Manager = new fxmManager_default({
@@ -75472,7 +75565,8 @@ var Manager = new fxmManager_default({
   abc: abc_default,
   bocom: bocom_default,
   psbc: psbc_default,
-  cmb: cmb_default
+  cmb: cmb_default,
+  pboc: pboc_default
 });
 (async () => {
   App.use([Manager], "/(.*)");
@@ -75500,7 +75594,7 @@ var Manager = new fxmManager_default({
         response3.headers.set("X-Author", package_default2.author);
         response3.headers.set(
           "X-License",
-          "MIT, Data copyright belongs to its source. More details at https://github.com/186526/fxrate."
+          "MIT, Data copyright belongs to its source. More details at <https://github.com/186526/fxrate>."
         );
       }
     ])

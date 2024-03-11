@@ -46,6 +46,7 @@ export enum currency {
     TJS = 'TJS',
     MNT = 'MNT',
     LAK = 'LAK',
+    IRR = 'IRR',
     unknown,
 }
 
