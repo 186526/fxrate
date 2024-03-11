@@ -15,6 +15,7 @@ import getBOCOMFXRates from './FXGetter/bocom';
 import getPSBCFXRates from './FXGetter/psbc';
 import getCMBFXRates from './FXGetter/cmb';
 import getPBOCFXRates from './FXGetter/pboc';
+import getUnionPayFXRates from './FXGetter/unionpay';
 
 const App = new rootRouter();
 
@@ -29,6 +30,7 @@ const Manager = new fxmManager({
     psbc: getPSBCFXRates,
     cmb: getCMBFXRates,
     pboc: getPBOCFXRates,
+    unionpay: getUnionPayFXRates,
 });
 
 (async () => {

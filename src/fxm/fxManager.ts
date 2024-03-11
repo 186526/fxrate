@@ -39,6 +39,11 @@ export default class fxManager {
             if (this.fxRateList[from][to].updated > FXRate.updated) return;
         }
 
+        if (!rate.buy && !rate.sell && !rate.middle) {
+            console.log(FXRate);
+            throw new Error('Invalid FXRate');
+        }
+
         if (!rate.buy && !rate.sell) {
             rate = {
                 buy: {
@@ -55,7 +60,9 @@ export default class fxManager {
             rate.buy = rate.sell;
         } else if (!rate.sell && rate.buy) {
             rate.sell = rate.buy;
-        } else if (!rate.middle) {
+        }
+
+        if (!rate.middle) {
             rate.middle = divide(
                 add(
                     math.min(
@@ -73,9 +80,6 @@ export default class fxManager {
                 ),
                 2,
             ) as Fraction;
-        } else if (!rate.buy && !rate.sell && !rate.middle) {
-            console.log(FXRate);
-            throw new Error('Invalid FXRate');
         }
 
         if (!this.fxRateList[from]) {

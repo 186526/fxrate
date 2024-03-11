@@ -3993,8 +3993,8 @@ var require_tychei = __commonJS({
 // node_modules/seedrandom/seedrandom.js
 var require_seedrandom = __commonJS({
   "node_modules/seedrandom/seedrandom.js"(exports2, module2) {
-    (function(global2, pool, math2) {
-      var width = 256, chunks = 6, digits2 = 52, rngname = "random", startdenom = math2.pow(width, chunks), significance = math2.pow(2, digits2), overflow = significance * 2, mask = width - 1, nodecrypto;
+    (function(global2, pool, math3) {
+      var width = 256, chunks = 6, digits2 = 52, rngname = "random", startdenom = math3.pow(width, chunks), significance = math3.pow(2, digits2), overflow = significance * 2, mask = width - 1, nodecrypto;
       function seedrandom2(seed, options, callback) {
         var key = [];
         options = options == true ? { entropy: true } : options || {};
@@ -4035,14 +4035,14 @@ var require_seedrandom = __commonJS({
             };
           }
           if (is_math_call) {
-            math2[rngname] = prng2;
+            math3[rngname] = prng2;
             return seed2;
           } else
             return prng2;
         })(
           prng,
           shortseed,
-          "global" in options ? options.global : this == math2,
+          "global" in options ? options.global : this == math3,
           options.state
         );
       }
@@ -4113,7 +4113,7 @@ var require_seedrandom = __commonJS({
       function tostring(a) {
         return String.fromCharCode.apply(0, a);
       }
-      mixkey(math2.random(), pool);
+      mixkey(math3.random(), pool);
       if (typeof module2 == "object" && module2.exports) {
         module2.exports = seedrandom2;
         try {
@@ -4125,7 +4125,7 @@ var require_seedrandom = __commonJS({
           return seedrandom2;
         });
       } else {
-        math2["seed" + rngname] = seedrandom2;
+        math3["seed" + rngname] = seedrandom2;
       }
     })(
       // global: `self` in browsers (including strict mode and web workers),
@@ -39650,7 +39650,7 @@ var createNode = /* @__PURE__ */ factory(name206, dependencies206, (_ref) => {
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
+    _compile(math3, argNames) {
       throw new Error("Method _compile must be implemented by type " + this.type);
     }
     /**
@@ -40018,9 +40018,9 @@ var createAccessorNode = /* @__PURE__ */ factory(name207, dependencies207, (_ref
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
-      var evalObject = this.object._compile(math2, argNames);
-      var evalIndex = this.index._compile(math2, argNames);
+    _compile(math3, argNames) {
+      var evalObject = this.object._compile(math3, argNames);
+      var evalIndex = this.index._compile(math3, argNames);
       if (this.index.isObjectProperty()) {
         var prop2 = this.index.getObjectProperty();
         return function evalAccessorNode(scope, args, context) {
@@ -40165,13 +40165,13 @@ var createArrayNode = /* @__PURE__ */ factory(name208, dependencies208, (_ref) =
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
+    _compile(math3, argNames) {
       var evalItems = map(this.items, function(item) {
-        return item._compile(math2, argNames);
+        return item._compile(math3, argNames);
       });
-      var asMatrix = math2.config.matrix !== "Array";
+      var asMatrix = math3.config.matrix !== "Array";
       if (asMatrix) {
-        var matrix2 = math2.matrix;
+        var matrix2 = math3.matrix;
         return function evalArrayNode(scope, args, context) {
           return matrix2(map(evalItems, function(evalItem) {
             return evalItem(scope, args, context);
@@ -40729,10 +40729,10 @@ var createAssignmentNode = /* @__PURE__ */ factory(name209, dependencies209, (_r
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
-      var evalObject = this.object._compile(math2, argNames);
-      var evalIndex = this.index ? this.index._compile(math2, argNames) : null;
-      var evalValue = this.value._compile(math2, argNames);
+    _compile(math3, argNames) {
+      var evalObject = this.object._compile(math3, argNames);
+      var evalIndex = this.index ? this.index._compile(math3, argNames) : null;
+      var evalValue = this.value._compile(math3, argNames);
       var name314 = this.object.name;
       if (!this.index) {
         if (!isSymbolNode(this.object)) {
@@ -40760,7 +40760,7 @@ var createAssignmentNode = /* @__PURE__ */ factory(name209, dependencies209, (_r
           return value;
         };
       } else {
-        var evalParentObject = this.object.object._compile(math2, argNames);
+        var evalParentObject = this.object.object._compile(math3, argNames);
         if (this.object.index.isObjectProperty()) {
           var parentProp = this.object.index.getObjectProperty();
           return function evalAssignmentNode(scope, args, context) {
@@ -40772,7 +40772,7 @@ var createAssignmentNode = /* @__PURE__ */ factory(name209, dependencies209, (_r
             return value;
           };
         } else {
-          var evalParentIndex = this.object.index._compile(math2, argNames);
+          var evalParentIndex = this.object.index._compile(math3, argNames);
           return function evalAssignmentNode(scope, args, context) {
             var parent2 = evalParentObject(scope, args, context);
             var parentIndex = evalParentIndex(scope, args, parent2);
@@ -40945,10 +40945,10 @@ var createBlockNode = /* @__PURE__ */ factory(name210, dependencies210, (_ref) =
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
+    _compile(math3, argNames) {
       var evalBlocks = map(this.blocks, function(block) {
         return {
-          evaluate: block.node._compile(math2, argNames),
+          evaluate: block.node._compile(math3, argNames),
           visible: block.visible
         };
       });
@@ -41137,10 +41137,10 @@ var createConditionalNode = /* @__PURE__ */ factory(name211, dependencies211, (_
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
-      var evalCondition = this.condition._compile(math2, argNames);
-      var evalTrueExpr = this.trueExpr._compile(math2, argNames);
-      var evalFalseExpr = this.falseExpr._compile(math2, argNames);
+    _compile(math3, argNames) {
+      var evalCondition = this.condition._compile(math3, argNames);
+      var evalTrueExpr = this.trueExpr._compile(math3, argNames);
+      var evalFalseExpr = this.falseExpr._compile(math3, argNames);
       return function evalConditionalNode(scope, args, context) {
         return testCondition(evalCondition(scope, args, context)) ? evalTrueExpr(scope, args, context) : evalFalseExpr(scope, args, context);
       };
@@ -41790,7 +41790,7 @@ var createConstantNode = /* @__PURE__ */ factory(name212, dependencies212, (_ref
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
+    _compile(math3, argNames) {
       var value = this.value;
       return function evalConstantNode() {
         return value;
@@ -41984,12 +41984,12 @@ var createFunctionAssignmentNode = /* @__PURE__ */ factory(name213, dependencies
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
+    _compile(math3, argNames) {
       var childArgNames = Object.create(argNames);
       forEach(this.params, function(param) {
         childArgNames[param] = true;
       });
-      var evalExpr = this.expr._compile(math2, childArgNames);
+      var evalExpr = this.expr._compile(math3, childArgNames);
       var name314 = this.name;
       var params = this.params;
       var signature = join(this.types, ",");
@@ -42171,13 +42171,13 @@ var createIndexNode = /* @__PURE__ */ factory(name214, dependencies214, (_ref) =
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
+    _compile(math3, argNames) {
       var evalDimensions = map(this.dimensions, function(dimension, i) {
         var needsEnd = dimension.filter((node) => node.isSymbolNode && node.name === "end").length > 0;
         if (needsEnd) {
           var childArgNames = Object.create(argNames);
           childArgNames.end = true;
-          var _evalDimension = dimension._compile(math2, childArgNames);
+          var _evalDimension = dimension._compile(math3, childArgNames);
           return function evalDimension(scope, args, context) {
             if (!isMatrix(context) && !isArray(context) && !isString(context)) {
               throw new TypeError('Cannot resolve "end": context must be a Matrix, Array, or string but is ' + typeOf(context));
@@ -42188,10 +42188,10 @@ var createIndexNode = /* @__PURE__ */ factory(name214, dependencies214, (_ref) =
             return _evalDimension(scope, childArgs, context);
           };
         } else {
-          return dimension._compile(math2, argNames);
+          return dimension._compile(math3, argNames);
         }
       });
-      var index2 = getSafeProperty(math2, "index");
+      var index2 = getSafeProperty(math3, "index");
       return function evalIndexNode(scope, args, context) {
         var dimensions = map(evalDimensions, function(evalDimension) {
           return evalDimension(scope, args, context);
@@ -42353,14 +42353,14 @@ var createObjectNode = /* @__PURE__ */ factory(name215, dependencies215, (_ref) 
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
+    _compile(math3, argNames) {
       var evalEntries = {};
       for (var key in this.properties) {
         if (hasOwnProperty(this.properties, key)) {
           var stringifiedKey = stringify(key);
           var parsedKey = JSON.parse(stringifiedKey);
           var prop2 = getSafeProperty(this.properties, key);
-          evalEntries[parsedKey] = prop2._compile(math2, argNames);
+          evalEntries[parsedKey] = prop2._compile(math3, argNames);
         }
       }
       return function evalObjectNode(scope, args, context) {
@@ -42701,22 +42701,22 @@ var createOperatorNode = /* @__PURE__ */ factory(name216, dependencies216, (_ref
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
-      if (typeof this.fn !== "string" || !isSafeMethod(math2, this.fn)) {
-        if (!math2[this.fn]) {
+    _compile(math3, argNames) {
+      if (typeof this.fn !== "string" || !isSafeMethod(math3, this.fn)) {
+        if (!math3[this.fn]) {
           throw new Error("Function " + this.fn + ' missing in provided namespace "math"');
         } else {
           throw new Error('No access to function "' + this.fn + '"');
         }
       }
-      var fn = getSafeProperty(math2, this.fn);
+      var fn = getSafeProperty(math3, this.fn);
       var evalArgs = map(this.args, function(arg) {
-        return arg._compile(math2, argNames);
+        return arg._compile(math3, argNames);
       });
       if (typeof fn === "function" && fn.rawArgs === true) {
         var rawArgs = this.args;
         return function evalOperatorNode(scope, args, context) {
-          return fn(rawArgs, math2, createSubScope(scope, args));
+          return fn(rawArgs, math3, createSubScope(scope, args));
         };
       } else if (evalArgs.length === 1) {
         var evalArg0 = evalArgs[0];
@@ -43052,8 +43052,8 @@ var createParenthesisNode = /* @__PURE__ */ factory(name217, dependencies217, (_
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
-      return this.content._compile(math2, argNames);
+    _compile(math3, argNames) {
+      return this.content._compile(math3, argNames);
     }
     /**
      * Get the content of the current Node.
@@ -43225,12 +43225,12 @@ var createRangeNode = /* @__PURE__ */ factory(name218, dependencies218, (_ref) =
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
-      var range = math2.range;
-      var evalStart = this.start._compile(math2, argNames);
-      var evalEnd = this.end._compile(math2, argNames);
+    _compile(math3, argNames) {
+      var range = math3.range;
+      var evalStart = this.start._compile(math3, argNames);
+      var evalEnd = this.end._compile(math3, argNames);
       if (this.step) {
-        var evalStep = this.step._compile(math2, argNames);
+        var evalStep = this.step._compile(math3, argNames);
         return function evalRangeNode(scope, args, context) {
           return range(evalStart(scope, args, context), evalEnd(scope, args, context), evalStep(scope, args, context));
         };
@@ -43441,16 +43441,16 @@ var createRelationalNode = /* @__PURE__ */ factory(name219, dependencies219, (_r
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math2, argNames) {
+    _compile(math3, argNames) {
       var self2 = this;
-      var compiled = this.params.map((p) => p._compile(math2, argNames));
+      var compiled = this.params.map((p) => p._compile(math3, argNames));
       return function evalRelationalNode(scope, args, context) {
         var evalLhs;
         var evalRhs = compiled[0](scope, args, context);
         for (var i = 0; i < self2.conditionals.length; i++) {
           evalLhs = evalRhs;
           evalRhs = compiled[i + 1](scope, args, context);
-          var condFn = getSafeProperty(math2, self2.conditionals[i]);
+          var condFn = getSafeProperty(math3, self2.conditionals[i]);
           if (!condFn(evalLhs, evalRhs)) {
             return false;
           }
@@ -43571,7 +43571,7 @@ var name220 = "SymbolNode";
 var dependencies220 = ["math", "?Unit", "Node"];
 var createSymbolNode = /* @__PURE__ */ factory(name220, dependencies220, (_ref) => {
   var {
-    math: math2,
+    math: math3,
     Unit,
     Node: Node2
   } = _ref;
@@ -43612,15 +43612,15 @@ var createSymbolNode = /* @__PURE__ */ factory(name220, dependencies220, (_ref) 
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math3, argNames) {
+    _compile(math4, argNames) {
       var name314 = this.name;
       if (argNames[name314] === true) {
         return function(scope, args, context) {
           return getSafeProperty(args, name314);
         };
-      } else if (name314 in math3) {
+      } else if (name314 in math4) {
         return function(scope, args, context) {
-          return scope.has(name314) ? scope.get(name314) : getSafeProperty(math3, name314);
+          return scope.has(name314) ? scope.get(name314) : getSafeProperty(math4, name314);
         };
       } else {
         var isUnit2 = isValuelessUnit(name314);
@@ -43718,7 +43718,7 @@ var createSymbolNode = /* @__PURE__ */ factory(name220, dependencies220, (_ref) 
      */
     _toTex(options) {
       var isUnit2 = false;
-      if (typeof math2[this.name] === "undefined" && isValuelessUnit(this.name)) {
+      if (typeof math3[this.name] === "undefined" && isValuelessUnit(this.name)) {
         isUnit2 = true;
       }
       var symbol = toSymbol(this.name, isUnit2);
@@ -43741,7 +43741,7 @@ var dependencies221 = ["math", "Node", "SymbolNode"];
 var createFunctionNode = /* @__PURE__ */ factory(name221, dependencies221, (_ref) => {
   var _class;
   var {
-    math: math2,
+    math: math3,
     Node: Node2,
     SymbolNode
   } = _ref;
@@ -43845,19 +43845,19 @@ var createFunctionNode = /* @__PURE__ */ factory(name221, dependencies221, (_ref
      * @return {function} Returns a function which can be called like:
      *                        evalNode(scope: Object, args: Object, context: *)
      */
-    _compile(math3, argNames) {
-      var evalArgs = this.args.map((arg) => arg._compile(math3, argNames));
+    _compile(math4, argNames) {
+      var evalArgs = this.args.map((arg) => arg._compile(math4, argNames));
       if (isSymbolNode(this.fn)) {
         var _name = this.fn.name;
         if (!argNames[_name]) {
-          var fn = _name in math3 ? getSafeProperty(math3, _name) : void 0;
+          var fn = _name in math4 ? getSafeProperty(math4, _name) : void 0;
           var isRaw = typeof fn === "function" && fn.rawArgs === true;
           var resolveFn = (scope) => {
             var value;
             if (scope.has(_name)) {
               value = scope.get(_name);
-            } else if (_name in math3) {
-              value = getSafeProperty(math3, _name);
+            } else if (_name in math4) {
+              value = getSafeProperty(math4, _name);
             } else {
               return FunctionNode.onUndefinedFunction(_name);
             }
@@ -43870,7 +43870,7 @@ var createFunctionNode = /* @__PURE__ */ factory(name221, dependencies221, (_ref
             var rawArgs = this.args;
             return function evalFunctionNode(scope, args, context) {
               var fn2 = resolveFn(scope);
-              return fn2(rawArgs, math3, createSubScope(scope, args));
+              return fn2(rawArgs, math4, createSubScope(scope, args));
             };
           } else {
             switch (evalArgs.length) {
@@ -43908,7 +43908,7 @@ var createFunctionNode = /* @__PURE__ */ factory(name221, dependencies221, (_ref
               throw new TypeError("Argument '".concat(_name, "' was not a function; received: ").concat(strin(fn2)));
             }
             if (fn2.rawArgs) {
-              return fn2(_rawArgs, math3, createSubScope(scope, args));
+              return fn2(_rawArgs, math4, createSubScope(scope, args));
             } else {
               var values2 = evalArgs.map((evalArg) => evalArg(scope, args, context));
               return fn2.apply(fn2, values2);
@@ -43916,14 +43916,14 @@ var createFunctionNode = /* @__PURE__ */ factory(name221, dependencies221, (_ref
           };
         }
       } else if (isAccessorNode(this.fn) && isIndexNode(this.fn.index) && this.fn.index.isObjectProperty()) {
-        var evalObject = this.fn.object._compile(math3, argNames);
+        var evalObject = this.fn.object._compile(math4, argNames);
         var prop2 = this.fn.index.getObjectProperty();
         var _rawArgs2 = this.args;
         return function evalFunctionNode(scope, args, context) {
           var object = evalObject(scope, args, context);
           var fn2 = getSafeMethod(object, prop2);
           if (fn2 !== null && fn2 !== void 0 && fn2.rawArgs) {
-            return fn2(_rawArgs2, math3, createSubScope(scope, args));
+            return fn2(_rawArgs2, math4, createSubScope(scope, args));
           } else {
             var values2 = evalArgs.map((evalArg) => evalArg(scope, args, context));
             return fn2.apply(object, values2);
@@ -43931,7 +43931,7 @@ var createFunctionNode = /* @__PURE__ */ factory(name221, dependencies221, (_ref
         };
       } else {
         var fnExpr = this.fn.toString();
-        var evalFn = this.fn._compile(math3, argNames);
+        var evalFn = this.fn._compile(math4, argNames);
         var _rawArgs3 = this.args;
         return function evalFunctionNode(scope, args, context) {
           var fn2 = evalFn(scope, args, context);
@@ -43939,7 +43939,7 @@ var createFunctionNode = /* @__PURE__ */ factory(name221, dependencies221, (_ref
             throw new TypeError("Expression '".concat(fnExpr, "' did not evaluate to a function; value is:") + "\n  ".concat(strin(fn2)));
           }
           if (fn2.rawArgs) {
-            return fn2(_rawArgs3, math3, createSubScope(scope, args));
+            return fn2(_rawArgs3, math4, createSubScope(scope, args));
           } else {
             var values2 = evalArgs.map((evalArg) => evalArg(scope, args, context));
             return fn2.apply(fn2, values2);
@@ -44080,8 +44080,8 @@ var createFunctionNode = /* @__PURE__ */ factory(name221, dependencies221, (_ref
       if (latexFunctions[this.name]) {
         latexConverter = latexFunctions[this.name];
       }
-      if (math2[this.name] && (typeof math2[this.name].toTex === "function" || typeof math2[this.name].toTex === "object" || typeof math2[this.name].toTex === "string")) {
-        latexConverter = math2[this.name].toTex;
+      if (math3[this.name] && (typeof math3[this.name].toTex === "function" || typeof math3[this.name].toTex === "object" || typeof math3[this.name].toTex === "string")) {
+        latexConverter = math3[this.name].toTex;
       }
       var customToTex;
       switch (typeof latexConverter) {
@@ -46923,7 +46923,7 @@ var dependencies238 = ["?on", "math", "typed"];
 var createChainClass = /* @__PURE__ */ factory(name238, dependencies238, (_ref) => {
   var {
     on,
-    math: math2,
+    math: math3,
     typed: typed3
   } = _ref;
   function Chain(value) {
@@ -47013,7 +47013,7 @@ var createChainClass = /* @__PURE__ */ factory(name238, dependencies238, (_ref) 
     isChain: true
     // conflicts with the property isChain of a Chain instance
   };
-  Chain.createProxy(math2);
+  Chain.createProxy(math3);
   if (on) {
     on("import", function(name314, resolver, path) {
       if (!path) {
@@ -56698,9 +56698,9 @@ var createColumnTransform = /* @__PURE__ */ factory(name291, dependencies291, (_
 });
 
 // node_modules/mathjs/lib/esm/expression/transform/utils/compileInlineExpression.js
-function compileInlineExpression(expression, math2, scope) {
+function compileInlineExpression(expression, math3, scope) {
   var symbol = expression.filter(function(node) {
-    return isSymbolNode(node) && !(node.name in math2) && !scope.has(node.name);
+    return isSymbolNode(node) && !(node.name in math3) && !scope.has(node.name);
   })[0];
   if (!symbol) {
     throw new Error('No undefined variable found in inline expression "' + expression + '"');
@@ -56722,7 +56722,7 @@ var createFilterTransform = /* @__PURE__ */ factory(name292, dependencies292, (_
   var {
     typed: typed3
   } = _ref;
-  function filterTransform(args, math2, scope) {
+  function filterTransform(args, math3, scope) {
     var x, callback;
     if (args[0]) {
       x = args[0].compile().evaluate(scope);
@@ -56731,7 +56731,7 @@ var createFilterTransform = /* @__PURE__ */ factory(name292, dependencies292, (_
       if (isSymbolNode(args[1]) || isFunctionAssignmentNode(args[1])) {
         callback = args[1].compile().evaluate(scope);
       } else {
-        callback = compileInlineExpression(args[1], math2, scope);
+        callback = compileInlineExpression(args[1], math3, scope);
       }
     }
     return filter6(x, callback);
@@ -56764,7 +56764,7 @@ var createForEachTransform = /* @__PURE__ */ factory(name293, dependencies293, (
   var {
     typed: typed3
   } = _ref;
-  function forEachTransform(args, math2, scope) {
+  function forEachTransform(args, math3, scope) {
     var x, callback;
     if (args[0]) {
       x = args[0].compile().evaluate(scope);
@@ -56773,7 +56773,7 @@ var createForEachTransform = /* @__PURE__ */ factory(name293, dependencies293, (
       if (isSymbolNode(args[1]) || isFunctionAssignmentNode(args[1])) {
         callback = args[1].compile().evaluate(scope);
       } else {
-        callback = compileInlineExpression(args[1], math2, scope);
+        callback = compileInlineExpression(args[1], math3, scope);
       }
     }
     return _forEach2(x, callback);
@@ -56848,7 +56848,7 @@ var createMapTransform = /* @__PURE__ */ factory(name295, dependencies295, (_ref
   var {
     typed: typed3
   } = _ref;
-  function mapTransform(args, math2, scope) {
+  function mapTransform(args, math3, scope) {
     var x, callback;
     if (args[0]) {
       x = args[0].compile().evaluate(scope);
@@ -56857,7 +56857,7 @@ var createMapTransform = /* @__PURE__ */ factory(name295, dependencies295, (_ref
       if (isSymbolNode(args[1]) || isFunctionAssignmentNode(args[1])) {
         callback = args[1].compile().evaluate(scope);
       } else {
-        callback = compileInlineExpression(args[1], math2, scope);
+        callback = compileInlineExpression(args[1], math3, scope);
       }
     }
     return map3(x, callback);
@@ -57402,7 +57402,7 @@ var createAndTransform = /* @__PURE__ */ factory(name310, dependencies310, (_ref
     not: not2,
     concat: concat3
   });
-  function andTransform(args, math2, scope) {
+  function andTransform(args, math3, scope) {
     var condition1 = args[0].compile().evaluate(scope);
     if (!isCollection(condition1) && !and(condition1, true)) {
       return false;
@@ -57434,7 +57434,7 @@ var createOrTransform = /* @__PURE__ */ factory(name311, dependencies311, (_ref)
     DenseMatrix: DenseMatrix2,
     concat: concat3
   });
-  function orTransform(args, math2, scope) {
+  function orTransform(args, math3, scope) {
     var condition1 = args[0].compile().evaluate(scope);
     if (!isCollection(condition1) && or(condition1, false)) {
       return true;
@@ -57468,7 +57468,7 @@ var createBitAndTransform = /* @__PURE__ */ factory(name312, dependencies312, (_
     not: not2,
     concat: concat3
   });
-  function bitAndTransform(args, math2, scope) {
+  function bitAndTransform(args, math3, scope) {
     var condition1 = args[0].compile().evaluate(scope);
     if (!isCollection(condition1)) {
       if (isNaN(condition1)) {
@@ -57505,7 +57505,7 @@ var createBitOrTransform = /* @__PURE__ */ factory(name313, dependencies313, (_r
     DenseMatrix: DenseMatrix2,
     concat: concat3
   });
-  function bitOrTransform(args, math2, scope) {
+  function bitOrTransform(args, math3, scope) {
     var condition1 = args[0].compile().evaluate(scope);
     if (!isCollection(condition1)) {
       if (isNaN(condition1)) {
@@ -57715,7 +57715,7 @@ function mixin(obj) {
 }
 
 // node_modules/mathjs/lib/esm/core/function/import.js
-function importFactory(typed3, load2, math2, importedFactories) {
+function importFactory(typed3, load2, math3, importedFactories) {
   function mathImport(functions, options) {
     var num = arguments.length;
     if (num !== 1 && num !== 2) {
@@ -57771,25 +57771,25 @@ function importFactory(typed3, load2, math2, importedFactories) {
         [value.signature]: value
       });
     }
-    if (typed3.isTypedFunction(math2[name314]) && typed3.isTypedFunction(value)) {
+    if (typed3.isTypedFunction(math3[name314]) && typed3.isTypedFunction(value)) {
       if (options.override) {
         value = typed3(name314, value.signatures);
       } else {
-        value = typed3(math2[name314], value);
+        value = typed3(math3[name314], value);
       }
-      math2[name314] = value;
+      math3[name314] = value;
       delete importedFactories[name314];
       _importTransform(name314, value);
-      math2.emit("import", name314, function resolver() {
+      math3.emit("import", name314, function resolver() {
         return value;
       });
       return;
     }
-    if (math2[name314] === void 0 || options.override) {
-      math2[name314] = value;
+    if (math3[name314] === void 0 || options.override) {
+      math3[name314] = value;
       delete importedFactories[name314];
       _importTransform(name314, value);
-      math2.emit("import", name314, function resolver() {
+      math3.emit("import", name314, function resolver() {
         return value;
       });
       return;
@@ -57800,23 +57800,23 @@ function importFactory(typed3, load2, math2, importedFactories) {
   }
   function _importTransform(name314, value) {
     if (value && typeof value.transform === "function") {
-      math2.expression.transform[name314] = value.transform;
+      math3.expression.transform[name314] = value.transform;
       if (allowedInExpressions(name314)) {
-        math2.expression.mathWithTransform[name314] = value.transform;
+        math3.expression.mathWithTransform[name314] = value.transform;
       }
     } else {
-      delete math2.expression.transform[name314];
+      delete math3.expression.transform[name314];
       if (allowedInExpressions(name314)) {
-        math2.expression.mathWithTransform[name314] = value;
+        math3.expression.mathWithTransform[name314] = value;
       }
     }
   }
   function _deleteTransform(name314) {
-    delete math2.expression.transform[name314];
+    delete math3.expression.transform[name314];
     if (allowedInExpressions(name314)) {
-      math2.expression.mathWithTransform[name314] = math2[name314];
+      math3.expression.mathWithTransform[name314] = math3[name314];
     } else {
-      delete math2.expression.mathWithTransform[name314];
+      delete math3.expression.mathWithTransform[name314];
     }
   }
   function _wrap2(fn) {
@@ -57826,7 +57826,7 @@ function importFactory(typed3, load2, math2, importedFactories) {
         var arg = arguments[i];
         args[i] = arg && arg.valueOf();
       }
-      return fn.apply(math2, args);
+      return fn.apply(math3, args);
     };
     if (fn.transform) {
       wrapper.transform = fn.transform;
@@ -57838,8 +57838,8 @@ function importFactory(typed3, load2, math2, importedFactories) {
     if (contains2(name314, ".")) {
       throw new Error("Factory name should not contain a nested path. Name: " + JSON.stringify(name314));
     }
-    var namespace = isTransformFunctionFactory(factory2) ? math2.expression.transform : math2;
-    var existingTransform = name314 in math2.expression.transform;
+    var namespace = isTransformFunctionFactory(factory2) ? math3.expression.transform : math3;
+    var existingTransform = name314 in math3.expression.transform;
     var existing = hasOwnProperty(namespace, name314) ? namespace[name314] : void 0;
     var resolver = function resolver2() {
       var dependencies314 = {};
@@ -57848,13 +57848,13 @@ function importFactory(typed3, load2, math2, importedFactories) {
           throw new Error("Factory dependency should not contain a nested path. Name: " + JSON.stringify(dependency));
         }
         if (dependency === "math") {
-          dependencies314.math = math2;
+          dependencies314.math = math3;
         } else if (dependency === "mathWithTransform") {
-          dependencies314.mathWithTransform = math2.expression.mathWithTransform;
+          dependencies314.mathWithTransform = math3.expression.mathWithTransform;
         } else if (dependency === "classes") {
-          dependencies314.classes = math2;
+          dependencies314.classes = math3;
         } else {
-          dependencies314[dependency] = math2[dependency];
+          dependencies314[dependency] = math3[dependency];
         }
       });
       var instance = /* @__PURE__ */ factory2(dependencies314);
@@ -57879,7 +57879,7 @@ function importFactory(typed3, load2, math2, importedFactories) {
         _deleteTransform(name314);
       } else {
         if (isTransformFunctionFactory(factory2) || factoryAllowedInExpressions(factory2)) {
-          lazy(math2.expression.mathWithTransform, name314, () => namespace[name314]);
+          lazy(math3.expression.mathWithTransform, name314, () => namespace[name314]);
         }
       }
     } else {
@@ -57888,12 +57888,12 @@ function importFactory(typed3, load2, math2, importedFactories) {
         _deleteTransform(name314);
       } else {
         if (isTransformFunctionFactory(factory2) || factoryAllowedInExpressions(factory2)) {
-          lazy(math2.expression.mathWithTransform, name314, () => namespace[name314]);
+          lazy(math3.expression.mathWithTransform, name314, () => namespace[name314]);
         }
       }
     }
     importedFactories[name314] = factory2;
-    math2.emit("import", name314, resolver);
+    math3.emit("import", name314, resolver);
   }
   function isSupportedType(object) {
     return typeof object === "function" || typeof object === "number" || typeof object === "string" || typeof object === "boolean" || object === null || isUnit(object) || isComplex(object) || isBigNumber(object) || isFraction(object) || isMatrix(object) || Array.isArray(object);
@@ -57929,7 +57929,7 @@ function create(factories, config4) {
   if (typeof Object.create !== "function") {
     throw new Error("ES5 not supported by this JavaScript engine. Please load the es5-shim and es5-sham library for compatibility.");
   }
-  var math2 = mixin({
+  var math3 = mixin({
     // only here for backward compatibility for legacy factory functions
     isNumber,
     isComplex,
@@ -57971,22 +57971,22 @@ function create(factories, config4) {
     isSymbolNode,
     isChain
   });
-  math2.config = configFactory(configInternal, math2.emit);
-  math2.expression = {
+  math3.config = configFactory(configInternal, math3.emit);
+  math3.expression = {
     transform: {},
     mathWithTransform: {
-      config: math2.config
+      config: math3.config
     }
   };
   var legacyFactories = [];
   var legacyInstances = [];
   function load2(factory2) {
     if (isFactory(factory2)) {
-      return factory2(math2);
+      return factory2(math3);
     }
     var firstProperty = factory2[Object.keys(factory2)[0]];
     if (isFactory(firstProperty)) {
-      return firstProperty(math2);
+      return firstProperty(math3);
     }
     if (!isLegacyFactory(factory2)) {
       console.warn("Factory object with properties `type`, `name`, and `factory` expected", factory2);
@@ -57996,9 +57996,9 @@ function create(factories, config4) {
     var instance;
     if (index2 === -1) {
       if (factory2.math === true) {
-        instance = factory2.factory(math2.type, configInternal, load2, math2.typed, math2);
+        instance = factory2.factory(math3.type, configInternal, load2, math3.typed, math3);
       } else {
-        instance = factory2.factory(math2.type, configInternal, load2, math2.typed);
+        instance = factory2.factory(math3.type, configInternal, load2, math3.typed);
       }
       legacyFactories.push(factory2);
       legacyInstances.push(instance);
@@ -58012,12 +58012,12 @@ function create(factories, config4) {
     for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
       args[_key] = arguments[_key];
     }
-    return math2.typed.apply(math2.typed, args);
+    return math3.typed.apply(math3.typed, args);
   }
   lazyTyped.isTypedFunction = import_typed_function3.default.isTypedFunction;
-  var internalImport = importFactory(lazyTyped, load2, math2, importedFactories);
-  math2.import = internalImport;
-  math2.on("config", () => {
+  var internalImport = importFactory(lazyTyped, load2, math3, importedFactories);
+  math3.import = internalImport;
+  math3.on("config", () => {
     values(importedFactories).forEach((factory2) => {
       if (factory2 && factory2.meta && factory2.meta.recreateOnConfigChange) {
         internalImport(factory2, {
@@ -58026,13 +58026,13 @@ function create(factories, config4) {
       }
     });
   });
-  math2.create = create.bind(null, factories);
-  math2.factory = factory;
-  math2.import(values(deepFlatten(factories)));
-  math2.ArgumentsError = ArgumentsError;
-  math2.DimensionError = DimensionError;
-  math2.IndexError = IndexError;
-  return math2;
+  math3.create = create.bind(null, factories);
+  math3.factory = factory;
+  math3.import(values(deepFlatten(factories)));
+  math3.ArgumentsError = ArgumentsError;
+  math3.DimensionError = DimensionError;
+  math3.IndexError = IndexError;
+  return math3;
 }
 
 // src/fxm/fxManager.ts
@@ -58060,6 +58060,10 @@ var fxManager = class {
       if (this.fxRateList[from][to].updated > FXRate.updated)
         return;
     }
+    if (!rate.buy && !rate.sell && !rate.middle) {
+      console.log(FXRate);
+      throw new Error("Invalid FXRate");
+    }
     if (!rate.buy && !rate.sell) {
       rate = {
         buy: {
@@ -58076,7 +58080,8 @@ var fxManager = class {
       rate.buy = rate.sell;
     } else if (!rate.sell && rate.buy) {
       rate.sell = rate.buy;
-    } else if (!rate.middle) {
+    }
+    if (!rate.middle) {
       rate.middle = divide3(
         add3(
           math.min(
@@ -58094,9 +58099,6 @@ var fxManager = class {
         ),
         2
       );
-    } else if (!rate.buy && !rate.sell && !rate.middle) {
-      console.log(FXRate);
-      throw new Error("Invalid FXRate");
     }
     if (!this.fxRateList[from]) {
       this.fxRateList[from] = {
@@ -75554,6 +75556,99 @@ var getPBOCFXRates = async () => {
 };
 var pboc_default = getPBOCFXRates;
 
+// src/FXGetter/unionpay.ts
+var math2 = create(all, {
+  number: "Fraction"
+});
+var getUnionPayFXRates = async () => {
+  let currentDate = parseInt(
+    (/* @__PURE__ */ new Date()).toISOString().split("T")[0].replaceAll("-", "")
+  );
+  let res = await axios_default.get(
+    `https://www.unionpayintl.com/upload/jfimg/${currentDate}.json`,
+    {
+      headers: {
+        "User-Agent": "fxrate axios/latest"
+      }
+    }
+  );
+  while (res.status !== 200) {
+    currentDate -= 1;
+    console.log(
+      currentDate,
+      "'s UnionPay FXRate not found, trying",
+      currentDate
+    );
+    res = await axios_default.get(
+      `https://www.unionpayintl.com/upload/jfimg/${currentDate}.json`,
+      {
+        headers: {
+          "User-Agent": "fxrate axios/latest"
+        }
+      }
+    );
+  }
+  const data2 = res.data;
+  const date = /* @__PURE__ */ new Date(`${data2.curDate} 16:30 UTC+8`);
+  const answerMap = {};
+  data2.exchangeRateJson.forEach((rate) => {
+    let firstCurr = rate.transCur, secondCurr = rate.baseCur, isReverse = false;
+    if (!answerMap[rate.transCur]) {
+      if (answerMap[rate.baseCur]) {
+        firstCurr = rate.baseCur;
+        secondCurr = rate.transCur;
+        isReverse = true;
+      }
+    }
+    if (!answerMap[firstCurr]) {
+      answerMap[firstCurr] = {};
+    }
+    if (!answerMap[firstCurr][secondCurr]) {
+      answerMap[firstCurr][secondCurr] = {
+        forward: void 0,
+        reverse: void 0
+      };
+    }
+    if (isReverse) {
+      answerMap[firstCurr][secondCurr].reverse = math2.divide(
+        1,
+        rate.rateData
+      );
+    } else {
+      answerMap[firstCurr][secondCurr].forward = rate.rateData;
+    }
+  });
+  const answer = [];
+  Object.keys(answerMap).forEach((from) => {
+    Object.keys(answerMap[from]).forEach((to) => {
+      const k = {
+        currency: {
+          from,
+          to
+        },
+        rate: {},
+        updated: date,
+        unit: 1
+      };
+      if (answerMap[from][to].forward) {
+        k.rate.sell = {
+          remit: answerMap[from][to].forward,
+          cash: answerMap[from][to].forward
+        };
+      }
+      if (answerMap[from][to].reverse) {
+        k.rate.buy = {
+          remit: answerMap[from][to].reverse,
+          cash: answerMap[from][to].reverse
+        };
+      }
+      answer.push(k);
+    });
+  });
+  return answer;
+};
+var unionpay_default = getUnionPayFXRates;
+
 // src/index.ts
 var App = new dist_default();
 var Manager = new fxmManager_default({
@@ -75566,7 +75661,8 @@ var Manager = new fxmManager_default({
   bocom: bocom_default,
   psbc: psbc_default,
   cmb: cmb_default,
-  pboc: pboc_default
+  pboc: pboc_default,
+  unionpay: unionpay_default
 });
 (async () => {
   App.use([Manager], "/(.*)");
