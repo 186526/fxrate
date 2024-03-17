@@ -153,6 +153,13 @@ class fxmManager extends router {
         setInterval(() => this.updateFXManager(source), 1000 * 60 * 30);
     }
 
+    public registerFXM(source: string, fxManager: fxManager): void {
+        this.fxms[source] = fxManager;
+        this.fxmStatus[source] = 'ready';
+        this.mountFXMRouter(source);
+        this.log(`Registered ${source}.`);
+    }
+
     private mountFXMRouter(source: string): void {
         this.use([this.getFXMRouter(source)], `/${source}/(.*)`);
     }

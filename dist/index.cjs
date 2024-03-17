@@ -2649,7 +2649,7 @@ var require_fraction = __commonJS({
         if (d === 0) {
           throw DivisionByZero();
         }
-        var f = Object.create(Fraction5.prototype);
+        var f = Object.create(Fraction6.prototype);
         f["s"] = n < 0 ? -1 : 1;
         n = n < 0 ? -n : n;
         var a = gcd(n, d);
@@ -2864,9 +2864,9 @@ var require_fraction = __commonJS({
         }
       }
       ;
-      function Fraction5(a, b) {
+      function Fraction6(a, b) {
         parse8(a, b);
-        if (this instanceof Fraction5) {
+        if (this instanceof Fraction6) {
           a = gcd(P3["d"], P3["n"]);
           this["s"] = P3["s"];
           this["n"] = P3["n"] / a;
@@ -2884,7 +2884,7 @@ var require_fraction = __commonJS({
       var NonIntegerParameter = function() {
         return new Error("Parameters must be integer");
       };
-      Fraction5.prototype = {
+      Fraction6.prototype = {
         "s": 1,
         "n": 0,
         "d": 1,
@@ -2967,7 +2967,7 @@ var require_fraction = __commonJS({
          **/
         "mod": function(a, b) {
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction5(NaN);
+            return new Fraction6(NaN);
           }
           if (a === void 0) {
             return newFraction(this["s"] * this["n"] % this["d"], 1);
@@ -3010,7 +3010,7 @@ var require_fraction = __commonJS({
         "ceil": function(places) {
           places = Math.pow(10, places || 0);
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction5(NaN);
+            return new Fraction6(NaN);
           }
           return newFraction(Math.ceil(places * this["s"] * this["n"] / this["d"]), places);
         },
@@ -3022,7 +3022,7 @@ var require_fraction = __commonJS({
         "floor": function(places) {
           places = Math.pow(10, places || 0);
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction5(NaN);
+            return new Fraction6(NaN);
           }
           return newFraction(Math.floor(places * this["s"] * this["n"] / this["d"]), places);
         },
@@ -3034,7 +3034,7 @@ var require_fraction = __commonJS({
         "round": function(places) {
           places = Math.pow(10, places || 0);
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction5(NaN);
+            return new Fraction6(NaN);
           }
           return newFraction(Math.round(places * this["s"] * this["n"] / this["d"]), places);
         },
@@ -3267,12 +3267,12 @@ var require_fraction = __commonJS({
         }
       };
       if (typeof exports2 === "object") {
-        Object.defineProperty(Fraction5, "__esModule", { "value": true });
-        Fraction5["default"] = Fraction5;
-        Fraction5["Fraction"] = Fraction5;
-        module2["exports"] = Fraction5;
+        Object.defineProperty(Fraction6, "__esModule", { "value": true });
+        Fraction6["default"] = Fraction6;
+        Fraction6["Fraction"] = Fraction6;
+        module2["exports"] = Fraction6;
       } else {
-        root3["Fraction"] = Fraction5;
+        root3["Fraction"] = Fraction6;
       }
     })(exports2);
   }
@@ -17226,6 +17226,337 @@ var require_boolbase = __commonJS({
   }
 });
 
+// node_modules/http-response-object/lib/index.js
+var require_lib = __commonJS({
+  "node_modules/http-response-object/lib/index.js"(exports2, module2) {
+    "use strict";
+    var Response2 = (
+      /** @class */
+      function() {
+        function Response3(statusCode, headers2, body, url2) {
+          if (typeof statusCode !== "number") {
+            throw new TypeError("statusCode must be a number but was " + typeof statusCode);
+          }
+          if (headers2 === null) {
+            throw new TypeError("headers cannot be null");
+          }
+          if (typeof headers2 !== "object") {
+            throw new TypeError("headers must be an object but was " + typeof headers2);
+          }
+          this.statusCode = statusCode;
+          var headersToLowerCase = {};
+          for (var key in headers2) {
+            headersToLowerCase[key.toLowerCase()] = headers2[key];
+          }
+          this.headers = headersToLowerCase;
+          this.body = body;
+          this.url = url2;
+        }
+        Response3.prototype.isError = function() {
+          return this.statusCode === 0 || this.statusCode >= 400;
+        };
+        Response3.prototype.getBody = function(encoding) {
+          if (this.statusCode === 0) {
+            var err = new Error("This request to " + this.url + " resulted in a status code of 0. This usually indicates some kind of network error in a browser (e.g. CORS not being set up or the DNS failing to resolve):\n" + this.body.toString());
+            err.statusCode = this.statusCode;
+            err.headers = this.headers;
+            err.body = this.body;
+            err.url = this.url;
+            throw err;
+          }
+          if (this.statusCode >= 300) {
+            var err = new Error("Server responded to " + this.url + " with status code " + this.statusCode + ":\n" + this.body.toString());
+            err.statusCode = this.statusCode;
+            err.headers = this.headers;
+            err.body = this.body;
+            err.url = this.url;
+            throw err;
+          }
+          if (!encoding || typeof this.body === "string") {
+            return this.body;
+          }
+          return this.body.toString(encoding);
+        };
+        return Response3;
+      }()
+    );
+    module2.exports = Response2;
+  }
+});
+
+// node_modules/sync-request/lib/FormData.js
+var require_FormData = __commonJS({
+  "node_modules/sync-request/lib/FormData.js"(exports2) {
+    "use strict";
+    exports2.__esModule = true;
+    var FormData3 = (
+      /** @class */
+      function() {
+        function FormData4() {
+          this._entries = [];
+        }
+        FormData4.prototype.append = function(key, value, fileName) {
+          this._entries.push({ key, value, fileName });
+        };
+        return FormData4;
+      }()
+    );
+    exports2.FormData = FormData3;
+    function getFormDataEntries(fd) {
+      return fd._entries;
+    }
+    exports2.getFormDataEntries = getFormDataEntries;
+  }
+});
+
+// node_modules/sync-rpc/lib/json-buffer/index.js
+var require_json_buffer = __commonJS({
+  "node_modules/sync-rpc/lib/json-buffer/index.js"(exports2) {
+    "use strict";
+    exports2.stringify = function stringify3(o) {
+      if (o && Buffer.isBuffer(o))
+        return JSON.stringify(":base64:" + o.toString("base64"));
+      if (o && o.toJSON)
+        o = o.toJSON();
+      if (o && "object" === typeof o) {
+        var s = "";
+        var array = Array.isArray(o);
+        s = array ? "[" : "{";
+        var first2 = true;
+        for (var k in o) {
+          var ignore = "function" == typeof o[k] || !array && "undefined" === typeof o[k];
+          if (Object.hasOwnProperty.call(o, k) && !ignore) {
+            if (!first2)
+              s += ",";
+            first2 = false;
+            if (array) {
+              s += stringify3(o[k]);
+            } else if (o[k] !== void 0) {
+              s += stringify3(k) + ":" + stringify3(o[k]);
+            }
+          }
+        }
+        s += array ? "]" : "}";
+        return s;
+      } else if ("string" === typeof o) {
+        return JSON.stringify(/^:/.test(o) ? ":" + o : o);
+      } else if ("undefined" === typeof o) {
+        return "null";
+      } else
+        return JSON.stringify(o);
+    };
+    exports2.parse = function(s) {
+      return JSON.parse(s, function(key, value) {
+        if ("string" === typeof value) {
+          if (/^:base64:/.test(value))
+            return new Buffer(value.substring(8), "base64");
+          else
+            return /^:/.test(value) ? value.substring(1) : value;
+        }
+        return value;
+      });
+    };
+  }
+});
+
+// node_modules/sync-rpc/lib/index.js
+var require_lib2 = __commonJS({
+  "node_modules/sync-rpc/lib/index.js"(exports2, module2) {
+    "use strict";
+    var path = require("path");
+    var spawn = require("child_process").spawn;
+    var spawnSync = require("child_process").spawnSync;
+    var JSON2 = require_json_buffer();
+    var host = "127.0.0.1";
+    function nodeNetCatSrc(port, input) {
+      return "var c=require('net').connect(" + port + ",'127.0.0.1',()=>{c.pipe(process.stdout);c.end(" + JSON2.stringify(input).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029") + ")})";
+    }
+    var FUNCTION_PRIORITY = [nativeNC, nodeNC];
+    var started = false;
+    var configuration = { port: null, fastestFunction: null };
+    function start() {
+      if (!spawnSync) {
+        throw new Error(
+          "Sync-request requires node version 0.12 or later.  If you need to use it with an older version of node\nyou can `npm install sync-request@2.2.0`, which was the last version to support older versions of node."
+        );
+      }
+      const port = findPort();
+      const p = spawn(process.execPath, [require.resolve("./worker"), port], {
+        stdio: "inherit",
+        windowsHide: true
+      });
+      p.unref();
+      process.on("exit", () => {
+        p.kill();
+      });
+      waitForAlive(port);
+      const fastestFunction = getFastestFunction(port);
+      configuration.port = port;
+      configuration.fastestFunction = fastestFunction;
+      started = true;
+    }
+    function findPort() {
+      const findPortResult = spawnSync(
+        process.execPath,
+        [require.resolve("./find-port")],
+        {
+          windowsHide: true
+        }
+      );
+      if (findPortResult.error) {
+        if (typeof findPortResult.error === "string") {
+          throw new Error(findPortResult.error);
+        }
+        throw findPortResult.error;
+      }
+      if (findPortResult.status !== 0) {
+        throw new Error(
+          findPortResult.stderr.toString() || "find port exited with code " + findPortResult.status
+        );
+      }
+      const portString = findPortResult.stdout.toString("utf8").trim();
+      if (!/^[0-9]+$/.test(portString)) {
+        throw new Error("Invalid port number string returned: " + portString);
+      }
+      return +portString;
+    }
+    function waitForAlive(port) {
+      let response2 = null;
+      let err = null;
+      let timeout = Date.now() + 1e4;
+      while (response2 !== "pong" && Date.now() < timeout) {
+        const result = nodeNC(port, "ping\r\n");
+        response2 = result.stdout && result.stdout.toString();
+        err = result.stderr && result.stderr.toString();
+      }
+      if (response2 !== "pong") {
+        throw new Error(
+          'Timed out waiting for sync-rpc server to start (it should respond with "pong" when sent "ping"):\n\n' + err + "\n" + response2
+        );
+      }
+    }
+    function nativeNC(port, input) {
+      return spawnSync("nc", [host, port], {
+        input,
+        windowsHide: true,
+        maxBuffer: Infinity
+      });
+    }
+    function nodeNC(port, input) {
+      const src = nodeNetCatSrc(port, input);
+      if (src.length < 1e3) {
+        return spawnSync(process.execPath, ["-e", src], {
+          windowsHide: true,
+          maxBuffer: Infinity
+        });
+      } else {
+        return spawnSync(process.execPath, [], {
+          input: src,
+          windowsHide: true,
+          maxBuffer: Infinity
+        });
+      }
+    }
+    function test(fn, port) {
+      const result = fn(port, "ping\r\n");
+      const response2 = result.stdout && result.stdout.toString();
+      return response2 === "pong";
+    }
+    function getFastestFunction(port) {
+      for (let i = 0; i < FUNCTION_PRIORITY.length; i++) {
+        if (test(FUNCTION_PRIORITY[i], port)) {
+          return FUNCTION_PRIORITY[i];
+        }
+      }
+    }
+    function sendMessage(input) {
+      if (!started)
+        start();
+      const res = configuration.fastestFunction(
+        configuration.port,
+        JSON2.stringify(input) + "\r\n"
+      );
+      try {
+        return JSON2.parse(res.stdout.toString("utf8"));
+      } catch (ex) {
+        if (res.error) {
+          if (typeof res.error === "string")
+            res.error = new Error(res.error);
+          throw res.error;
+        }
+        if (res.status !== 0) {
+          throw new Error(
+            configuration.fastestFunction.name + " failed:\n" + (res.stdout && res.stdout.toString()) + "\n" + (res.stderr && res.stderr.toString())
+          );
+        }
+        throw new Error(
+          configuration.fastestFunction.name + " failed:\n" + (res.stdout && res.stdout).toString() + "\n" + (res.stderr && res.stderr).toString()
+        );
+      }
+    }
+    function extractValue(msg) {
+      if (!msg.s) {
+        const error = new Error(msg.v.message);
+        error.code = msg.v.code;
+        throw error;
+      }
+      return msg.v;
+    }
+    function createClient(filename, args) {
+      const id = extractValue(sendMessage({ t: 1, f: filename, a: args }));
+      return function(args2) {
+        return extractValue(sendMessage({ t: 0, i: id, a: args2 }));
+      };
+    }
+    createClient.FUNCTION_PRIORITY = FUNCTION_PRIORITY;
+    createClient.configuration = configuration;
+    module2.exports = createClient;
+  }
+});
+
+// node_modules/sync-request/lib/index.js
+var require_lib3 = __commonJS({
+  "node_modules/sync-request/lib/index.js"(exports2, module2) {
+    "use strict";
+    var __rest = exports2 && exports2.__rest || function(s, e2) {
+      var t = {};
+      for (var p in s)
+        if (Object.prototype.hasOwnProperty.call(s, p) && e2.indexOf(p) < 0)
+          t[p] = s[p];
+      if (s != null && typeof Object.getOwnPropertySymbols === "function") {
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++)
+          if (e2.indexOf(p[i]) < 0)
+            t[p[i]] = s[p[i]];
+      }
+      return t;
+    };
+    exports2.__esModule = true;
+    var GenericResponse = require_lib();
+    var FormData_1 = require_FormData();
+    exports2.FormData = FormData_1.FormData;
+    var init = require_lib2();
+    var remote = init(require.resolve("./worker"));
+    function request3(method, url2, options) {
+      var _a2 = options || { form: void 0 }, form = _a2.form, o = __rest(_a2, ["form"]);
+      var opts = o;
+      if (form) {
+        opts.form = FormData_1.getFormDataEntries(form);
+      }
+      var req = {
+        m: method,
+        u: url2 && typeof url2 === "object" ? url2.href : url2,
+        o: opts
+      };
+      var res = remote(req);
+      return new GenericResponse(res.s, res.h, res.b, res.u);
+    }
+    exports2["default"] = request3;
+    module2.exports = request3;
+    module2.exports["default"] = request3;
+    module2.exports.FormData = FormData_1.FormData;
+  }
+});
+
 // src/index.ts
 var src_exports = {};
 __export(src_exports, {
@@ -17964,7 +18295,8 @@ var package_default2 = {
     cheerio: "^1.0.0-rc.12",
     "fast-xml-parser": "^4.3.4",
     "handlers.js": "^0.1.1",
-    mathjs: "^12.3.2"
+    mathjs: "^12.3.2",
+    "sync-request": "^6.1.0"
   },
   devDependencies: {
     "@types/node": "^20.11.17",
@@ -20049,7 +20381,7 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     BigNumber: BigNumber2,
     Complex: Complex3,
     DenseMatrix: DenseMatrix2,
-    Fraction: Fraction5
+    Fraction: Fraction6
   } = _ref;
   var typed3 = _createTyped2();
   typed3.clear();
@@ -20269,10 +20601,10 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     from: "number",
     to: "Fraction",
     convert: function convert(x) {
-      if (!Fraction5) {
+      if (!Fraction6) {
         throwNoFraction(x);
       }
-      var f = new Fraction5(x);
+      var f = new Fraction6(x);
       if (f.valueOf() !== x) {
         throw new TypeError("Cannot implicitly convert a number to a Fraction when there will be a loss of precision (value: " + x + "). Use function fraction(x) to convert to Fraction.");
       }
@@ -20312,11 +20644,11 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     from: "string",
     to: "Fraction",
     convert: function convert(x) {
-      if (!Fraction5) {
+      if (!Fraction6) {
         throwNoFraction(x);
       }
       try {
-        return new Fraction5(x);
+        return new Fraction6(x);
       } catch (err) {
         throw new Error('Cannot convert "' + x + '" to Fraction');
       }
@@ -20353,10 +20685,10 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     from: "boolean",
     to: "Fraction",
     convert: function convert(x) {
-      if (!Fraction5) {
+      if (!Fraction6) {
         throwNoFraction(x);
       }
-      return new Fraction5(+x);
+      return new Fraction6(+x);
     }
   }, {
     from: "boolean",
@@ -23963,7 +24295,7 @@ var createIsInteger = /* @__PURE__ */ factory(name9, dependencies10, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.isInt();
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x.d === 1 && isFinite(x.n);
     },
     "Array | Matrix": typed3.referToSelf((self2) => (x) => deepMap(x, self2))
@@ -24482,7 +24814,7 @@ var createIsNegative = /* @__PURE__ */ factory(name10, dependencies11, (_ref) =>
     BigNumber: function BigNumber2(x) {
       return x.isNeg() && !x.isZero() && !x.isNaN();
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x.s < 0;
     },
     Unit: typed3.referToSelf((self2) => (x) => typed3.find(self2, x.valueType())(x.value)),
@@ -24535,7 +24867,7 @@ var createIsPositive = /* @__PURE__ */ factory(name13, dependencies14, (_ref) =>
     BigNumber: function BigNumber2(x) {
       return !x.isNeg() && !x.isZero() && !x.isNaN();
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x.s > 0 && x.n > 0;
     },
     Unit: typed3.referToSelf((self2) => (x) => typed3.find(self2, x.valueType())(x.value)),
@@ -24558,7 +24890,7 @@ var createIsZero = /* @__PURE__ */ factory(name14, dependencies15, (_ref) => {
     Complex: function Complex3(x) {
       return x.re === 0 && x.im === 0;
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x.d === 1 && x.n === 0;
     },
     Unit: typed3.referToSelf((self2) => (x) => typed3.find(self2, x.valueType())(x.value)),
@@ -24578,7 +24910,7 @@ var createIsNaN = /* @__PURE__ */ factory(name15, dependencies16, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.isNaN();
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return false;
     },
     Complex: function Complex3(x) {
@@ -25598,7 +25930,7 @@ var createNumber = /* @__PURE__ */ factory(name19, dependencies20, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.toNumber();
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x.valueOf();
     },
     Unit: typed3.referToSelf((self2) => (x) => {
@@ -25729,7 +26061,7 @@ var createBignumber = /* @__PURE__ */ factory(name22, dependencies23, (_ref) => 
       clone5.value = self2(x.value);
       return clone5;
     }),
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return new BigNumber2(x.n).div(x.d).times(x.s);
     },
     null: function _null(x) {
@@ -25761,7 +26093,7 @@ var createComplex = /* @__PURE__ */ factory(name23, dependencies24, (_ref) => {
     "BigNumber, BigNumber": function BigNumberBigNumber(re, im) {
       return new Complex3(re.toNumber(), im.toNumber());
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return new Complex3(x.valueOf(), 0);
     },
     Complex: function Complex4(x) {
@@ -25792,28 +26124,28 @@ var dependencies25 = ["typed", "Fraction"];
 var createFraction = /* @__PURE__ */ factory(name24, dependencies25, (_ref) => {
   var {
     typed: typed3,
-    Fraction: Fraction5
+    Fraction: Fraction6
   } = _ref;
   return typed3("fraction", {
     number: function number2(x) {
       if (!isFinite(x) || isNaN(x)) {
         throw new Error(x + " cannot be represented as a fraction");
       }
-      return new Fraction5(x);
+      return new Fraction6(x);
     },
     string: function string(x) {
-      return new Fraction5(x);
+      return new Fraction6(x);
     },
     "number, number": function numberNumber(numerator, denominator) {
-      return new Fraction5(numerator, denominator);
+      return new Fraction6(numerator, denominator);
     },
     null: function _null(x) {
-      return new Fraction5(0);
+      return new Fraction6(0);
     },
     BigNumber: function BigNumber2(x) {
-      return new Fraction5(x.toString());
+      return new Fraction6(x.toString());
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x;
     },
     Unit: typed3.referToSelf((self2) => (x) => {
@@ -25822,7 +26154,7 @@ var createFraction = /* @__PURE__ */ factory(name24, dependencies25, (_ref) => {
       return clone5;
     }),
     Object: function Object2(x) {
-      return new Fraction5(x);
+      return new Fraction6(x);
     },
     "Array | Matrix": typed3.referToSelf((self2) => (x) => deepMap(x, self2))
   });
@@ -26075,7 +26407,7 @@ var createUnaryPlus = /* @__PURE__ */ factory(name31, dependencies32, (_ref) => 
     BigNumber: function BigNumber3(x) {
       return x;
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x;
     },
     Unit: function Unit(x) {
@@ -26247,7 +26579,7 @@ var createCbrt = /* @__PURE__ */ factory(name36, dependencies37, (_ref) => {
     matrix: matrix2,
     Complex: Complex3,
     BigNumber: BigNumber2,
-    Fraction: Fraction5
+    Fraction: Fraction6
   } = _ref;
   return typed3(name36, {
     number: cbrtNumber,
@@ -26287,7 +26619,7 @@ var createCbrt = /* @__PURE__ */ factory(name36, dependencies37, (_ref) => {
       if (isBigNumber(x.value)) {
         third = new BigNumber2(1).div(3);
       } else if (isFraction(x.value)) {
-        third = new Fraction5(1, 3);
+        third = new Fraction6(1, 3);
       } else {
         third = 1 / 3;
       }
@@ -26531,7 +26863,7 @@ var createCeil = /* @__PURE__ */ factory(name40, dependencies41, (_ref2) => {
         return x.toDecimalPlaces(n.toNumber(), decimal_default.ROUND_CEIL);
       }
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x.ceil();
     },
     "Fraction, number": function FractionNumber(x, n) {
@@ -26581,7 +26913,7 @@ var createCube = /* @__PURE__ */ factory(name41, dependencies42, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.times(x).times(x);
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x.pow(3);
     },
     Unit: function Unit(x) {
@@ -26688,7 +27020,7 @@ var createFix = /* @__PURE__ */ factory(name44, dependencies45, (_ref2) => {
     "BigNumber, number | BigNumber": function BigNumberNumberBigNumber(x, n) {
       return x.isNegative() ? ceil2(x, n) : floor2(x, n);
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x.s < 0 ? x.ceil() : x.floor();
     },
     "Fraction, number | BigNumber": function FractionNumberBigNumber(x, n) {
@@ -26795,7 +27127,7 @@ var createFloor = /* @__PURE__ */ factory(name45, dependencies46, (_ref2) => {
         return x.toDecimalPlaces(n.toNumber(), decimal_default.ROUND_FLOOR);
       }
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x.floor();
     },
     "Fraction, number": function FractionNumber(x, n) {
@@ -28521,7 +28853,7 @@ var createSign = /* @__PURE__ */ factory(name64, dependencies64, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return new _BigNumber(x.cmp(0));
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return new _Fraction(x.s, 1);
     },
     // deep map collection, skip zeros since sign(0) = 0
@@ -28586,7 +28918,7 @@ var createSquare = /* @__PURE__ */ factory(name66, dependencies66, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.times(x);
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x.mul(x);
     },
     Unit: function Unit(x) {
@@ -32015,7 +32347,7 @@ var createRound = /* @__PURE__ */ factory(name127, dependencies127, (_ref) => {
       }
       return x.toDecimalPlaces(n.toNumber());
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return x.round();
     },
     "Fraction, number": function FractionNumber(x, n) {
@@ -33275,7 +33607,7 @@ var createCompare = /* @__PURE__ */ factory(name142, dependencies142, (_ref) => 
     equalScalar: equalScalar2,
     matrix: matrix2,
     BigNumber: BigNumber2,
-    Fraction: Fraction5,
+    Fraction: Fraction6,
     DenseMatrix: DenseMatrix2,
     concat: concat3
   } = _ref;
@@ -33309,7 +33641,7 @@ var createCompare = /* @__PURE__ */ factory(name142, dependencies142, (_ref) => 
       return nearlyEqual2(x, y, config4.epsilon) ? new BigNumber2(0) : new BigNumber2(x.cmp(y));
     },
     "Fraction, Fraction": function FractionFraction(x, y) {
-      return new Fraction5(x.compare(y));
+      return new Fraction6(x.compare(y));
     },
     "Complex, Complex": function ComplexComplex() {
       throw new TypeError("No ordering relation is defined for complex numbers");
@@ -37895,7 +38227,7 @@ var createUnitClass = /* @__PURE__ */ factory(name161, dependencies161, (_ref) =
         return new _BigNumber(x.n).div(x.d).times(x.s);
       return new _BigNumber(x + "");
     },
-    Fraction: function Fraction5(x) {
+    Fraction: function Fraction6(x) {
       return new _Fraction(x);
     },
     Complex: function Complex4(x) {
@@ -58044,7 +58376,7 @@ var math = create(all, {
 var { multiply: multiply2, divide: divide3, fraction: fraction2, add: add3 } = math;
 var fxManager = class {
   constructor(FXRates) {
-    this.fxRateList = {};
+    this._fxRateList = {};
     FXRates.forEach((fxRate) => {
       try {
         this.update(fxRate);
@@ -58053,6 +58385,12 @@ var fxManager = class {
       }
     });
     return this;
+  }
+  get fxRateList() {
+    return this._fxRateList;
+  }
+  set fxRateList(value) {
+    this._fxRateList = value;
   }
   update(FXRate) {
     const { currency, unit } = FXRate;
@@ -58346,6 +58684,12 @@ var fxmManager = class extends router {
     this.mountFXMRouter(source);
     this.log(`Registered ${source}.`);
     setInterval(() => this.updateFXManager(source), 1e3 * 60 * 30);
+  }
+  registerFXM(source, fxManager2) {
+    this.fxms[source] = fxManager2;
+    this.fxmStatus[source] = "ready";
+    this.mountFXMRouter(source);
+    this.log(`Registered ${source}.`);
   }
   mountFXMRouter(source) {
     this.use([this.getFXMRouter(source)], `/${source}/(.*)`);
@@ -75699,6 +76043,209 @@ var getWiseFXRates = (isInSandbox = true, WiseToken) => {
 };
 var wise_default = getWiseFXRates;
 
+// src/FXGetter/mastercard.ts
+var import_sync_request = __toESM(require_lib3(), 1);
+var currenciesList = [
+  "AFN",
+  "ALL",
+  "DZD",
+  "AOA",
+  "ARS",
+  "AMD",
+  "AWG",
+  "AUD",
+  "AZN",
+  "BSD",
+  "BHD",
+  "BDT",
+  "BBD",
+  "BYN",
+  "BZD",
+  "BMD",
+  "BTN",
+  "BOB",
+  "BAM",
+  "BWP",
+  "BRL",
+  "BND",
+  "BGN",
+  "BIF",
+  "KHR",
+  "CAD",
+  "CVE",
+  "KYD",
+  "XOF",
+  "XAF",
+  "XPF",
+  "CLP",
+  "CNY",
+  "COP",
+  "KMF",
+  "CDF",
+  "CRC",
+  "CUP",
+  "CZK",
+  "DKK",
+  "DJF",
+  "DOP",
+  "XCD",
+  "EGP",
+  "SVC",
+  "ETB",
+  "EUR",
+  "FKP",
+  "FJD",
+  "GMD",
+  "GEL",
+  "GHS",
+  "GIP",
+  "GBP",
+  "GTQ",
+  "GNF",
+  "GYD",
+  "HTG",
+  "HNL",
+  "HKD",
+  "HUF",
+  "ISK",
+  "INR",
+  "IDR",
+  "IQD",
+  "ILS",
+  "JMD",
+  "JPY",
+  "JOD",
+  "KZT",
+  "KES",
+  "KWD",
+  "KGS",
+  "LAK",
+  "LBP",
+  "LSL",
+  "LRD",
+  "LYD",
+  "MOP",
+  "MKD",
+  "MGA",
+  "MWK",
+  "MYR",
+  "MVR",
+  "MRU",
+  "MUR",
+  "MXN",
+  "MDL",
+  "MNT",
+  "MAD",
+  "MZN",
+  "MMK",
+  "NAD",
+  "NPR",
+  "ANG",
+  "NZD",
+  "NIO",
+  "NGN",
+  "NOK",
+  "OMR",
+  "PKR",
+  "PAB",
+  "PGK",
+  "PYG",
+  "PEN",
+  "PHP",
+  "PLN",
+  "QAR",
+  "RON",
+  "RUB",
+  "RWF",
+  "SHP",
+  "WST",
+  "STN",
+  "SAR",
+  "RSD",
+  "SCR",
+  "SLE",
+  "SGD",
+  "SBD",
+  "SOS",
+  "ZAR",
+  "KRW",
+  "SSP",
+  "LKR",
+  "SDG",
+  "SRD",
+  "SZL",
+  "SEK",
+  "CHF",
+  "TWD",
+  "TJS",
+  "TZS",
+  "THB",
+  "TOP",
+  "TTD",
+  "TND",
+  "TRY",
+  "TMT",
+  "UGX",
+  "UAH",
+  "AED",
+  "USD",
+  "UYU",
+  "UZS",
+  "VUV",
+  "VES",
+  "VND",
+  "YER",
+  "ZMW",
+  "ZWL"
+];
+var mastercardFXM = class extends fxManager {
+  get fxRateList() {
+    const fxRateList = {};
+    currenciesList.forEach((from) => {
+      fxRateList[from] = {};
+      currenciesList.forEach((to) => {
+        const currency = new Proxy(
+          {},
+          {
+            get: (_obj, prop2) => {
+              if (["cash", "remit", "middle"].includes(
+                prop2.toString()
+              )) {
+                const request3 = (0, import_sync_request.default)(
+                  "GET",
+                  `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`
+                );
+                const data2 = JSON.parse(
+                  request3.getBody().toString()
+                );
+                return fraction(data2.data.conversionRate);
+              } else if (prop2 == "updated") {
+                const request3 = (0, import_sync_request.default)(
+                  "GET",
+                  `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`
+                );
+                const data2 = JSON.parse(
+                  request3.getBody().toString()
+                );
+                return new Date(data2.data.fxDate);
+              }
+              return void 0;
+            }
+          }
+        );
+        fxRateList[from][to] = currency;
+      });
+    });
+    return fxRateList;
+  }
+  constructor() {
+    super([]);
+  }
+  update() {
+    throw new Error("Method is deprecated");
+  }
+};
+
 // src/index.ts
 var App = new dist_default();
 var Manager = new fxmManager_default({
@@ -75714,6 +76261,7 @@ var Manager = new fxmManager_default({
   pboc: pboc_default,
   unionpay: unionpay_default
 });
+Manager.registerFXM("mastercard", new mastercardFXM());
 if (import_node_process2.default.env.ENABLE_WISE == "1") {
   if (import_node_process2.default.env.WISE_TOKEN == void 0)
     throw new Error("WISE_TOKEN is not set.");

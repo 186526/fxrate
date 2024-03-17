@@ -18,6 +18,8 @@ import getPBOCFXRates from './FXGetter/pboc';
 import getUnionPayFXRates from './FXGetter/unionpay';
 import getWiseFXRates from './FXGetter/wise';
 
+import mastercardFXM from './FXGetter/mastercard';
+
 const App = new rootRouter();
 
 const Manager = new fxmManager({
@@ -33,6 +35,8 @@ const Manager = new fxmManager({
     pboc: getPBOCFXRates,
     unionpay: getUnionPayFXRates,
 });
+
+Manager.registerFXM('mastercard', new mastercardFXM());
 
 if (process.env.ENABLE_WISE == '1') {
     if (process.env.WISE_TOKEN == undefined)

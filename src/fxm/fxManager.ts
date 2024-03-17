@@ -8,7 +8,7 @@ const math = create(all, {
 const { multiply, divide, fraction, add } = math;
 
 export default class fxManager {
-    public fxRateList: {
+    private _fxRateList: {
         [currency in keyof currency]: {
             [currency in keyof currency]: {
                 cash: Fraction;
@@ -18,6 +18,12 @@ export default class fxManager {
             };
         };
     } = {} as any;
+    public get fxRateList() {
+        return this._fxRateList;
+    }
+    public set fxRateList(value: any) {
+        this._fxRateList = value;
+    }
 
     constructor(FXRates: FXRate[]) {
         FXRates.forEach((fxRate) => {
