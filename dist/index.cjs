@@ -13991,10 +13991,10 @@ var require_browser = __commonJS({
     exports2.useColors = useColors;
     exports2.storage = localstorage();
     exports2.destroy = /* @__PURE__ */ (() => {
-      let warned = false;
+      let warned2 = false;
       return () => {
-        if (!warned) {
-          warned = true;
+        if (!warned2) {
+          warned2 = true;
           console.warn("Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.");
         }
       };
@@ -14793,7 +14793,7 @@ var require_follow_redirects = __commonJS({
       this._isRedirect = true;
       spreadUrlObject(redirectUrl, this._options);
       if (redirectUrl.protocol !== currentUrlParts.protocol && redirectUrl.protocol !== "https:" || redirectUrl.host !== currentHost && !isSubdomain(redirectUrl.host, currentHost)) {
-        removeMatchingHeaders(/^(?:authorization|cookie)$/i, this._options.headers);
+        removeMatchingHeaders(/^(?:(?:proxy-)?authorization|cookie)$/i, this._options.headers);
       }
       if (isFunction3(beforeRedirect)) {
         var responseDetails = {
@@ -15652,7 +15652,9 @@ var require_OrderedObjParser = __commonJS({
           "euro": { regex: /&(euro|#8364);/g, val: "\u20AC" },
           "copyright": { regex: /&(copy|#169);/g, val: "\xA9" },
           "reg": { regex: /&(reg|#174);/g, val: "\xAE" },
-          "inr": { regex: /&(inr|#8377);/g, val: "\u20B9" }
+          "inr": { regex: /&(inr|#8377);/g, val: "\u20B9" },
+          "num_dec": { regex: /&#([0-9]{1,7});/g, val: (_, str) => String.fromCharCode(Number.parseInt(str, 10)) },
+          "num_hex": { regex: /&#x([0-9a-fA-F]{1,6});/g, val: (_, str) => String.fromCharCode(Number.parseInt(str, 16)) }
         };
         this.addExternalEntities = addExternalEntities;
         this.parseXml = parseXml;
@@ -17964,6 +17966,7 @@ var package_default2 = {
     cheerio: "^1.0.0-rc.12",
     "fast-xml-parser": "^4.3.4",
     "handlers.js": "^0.1.1",
+    "lru-cache": "^10.2.0",
     mathjs: "^12.3.2",
     "sync-request": "^6.1.0"
   },
@@ -19914,6 +19917,7 @@ var safeNativeMethods = {
 var ObjectWrappingMap = class {
   constructor(object) {
     this.wrappedObject = object;
+    this[Symbol.iterator] = this.entries;
   }
   keys() {
     return Object.keys(this.wrappedObject).values();
@@ -19958,6 +19962,7 @@ var PartitionedMap = class {
     this.a = a;
     this.b = b;
     this.bKeys = bKeys;
+    this[Symbol.iterator] = this.entries;
   }
   get(key) {
     return this.bKeys.has(key) ? this.b.get(key) : this.a.get(key);
@@ -26842,12 +26847,12 @@ var createMatAlgo02xDS0 = /* @__PURE__ */ factory(name46, dependencies47, (_ref)
   return function matAlgo02xDS0(denseMatrix, sparseMatrix, callback, inverse) {
     var adata = denseMatrix._data;
     var asize = denseMatrix._size;
-    var adt = denseMatrix._datatype;
+    var adt = denseMatrix._datatype || denseMatrix.getDataType();
     var bvalues = sparseMatrix._values;
     var bindex = sparseMatrix._index;
     var bptr = sparseMatrix._ptr;
     var bsize = sparseMatrix._size;
-    var bdt = sparseMatrix._datatype;
+    var bdt = sparseMatrix._datatype || sparseMatrix._data === void 0 ? sparseMatrix._datatype : sparseMatrix.getDataType();
     if (asize.length !== bsize.length) {
       throw new DimensionError(asize.length, bsize.length);
     }
@@ -26863,7 +26868,7 @@ var createMatAlgo02xDS0 = /* @__PURE__ */ factory(name46, dependencies47, (_ref)
     var eq2 = equalScalar2;
     var zero = 0;
     var cf = callback;
-    if (typeof adt === "string" && adt === bdt) {
+    if (typeof adt === "string" && adt === bdt && adt !== "mixed") {
       dt = adt;
       eq2 = typed3.find(equalScalar2, [dt, dt]);
       zero = typed3.convert(0, dt);
@@ -26889,7 +26894,7 @@ var createMatAlgo02xDS0 = /* @__PURE__ */ factory(name46, dependencies47, (_ref)
       index: cindex,
       ptr: cptr,
       size: [rows, columns],
-      datatype: dt
+      datatype: adt === denseMatrix._datatype && bdt === sparseMatrix._datatype ? dt : void 0
     });
   };
 });
@@ -26904,12 +26909,12 @@ var createMatAlgo03xDSf = /* @__PURE__ */ factory(name47, dependencies48, (_ref)
   return function matAlgo03xDSf(denseMatrix, sparseMatrix, callback, inverse) {
     var adata = denseMatrix._data;
     var asize = denseMatrix._size;
-    var adt = denseMatrix._datatype;
+    var adt = denseMatrix._datatype || denseMatrix.getDataType();
     var bvalues = sparseMatrix._values;
     var bindex = sparseMatrix._index;
     var bptr = sparseMatrix._ptr;
     var bsize = sparseMatrix._size;
-    var bdt = sparseMatrix._datatype;
+    var bdt = sparseMatrix._datatype || sparseMatrix._data === void 0 ? sparseMatrix._datatype : sparseMatrix.getDataType();
     if (asize.length !== bsize.length) {
       throw new DimensionError(asize.length, bsize.length);
     }
@@ -26924,7 +26929,7 @@ var createMatAlgo03xDSf = /* @__PURE__ */ factory(name47, dependencies48, (_ref)
     var dt;
     var zero = 0;
     var cf = callback;
-    if (typeof adt === "string" && adt === bdt) {
+    if (typeof adt === "string" && adt === bdt && adt !== "mixed") {
       dt = adt;
       zero = typed3.convert(0, dt);
       cf = typed3.find(callback, [dt, dt]);
@@ -26953,7 +26958,7 @@ var createMatAlgo03xDSf = /* @__PURE__ */ factory(name47, dependencies48, (_ref)
     return denseMatrix.createDenseMatrix({
       data: cdata,
       size: [rows, columns],
-      datatype: dt
+      datatype: adt === denseMatrix._datatype && bdt === sparseMatrix._datatype ? dt : void 0
     });
   };
 });
@@ -26971,12 +26976,12 @@ var createMatAlgo05xSfSf = /* @__PURE__ */ factory(name48, dependencies49, (_ref
     var aindex = a._index;
     var aptr = a._ptr;
     var asize = a._size;
-    var adt = a._datatype;
+    var adt = a._datatype || a._data === void 0 ? a._datatype : a.getDataType();
     var bvalues = b._values;
     var bindex = b._index;
     var bptr = b._ptr;
     var bsize = b._size;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b._data === void 0 ? b._datatype : b.getDataType();
     if (asize.length !== bsize.length) {
       throw new DimensionError(asize.length, bsize.length);
     }
@@ -26989,7 +26994,7 @@ var createMatAlgo05xSfSf = /* @__PURE__ */ factory(name48, dependencies49, (_ref
     var eq2 = equalScalar2;
     var zero = 0;
     var cf = callback;
-    if (typeof adt === "string" && adt === bdt) {
+    if (typeof adt === "string" && adt === bdt && adt !== "mixed") {
       dt = adt;
       eq2 = typed3.find(equalScalar2, [dt, dt]);
       zero = typed3.convert(0, dt);
@@ -27050,7 +27055,7 @@ var createMatAlgo05xSfSf = /* @__PURE__ */ factory(name48, dependencies49, (_ref
       index: cindex,
       ptr: cptr,
       size: [rows, columns],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
   };
 });
@@ -27358,12 +27363,12 @@ var createMatAlgo01xDSid = /* @__PURE__ */ factory(name53, dependencies53, (_ref
   return function algorithm1(denseMatrix, sparseMatrix, callback, inverse) {
     var adata = denseMatrix._data;
     var asize = denseMatrix._size;
-    var adt = denseMatrix._datatype;
+    var adt = denseMatrix._datatype || denseMatrix.getDataType();
     var bvalues = sparseMatrix._values;
     var bindex = sparseMatrix._index;
     var bptr = sparseMatrix._ptr;
     var bsize = sparseMatrix._size;
-    var bdt = sparseMatrix._datatype;
+    var bdt = sparseMatrix._datatype || sparseMatrix._data === void 0 ? sparseMatrix._datatype : sparseMatrix.getDataType();
     if (asize.length !== bsize.length) {
       throw new DimensionError(asize.length, bsize.length);
     }
@@ -27375,7 +27380,7 @@ var createMatAlgo01xDSid = /* @__PURE__ */ factory(name53, dependencies53, (_ref
     }
     var rows = asize[0];
     var columns = asize[1];
-    var dt = typeof adt === "string" && adt === bdt ? adt : void 0;
+    var dt = typeof adt === "string" && adt !== "mixed" && adt === bdt ? adt : void 0;
     var cf = dt ? typed3.find(callback, [dt, dt]) : callback;
     var i, j;
     var cdata = [];
@@ -27402,7 +27407,7 @@ var createMatAlgo01xDSid = /* @__PURE__ */ factory(name53, dependencies53, (_ref
     return denseMatrix.createDenseMatrix({
       data: cdata,
       size: [rows, columns],
-      datatype: dt
+      datatype: adt === denseMatrix._datatype && bdt === sparseMatrix._datatype ? dt : void 0
     });
   };
 });
@@ -27420,12 +27425,12 @@ var createMatAlgo04xSidSid = /* @__PURE__ */ factory(name54, dependencies54, (_r
     var aindex = a._index;
     var aptr = a._ptr;
     var asize = a._size;
-    var adt = a._datatype;
+    var adt = a._datatype || a._data === void 0 ? a._datatype : a.getDataType();
     var bvalues = b._values;
     var bindex = b._index;
     var bptr = b._ptr;
     var bsize = b._size;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b._data === void 0 ? b._datatype : b.getDataType();
     if (asize.length !== bsize.length) {
       throw new DimensionError(asize.length, bsize.length);
     }
@@ -27438,7 +27443,7 @@ var createMatAlgo04xSidSid = /* @__PURE__ */ factory(name54, dependencies54, (_r
     var eq2 = equalScalar2;
     var zero = 0;
     var cf = callback;
-    if (typeof adt === "string" && adt === bdt) {
+    if (typeof adt === "string" && adt === bdt && adt !== "mixed") {
       dt = adt;
       eq2 = typed3.find(equalScalar2, [dt, dt]);
       zero = typed3.convert(0, dt);
@@ -27504,7 +27509,7 @@ var createMatAlgo04xSidSid = /* @__PURE__ */ factory(name54, dependencies54, (_r
       index: cindex,
       ptr: cptr,
       size: [rows, columns],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
   };
 });
@@ -27693,10 +27698,10 @@ var createMatAlgo06xS0S0 = /* @__PURE__ */ factory(name57, dependencies57, (_ref
   return function matAlgo06xS0S0(a, b, callback) {
     var avalues = a._values;
     var asize = a._size;
-    var adt = a._datatype;
+    var adt = a._datatype || a._data === void 0 ? a._datatype : a.getDataType();
     var bvalues = b._values;
     var bsize = b._size;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b._data === void 0 ? b._datatype : b.getDataType();
     if (asize.length !== bsize.length) {
       throw new DimensionError(asize.length, bsize.length);
     }
@@ -27709,7 +27714,7 @@ var createMatAlgo06xS0S0 = /* @__PURE__ */ factory(name57, dependencies57, (_ref
     var eq2 = equalScalar2;
     var zero = 0;
     var cf = callback;
-    if (typeof adt === "string" && adt === bdt) {
+    if (typeof adt === "string" && adt === bdt && adt !== "mixed") {
       dt = adt;
       eq2 = typed3.find(equalScalar2, [dt, dt]);
       zero = typed3.convert(0, dt);
@@ -27760,7 +27765,7 @@ var createMatAlgo06xS0S0 = /* @__PURE__ */ factory(name57, dependencies57, (_ref
       index: cindex,
       ptr: cptr,
       size: [rows, columns],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
   };
 });
@@ -27989,16 +27994,16 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
   function _multiplyVectorDenseMatrix(a, b) {
     var adata = a._data;
     var asize = a._size;
-    var adt = a._datatype;
+    var adt = a._datatype || a.getDataType();
     var bdata = b._data;
     var bsize = b._size;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b.getDataType();
     var alength = asize[0];
     var bcolumns = bsize[1];
     var dt;
     var af = addScalar2;
     var mf = multiplyScalar2;
-    if (adt && bdt && adt === bdt && typeof adt === "string") {
+    if (adt && bdt && adt === bdt && typeof adt === "string" && adt !== "mixed") {
       dt = adt;
       af = typed3.find(addScalar2, [dt, dt]);
       mf = typed3.find(multiplyScalar2, [dt, dt]);
@@ -28014,7 +28019,7 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
     return a.createDenseMatrix({
       data: c,
       size: [bcolumns],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
   }
   var _multiplyMatrixVector = typed3("_multiplyMatrixVector", {
@@ -28030,15 +28035,15 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
   function _multiplyDenseMatrixVector(a, b) {
     var adata = a._data;
     var asize = a._size;
-    var adt = a._datatype;
+    var adt = a._datatype || a.getDataType();
     var bdata = b._data;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b.getDataType();
     var arows = asize[0];
     var acolumns = asize[1];
     var dt;
     var af = addScalar2;
     var mf = multiplyScalar2;
-    if (adt && bdt && adt === bdt && typeof adt === "string") {
+    if (adt && bdt && adt === bdt && typeof adt === "string" && adt !== "mixed") {
       dt = adt;
       af = typed3.find(addScalar2, [dt, dt]);
       mf = typed3.find(multiplyScalar2, [dt, dt]);
@@ -28055,23 +28060,23 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
     return a.createDenseMatrix({
       data: c,
       size: [arows],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
   }
   function _multiplyDenseMatrixDenseMatrix(a, b) {
     var adata = a._data;
     var asize = a._size;
-    var adt = a._datatype;
+    var adt = a._datatype || a.getDataType();
     var bdata = b._data;
     var bsize = b._size;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b.getDataType();
     var arows = asize[0];
     var acolumns = asize[1];
     var bcolumns = bsize[1];
     var dt;
     var af = addScalar2;
     var mf = multiplyScalar2;
-    if (adt && bdt && adt === bdt && typeof adt === "string") {
+    if (adt && bdt && adt === bdt && typeof adt === "string" && adt !== "mixed" && adt !== "mixed") {
       dt = adt;
       af = typed3.find(addScalar2, [dt, dt]);
       mf = typed3.find(multiplyScalar2, [dt, dt]);
@@ -28091,18 +28096,18 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
     return a.createDenseMatrix({
       data: c,
       size: [arows, bcolumns],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
   }
   function _multiplyDenseMatrixSparseMatrix(a, b) {
     var adata = a._data;
     var asize = a._size;
-    var adt = a._datatype;
+    var adt = a._datatype || a.getDataType();
     var bvalues = b._values;
     var bindex = b._index;
     var bptr = b._ptr;
     var bsize = b._size;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b._data === void 0 ? b._datatype : b.getDataType();
     if (!bvalues) {
       throw new Error("Cannot multiply Dense Matrix times Pattern only Matrix");
     }
@@ -28113,7 +28118,7 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
     var mf = multiplyScalar2;
     var eq2 = equalScalar2;
     var zero = 0;
-    if (adt && bdt && adt === bdt && typeof adt === "string") {
+    if (adt && bdt && adt === bdt && typeof adt === "string" && adt !== "mixed") {
       dt = adt;
       af = typed3.find(addScalar2, [dt, dt]);
       mf = typed3.find(multiplyScalar2, [dt, dt]);
@@ -28128,7 +28133,7 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
       index: cindex,
       ptr: cptr,
       size: [arows, bcolumns],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
     for (var jb = 0; jb < bcolumns; jb++) {
       cptr[jb] = cindex.length;
@@ -28162,12 +28167,12 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
     var avalues = a._values;
     var aindex = a._index;
     var aptr = a._ptr;
-    var adt = a._datatype;
+    var adt = a._datatype || a._data === void 0 ? a._datatype : a.getDataType();
     if (!avalues) {
       throw new Error("Cannot multiply Pattern only Matrix times Dense Matrix");
     }
     var bdata = b._data;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b.getDataType();
     var arows = a._size[0];
     var brows = b._size[0];
     var cvalues = [];
@@ -28178,7 +28183,7 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
     var mf = multiplyScalar2;
     var eq2 = equalScalar2;
     var zero = 0;
-    if (adt && bdt && adt === bdt && typeof adt === "string") {
+    if (adt && bdt && adt === bdt && typeof adt === "string" && adt !== "mixed") {
       dt = adt;
       af = typed3.find(addScalar2, [dt, dt]);
       mf = typed3.find(multiplyScalar2, [dt, dt]);
@@ -28213,19 +28218,19 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
       index: cindex,
       ptr: cptr,
       size: [arows, 1],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
   }
   function _multiplySparseMatrixDenseMatrix(a, b) {
     var avalues = a._values;
     var aindex = a._index;
     var aptr = a._ptr;
-    var adt = a._datatype;
+    var adt = a._datatype || a._data === void 0 ? a._datatype : a.getDataType();
     if (!avalues) {
       throw new Error("Cannot multiply Pattern only Matrix times Dense Matrix");
     }
     var bdata = b._data;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b.getDataType();
     var arows = a._size[0];
     var brows = b._size[0];
     var bcolumns = b._size[1];
@@ -28234,7 +28239,7 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
     var mf = multiplyScalar2;
     var eq2 = equalScalar2;
     var zero = 0;
-    if (adt && bdt && adt === bdt && typeof adt === "string") {
+    if (adt && bdt && adt === bdt && typeof adt === "string" && adt !== "mixed") {
       dt = adt;
       af = typed3.find(addScalar2, [dt, dt]);
       mf = typed3.find(multiplyScalar2, [dt, dt]);
@@ -28249,7 +28254,7 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
       index: cindex,
       ptr: cptr,
       size: [arows, bcolumns],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
     var x = [];
     var w = [];
@@ -28283,18 +28288,18 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
     var avalues = a._values;
     var aindex = a._index;
     var aptr = a._ptr;
-    var adt = a._datatype;
+    var adt = a._datatype || a._data === void 0 ? a._datatype : a.getDataType();
     var bvalues = b._values;
     var bindex = b._index;
     var bptr = b._ptr;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b._data === void 0 ? b._datatype : b.getDataType();
     var arows = a._size[0];
     var bcolumns = b._size[1];
     var values2 = avalues && bvalues;
     var dt;
     var af = addScalar2;
     var mf = multiplyScalar2;
-    if (adt && bdt && adt === bdt && typeof adt === "string") {
+    if (adt && bdt && adt === bdt && typeof adt === "string" && adt !== "mixed") {
       dt = adt;
       af = typed3.find(addScalar2, [dt, dt]);
       mf = typed3.find(multiplyScalar2, [dt, dt]);
@@ -28307,7 +28312,7 @@ var createMultiply = /* @__PURE__ */ factory(name62, dependencies62, (_ref) => {
       index: cindex,
       ptr: cptr,
       size: [arows, bcolumns],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
     var x = values2 ? [] : void 0;
     var w = [];
@@ -28747,12 +28752,12 @@ var createMatAlgo09xS0Sf = /* @__PURE__ */ factory(name70, dependencies70, (_ref
     var aindex = a._index;
     var aptr = a._ptr;
     var asize = a._size;
-    var adt = a._datatype;
+    var adt = a._datatype || a._data === void 0 ? a._datatype : a.getDataType();
     var bvalues = b._values;
     var bindex = b._index;
     var bptr = b._ptr;
     var bsize = b._size;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b._data === void 0 ? b._datatype : b.getDataType();
     if (asize.length !== bsize.length) {
       throw new DimensionError(asize.length, bsize.length);
     }
@@ -28765,7 +28770,7 @@ var createMatAlgo09xS0Sf = /* @__PURE__ */ factory(name70, dependencies70, (_ref
     var eq2 = equalScalar2;
     var zero = 0;
     var cf = callback;
-    if (typeof adt === "string" && adt === bdt) {
+    if (typeof adt === "string" && adt === bdt && adt !== "mixed") {
       dt = adt;
       eq2 = typed3.find(equalScalar2, [dt, dt]);
       zero = typed3.convert(0, dt);
@@ -28807,7 +28812,7 @@ var createMatAlgo09xS0Sf = /* @__PURE__ */ factory(name70, dependencies70, (_ref
       index: cindex,
       ptr: cptr,
       size: [rows, columns],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
   };
 });
@@ -29221,9 +29226,9 @@ var createMatAlgo07xSSf = /* @__PURE__ */ factory(name75, dependencies75, (_ref)
   } = _ref;
   return function matAlgo07xSSf(a, b, callback) {
     var asize = a._size;
-    var adt = a._datatype;
+    var adt = a._datatype || a._data === void 0 ? a._datatype : a.getDataType();
     var bsize = b._size;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b._data === void 0 ? b._datatype : b.getDataType();
     if (asize.length !== bsize.length) {
       throw new DimensionError(asize.length, bsize.length);
     }
@@ -29235,7 +29240,7 @@ var createMatAlgo07xSSf = /* @__PURE__ */ factory(name75, dependencies75, (_ref)
     var dt;
     var zero = 0;
     var cf = callback;
-    if (typeof adt === "string" && adt === bdt) {
+    if (typeof adt === "string" && adt === bdt && adt !== "mixed") {
       dt = adt;
       zero = typed3.convert(0, dt);
       cf = typed3.find(callback, [dt, dt]);
@@ -29262,7 +29267,7 @@ var createMatAlgo07xSSf = /* @__PURE__ */ factory(name75, dependencies75, (_ref)
     return new DenseMatrix2({
       data: cdata,
       size: [rows, columns],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
   };
   function _scatter(m, j, w, x, mark) {
@@ -31961,14 +31966,15 @@ var createPow = /* @__PURE__ */ factory(name126, dependencies126, (_ref) => {
 // node_modules/mathjs/lib/esm/function/arithmetic/round.js
 var NO_INT = "Number of decimals in function round must be an integer";
 var name127 = "round";
-var dependencies127 = ["typed", "matrix", "equalScalar", "zeros", "BigNumber", "DenseMatrix"];
+var dependencies127 = ["typed", "config", "matrix", "equalScalar", "zeros", "BigNumber", "DenseMatrix"];
 var createRound = /* @__PURE__ */ factory(name127, dependencies127, (_ref) => {
   var {
     typed: typed3,
+    config: config4,
     matrix: matrix2,
     equalScalar: equalScalar2,
     zeros: zeros3,
-    BigNumber: BigNumber2,
+    BigNumber: _BigNumber,
     DenseMatrix: DenseMatrix2
   } = _ref;
   var matAlgo11xS0s = createMatAlgo11xS0s({
@@ -31982,14 +31988,29 @@ var createRound = /* @__PURE__ */ factory(name127, dependencies127, (_ref) => {
   var matAlgo14xDs = createMatAlgo14xDs({
     typed: typed3
   });
+  function toExponent(epsilon) {
+    return Math.abs(splitNumber(epsilon).exponent);
+  }
   return typed3(name127, {
-    number: roundNumber,
-    "number, number": roundNumber,
+    number: function number2(x) {
+      var xEpsilon = roundNumber(x, toExponent(config4.epsilon));
+      var xSelected = nearlyEqual(x, xEpsilon, config4.epsilon) ? xEpsilon : x;
+      return roundNumber(xSelected);
+    },
+    "number, number": function numberNumber(x, n) {
+      var epsilonExponent = toExponent(config4.epsilon);
+      if (n >= epsilonExponent) {
+        return roundNumber(x, n);
+      }
+      var xEpsilon = roundNumber(x, epsilonExponent);
+      var xSelected = nearlyEqual(x, xEpsilon, config4.epsilon) ? xEpsilon : x;
+      return roundNumber(xSelected, n);
+    },
     "number, BigNumber": function numberBigNumber(x, n) {
       if (!n.isInteger()) {
         throw new TypeError(NO_INT);
       }
-      return new BigNumber2(x).toDecimalPlaces(n.toNumber());
+      return new _BigNumber(x).toDecimalPlaces(n.toNumber());
     },
     Complex: function Complex3(x) {
       return x.round();
@@ -32007,14 +32028,22 @@ var createRound = /* @__PURE__ */ factory(name127, dependencies127, (_ref) => {
       var _n = n.toNumber();
       return x.round(_n);
     },
-    BigNumber: function BigNumber3(x) {
-      return x.toDecimalPlaces(0);
+    BigNumber: function BigNumber2(x) {
+      var xEpsilon = new _BigNumber(x).toDecimalPlaces(toExponent(config4.epsilon));
+      var xSelected = nearlyEqual2(x, xEpsilon, config4.epsilon) ? xEpsilon : x;
+      return xSelected.toDecimalPlaces(0);
     },
     "BigNumber, BigNumber": function BigNumberBigNumber(x, n) {
       if (!n.isInteger()) {
         throw new TypeError(NO_INT);
       }
-      return x.toDecimalPlaces(n.toNumber());
+      var epsilonExponent = toExponent(config4.epsilon);
+      if (n >= epsilonExponent) {
+        return x.toDecimalPlaces(n.toNumber());
+      }
+      var xEpsilon = x.toDecimalPlaces(epsilonExponent);
+      var xSelected = nearlyEqual2(x, xEpsilon, config4.epsilon) ? xEpsilon : x;
+      return xSelected.toDecimalPlaces(n.toNumber());
     },
     Fraction: function Fraction6(x) {
       return x.round();
@@ -32873,12 +32902,12 @@ var createMatAlgo08xS0Sid = /* @__PURE__ */ factory(name137, dependencies137, (_
     var aindex = a._index;
     var aptr = a._ptr;
     var asize = a._size;
-    var adt = a._datatype;
+    var adt = a._datatype || a._data === void 0 ? a._datatype : a.getDataType();
     var bvalues = b._values;
     var bindex = b._index;
     var bptr = b._ptr;
     var bsize = b._size;
-    var bdt = b._datatype;
+    var bdt = b._datatype || b._data === void 0 ? b._datatype : b.getDataType();
     if (asize.length !== bsize.length) {
       throw new DimensionError(asize.length, bsize.length);
     }
@@ -32894,7 +32923,7 @@ var createMatAlgo08xS0Sid = /* @__PURE__ */ factory(name137, dependencies137, (_
     var eq2 = equalScalar2;
     var zero = 0;
     var cf = callback;
-    if (typeof adt === "string" && adt === bdt) {
+    if (typeof adt === "string" && adt === bdt && adt !== "mixed") {
       dt = adt;
       eq2 = typed3.find(equalScalar2, [dt, dt]);
       zero = typed3.convert(0, dt);
@@ -32939,7 +32968,7 @@ var createMatAlgo08xS0Sid = /* @__PURE__ */ factory(name137, dependencies137, (_
       index: cindex,
       ptr: cptr,
       size: [rows, columns],
-      datatype: dt
+      datatype: adt === a._datatype && bdt === b._datatype ? dt : void 0
     });
   };
 });
@@ -38127,6 +38156,7 @@ var createUnitClass = /* @__PURE__ */ factory(name161, dependencies161, (_ref) =
   };
   Unit.deleteUnit = function(name314) {
     delete Unit.UNITS[name314];
+    delete _findUnit.cache;
   };
   Unit.PREFIXES = PREFIXES;
   Unit.BASE_DIMENSIONS = BASE_DIMENSIONS;
@@ -39409,14 +39439,14 @@ var createDot = /* @__PURE__ */ factory(name203, dependencies203, (_ref) => {
   function _denseDot(a, b) {
     var N = _validateDim(a, b);
     var adata = isMatrix(a) ? a._data : a;
-    var adt = isMatrix(a) ? a._datatype : void 0;
+    var adt = isMatrix(a) ? a._datatype || a.getDataType() : void 0;
     var bdata = isMatrix(b) ? b._data : b;
-    var bdt = isMatrix(b) ? b._datatype : void 0;
+    var bdt = isMatrix(b) ? b._datatype || b.getDataType() : void 0;
     var aIsColumn = _size(a).length === 2;
     var bIsColumn = _size(b).length === 2;
     var add5 = addScalar2;
     var mul2 = multiplyScalar2;
-    if (adt && bdt && adt === bdt && typeof adt === "string") {
+    if (adt && bdt && adt === bdt && typeof adt === "string" && adt !== "mixed") {
       var dt = adt;
       add5 = typed3.find(addScalar2, [dt, dt]);
       mul2 = typed3.find(multiplyScalar2, [dt, dt]);
@@ -41880,21 +41910,22 @@ var createConstantNode = /* @__PURE__ */ factory(name212, dependencies212, (_ref
      */
     _toTex(options) {
       var value = this._toString(options);
-      switch (typeOf(this.value)) {
+      var type = typeOf(this.value);
+      switch (type) {
         case "string":
           return "\\mathtt{" + escapeLatex(value) + "}";
         case "number":
-        case "BigNumber":
-          {
-            if (!isFinite(this.value)) {
-              return this.value.valueOf() < 0 ? "-\\infty" : "\\infty";
-            }
-            var index2 = value.toLowerCase().indexOf("e");
-            if (index2 !== -1) {
-              return value.substring(0, index2) + "\\cdot10^{" + value.substring(index2 + 1) + "}";
-            }
+        case "BigNumber": {
+          var finite = type === "BigNumber" ? this.value.isFinite() : isFinite(this.value);
+          if (!finite) {
+            return this.value.valueOf() < 0 ? "-\\infty" : "\\infty";
+          }
+          var index2 = value.toLowerCase().indexOf("e");
+          if (index2 !== -1) {
+            return value.substring(0, index2) + "\\cdot10^{" + value.substring(index2 + 1) + "}";
           }
           return value;
+        }
         case "Fraction":
           return this.value.toLatex();
         default:
@@ -45031,8 +45062,10 @@ var createParse = /* @__PURE__ */ factory(name222, dependencies222, (_ref) => {
           params = [row];
           while (state.token === ";") {
             getToken(state);
-            params[rows] = parseRow(state);
-            rows++;
+            if (state.token !== "]") {
+              params[rows] = parseRow(state);
+              rows++;
+            }
           }
           if (state.token !== "]") {
             throw createSyntaxError(state, "End of matrix ] expected");
@@ -45068,8 +45101,10 @@ var createParse = /* @__PURE__ */ factory(name222, dependencies222, (_ref) => {
     var len = 1;
     while (state.token === ",") {
       getToken(state);
-      params[len] = parseAssignment(state);
-      len++;
+      if (state.token !== "]" && state.token !== ";") {
+        params[len] = parseAssignment(state);
+        len++;
+      }
     }
     return new ArrayNode(params);
   }
@@ -53197,21 +53232,21 @@ var createStirlingS2 = /* @__PURE__ */ factory(name273, dependencies273, (_ref) 
         throw new TypeError("k must be less than or equal to n in function stirlingS2");
       }
       var big = !(isNumber(n) && isNumber(k));
-      var cache = big ? bigCache : smallCache;
+      var cache2 = big ? bigCache : smallCache;
       var make = big ? bignumber2 : number2;
       var nn = number2(n);
       var nk = number2(k);
-      if (cache[nn] && cache[nn].length > nk) {
-        return cache[nn][nk];
+      if (cache2[nn] && cache2[nn].length > nk) {
+        return cache2[nn][nk];
       }
       for (var m = 0; m <= nn; ++m) {
-        if (!cache[m]) {
-          cache[m] = [m === 0 ? make(1) : make(0)];
+        if (!cache2[m]) {
+          cache2[m] = [m === 0 ? make(1) : make(0)];
         }
         if (m === 0)
           continue;
-        var row = cache[m];
-        var prev2 = cache[m - 1];
+        var row = cache2[m];
+        var prev2 = cache2[m - 1];
         for (var i = row.length; i <= m && i <= nk; ++i) {
           if (i === m) {
             row[i] = 1;
@@ -53220,7 +53255,7 @@ var createStirlingS2 = /* @__PURE__ */ factory(name273, dependencies273, (_ref) 
           }
         }
       }
-      return cache[nn][nk];
+      return cache2[nn][nk];
     }
   });
 });
@@ -55118,6 +55153,9 @@ var createSimplifyCore = /* @__PURE__ */ factory(name281, dependencies281, (_ref
           if (_a2.value) {
             if (isAlwaysBoolean(a1))
               return a1;
+            if (isConstantNode(a1)) {
+              return a1.value ? nodeT : nodeF;
+            }
           } else {
             return nodeF;
           }
@@ -56439,7 +56477,7 @@ var createReplacer = /* @__PURE__ */ factory(name289, dependencies289, () => {
 });
 
 // node_modules/mathjs/lib/esm/version.js
-var version2 = "12.3.2";
+var version2 = "12.4.1";
 
 // node_modules/mathjs/lib/esm/constants.js
 var createTrue = /* @__PURE__ */ factory("true", [], () => true);
@@ -57632,6 +57670,7 @@ var identity = /* @__PURE__ */ createIdentity({
 var round2 = /* @__PURE__ */ createRound({
   BigNumber,
   DenseMatrix,
+  config,
   equalScalar,
   matrix,
   typed: typed2,
@@ -58495,9 +58534,9 @@ function bind(fn, thisArg) {
 // node_modules/axios/lib/utils.js
 var { toString } = Object.prototype;
 var { getPrototypeOf } = Object;
-var kindOf = /* @__PURE__ */ ((cache) => (thing) => {
+var kindOf = /* @__PURE__ */ ((cache2) => (thing) => {
   const str = toString.call(thing);
-  return cache[str] || (cache[str] = str.slice(8, -1).toLowerCase());
+  return cache2[str] || (cache2[str] = str.slice(8, -1).toLowerCase());
 })(/* @__PURE__ */ Object.create(null));
 var kindOfTest = (type) => {
   type = type.toLowerCase();
@@ -59716,7 +59755,7 @@ var import_follow_redirects = __toESM(require_follow_redirects(), 1);
 var import_zlib = __toESM(require("zlib"), 1);
 
 // node_modules/axios/lib/env/data.js
-var VERSION = "1.6.7";
+var VERSION = "1.6.8";
 
 // node_modules/axios/lib/helpers/parseProtocol.js
 function parseProtocol(url2) {
@@ -59972,7 +60011,7 @@ var AxiosTransformStream = class extends import_stream.default.Transform {
 var AxiosTransformStream_default = AxiosTransformStream;
 
 // node_modules/axios/lib/adapters/http.js
-var import_events = __toESM(require("events"), 1);
+var import_events = require("events");
 
 // node_modules/axios/lib/helpers/formDataToStream.js
 var import_util4 = require("util");
@@ -60217,7 +60256,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
         });
       };
     }
-    const emitter = new import_events.default();
+    const emitter = new import_events.EventEmitter();
     const onFinished = () => {
       if (config4.cancelToken) {
         config4.cancelToken.unsubscribe(abort);
@@ -60951,7 +60990,7 @@ function dispatchRequest(config4) {
 }
 
 // node_modules/axios/lib/core/mergeConfig.js
-var headersToObject = (thing) => thing instanceof AxiosHeaders_default ? thing.toJSON() : thing;
+var headersToObject = (thing) => thing instanceof AxiosHeaders_default ? { ...thing } : thing;
 function mergeConfig(config1, config22) {
   config22 = config22 || {};
   const config4 = {};
@@ -75714,6 +75753,1287 @@ var wise_default = getWiseFXRates;
 
 // src/FXGetter/mastercard.ts
 var import_sync_request = __toESM(require("sync-request"), 1);
+
+// node_modules/lru-cache/dist/esm/index.js
+var perf = typeof performance === "object" && performance && typeof performance.now === "function" ? performance : Date;
+var warned = /* @__PURE__ */ new Set();
+var PROCESS = typeof process === "object" && !!process ? process : {};
+var emitWarning = (msg, type, code, fn) => {
+  typeof PROCESS.emitWarning === "function" ? PROCESS.emitWarning(msg, type, code, fn) : console.error(`[${code}] ${type}: ${msg}`);
+};
+var AC = globalThis.AbortController;
+var AS = globalThis.AbortSignal;
+if (typeof AC === "undefined") {
+  AS = class AbortSignal {
+    onabort;
+    _onabort = [];
+    reason;
+    aborted = false;
+    addEventListener(_, fn) {
+      this._onabort.push(fn);
+    }
+  };
+  AC = class AbortController {
+    constructor() {
+      warnACPolyfill();
+    }
+    signal = new AS();
+    abort(reason) {
+      if (this.signal.aborted)
+        return;
+      this.signal.reason = reason;
+      this.signal.aborted = true;
+      for (const fn of this.signal._onabort) {
+        fn(reason);
+      }
+      this.signal.onabort?.(reason);
+    }
+  };
+  let printACPolyfillWarning = PROCESS.env?.LRU_CACHE_IGNORE_AC_WARNING !== "1";
+  const warnACPolyfill = () => {
+    if (!printACPolyfillWarning)
+      return;
+    printACPolyfillWarning = false;
+    emitWarning("AbortController is not defined. If using lru-cache in node 14, load an AbortController polyfill from the `node-abort-controller` package. A minimal polyfill is provided for use by LRUCache.fetch(), but it should not be relied upon in other contexts (eg, passing it to other APIs that use AbortController/AbortSignal might have undesirable effects). You may disable this with LRU_CACHE_IGNORE_AC_WARNING=1 in the env.", "NO_ABORT_CONTROLLER", "ENOTSUP", warnACPolyfill);
+  };
+}
+var shouldWarn = (code) => !warned.has(code);
+var TYPE = Symbol("type");
+var isPosInt = (n) => n && n === Math.floor(n) && n > 0 && isFinite(n);
+var getUintArray = (max2) => !isPosInt(max2) ? null : max2 <= Math.pow(2, 8) ? Uint8Array : max2 <= Math.pow(2, 16) ? Uint16Array : max2 <= Math.pow(2, 32) ? Uint32Array : max2 <= Number.MAX_SAFE_INTEGER ? ZeroArray : null;
+var ZeroArray = class extends Array {
+  constructor(size2) {
+    super(size2);
+    this.fill(0);
+  }
+};
+var Stack = class _Stack {
+  heap;
+  length;
+  // private constructor
+  static #constructing = false;
+  static create(max2) {
+    const HeapCls = getUintArray(max2);
+    if (!HeapCls)
+      return [];
+    _Stack.#constructing = true;
+    const s = new _Stack(max2, HeapCls);
+    _Stack.#constructing = false;
+    return s;
+  }
+  constructor(max2, HeapCls) {
+    if (!_Stack.#constructing) {
+      throw new TypeError("instantiate Stack using Stack.create(n)");
+    }
+    this.heap = new HeapCls(max2);
+    this.length = 0;
+  }
+  push(n) {
+    this.heap[this.length++] = n;
+  }
+  pop() {
+    return this.heap[--this.length];
+  }
+};
+var LRUCache = class _LRUCache {
+  // properties coming in from the options of these, only max and maxSize
+  // really *need* to be protected. The rest can be modified, as they just
+  // set defaults for various methods.
+  #max;
+  #maxSize;
+  #dispose;
+  #disposeAfter;
+  #fetchMethod;
+  /**
+   * {@link LRUCache.OptionsBase.ttl}
+   */
+  ttl;
+  /**
+   * {@link LRUCache.OptionsBase.ttlResolution}
+   */
+  ttlResolution;
+  /**
+   * {@link LRUCache.OptionsBase.ttlAutopurge}
+   */
+  ttlAutopurge;
+  /**
+   * {@link LRUCache.OptionsBase.updateAgeOnGet}
+   */
+  updateAgeOnGet;
+  /**
+   * {@link LRUCache.OptionsBase.updateAgeOnHas}
+   */
+  updateAgeOnHas;
+  /**
+   * {@link LRUCache.OptionsBase.allowStale}
+   */
+  allowStale;
+  /**
+   * {@link LRUCache.OptionsBase.noDisposeOnSet}
+   */
+  noDisposeOnSet;
+  /**
+   * {@link LRUCache.OptionsBase.noUpdateTTL}
+   */
+  noUpdateTTL;
+  /**
+   * {@link LRUCache.OptionsBase.maxEntrySize}
+   */
+  maxEntrySize;
+  /**
+   * {@link LRUCache.OptionsBase.sizeCalculation}
+   */
+  sizeCalculation;
+  /**
+   * {@link LRUCache.OptionsBase.noDeleteOnFetchRejection}
+   */
+  noDeleteOnFetchRejection;
+  /**
+   * {@link LRUCache.OptionsBase.noDeleteOnStaleGet}
+   */
+  noDeleteOnStaleGet;
+  /**
+   * {@link LRUCache.OptionsBase.allowStaleOnFetchAbort}
+   */
+  allowStaleOnFetchAbort;
+  /**
+   * {@link LRUCache.OptionsBase.allowStaleOnFetchRejection}
+   */
+  allowStaleOnFetchRejection;
+  /**
+   * {@link LRUCache.OptionsBase.ignoreFetchAbort}
+   */
+  ignoreFetchAbort;
+  // computed properties
+  #size;
+  #calculatedSize;
+  #keyMap;
+  #keyList;
+  #valList;
+  #next;
+  #prev;
+  #head;
+  #tail;
+  #free;
+  #disposed;
+  #sizes;
+  #starts;
+  #ttls;
+  #hasDispose;
+  #hasFetchMethod;
+  #hasDisposeAfter;
+  /**
+   * Do not call this method unless you need to inspect the
+   * inner workings of the cache.  If anything returned by this
+   * object is modified in any way, strange breakage may occur.
+   *
+   * These fields are private for a reason!
+   *
+   * @internal
+   */
+  static unsafeExposeInternals(c) {
+    return {
+      // properties
+      starts: c.#starts,
+      ttls: c.#ttls,
+      sizes: c.#sizes,
+      keyMap: c.#keyMap,
+      keyList: c.#keyList,
+      valList: c.#valList,
+      next: c.#next,
+      prev: c.#prev,
+      get head() {
+        return c.#head;
+      },
+      get tail() {
+        return c.#tail;
+      },
+      free: c.#free,
+      // methods
+      isBackgroundFetch: (p) => c.#isBackgroundFetch(p),
+      backgroundFetch: (k, index2, options, context) => c.#backgroundFetch(k, index2, options, context),
+      moveToTail: (index2) => c.#moveToTail(index2),
+      indexes: (options) => c.#indexes(options),
+      rindexes: (options) => c.#rindexes(options),
+      isStale: (index2) => c.#isStale(index2)
+    };
+  }
+  // Protected read-only members
+  /**
+   * {@link LRUCache.OptionsBase.max} (read-only)
+   */
+  get max() {
+    return this.#max;
+  }
+  /**
+   * {@link LRUCache.OptionsBase.maxSize} (read-only)
+   */
+  get maxSize() {
+    return this.#maxSize;
+  }
+  /**
+   * The total computed size of items in the cache (read-only)
+   */
+  get calculatedSize() {
+    return this.#calculatedSize;
+  }
+  /**
+   * The number of items stored in the cache (read-only)
+   */
+  get size() {
+    return this.#size;
+  }
+  /**
+   * {@link LRUCache.OptionsBase.fetchMethod} (read-only)
+   */
+  get fetchMethod() {
+    return this.#fetchMethod;
+  }
+  /**
+   * {@link LRUCache.OptionsBase.dispose} (read-only)
+   */
+  get dispose() {
+    return this.#dispose;
+  }
+  /**
+   * {@link LRUCache.OptionsBase.disposeAfter} (read-only)
+   */
+  get disposeAfter() {
+    return this.#disposeAfter;
+  }
+  constructor(options) {
+    const { max: max2 = 0, ttl, ttlResolution = 1, ttlAutopurge, updateAgeOnGet, updateAgeOnHas, allowStale, dispose, disposeAfter, noDisposeOnSet, noUpdateTTL, maxSize = 0, maxEntrySize = 0, sizeCalculation, fetchMethod, noDeleteOnFetchRejection, noDeleteOnStaleGet, allowStaleOnFetchRejection, allowStaleOnFetchAbort, ignoreFetchAbort } = options;
+    if (max2 !== 0 && !isPosInt(max2)) {
+      throw new TypeError("max option must be a nonnegative integer");
+    }
+    const UintArray = max2 ? getUintArray(max2) : Array;
+    if (!UintArray) {
+      throw new Error("invalid max value: " + max2);
+    }
+    this.#max = max2;
+    this.#maxSize = maxSize;
+    this.maxEntrySize = maxEntrySize || this.#maxSize;
+    this.sizeCalculation = sizeCalculation;
+    if (this.sizeCalculation) {
+      if (!this.#maxSize && !this.maxEntrySize) {
+        throw new TypeError("cannot set sizeCalculation without setting maxSize or maxEntrySize");
+      }
+      if (typeof this.sizeCalculation !== "function") {
+        throw new TypeError("sizeCalculation set to non-function");
+      }
+    }
+    if (fetchMethod !== void 0 && typeof fetchMethod !== "function") {
+      throw new TypeError("fetchMethod must be a function if specified");
+    }
+    this.#fetchMethod = fetchMethod;
+    this.#hasFetchMethod = !!fetchMethod;
+    this.#keyMap = /* @__PURE__ */ new Map();
+    this.#keyList = new Array(max2).fill(void 0);
+    this.#valList = new Array(max2).fill(void 0);
+    this.#next = new UintArray(max2);
+    this.#prev = new UintArray(max2);
+    this.#head = 0;
+    this.#tail = 0;
+    this.#free = Stack.create(max2);
+    this.#size = 0;
+    this.#calculatedSize = 0;
+    if (typeof dispose === "function") {
+      this.#dispose = dispose;
+    }
+    if (typeof disposeAfter === "function") {
+      this.#disposeAfter = disposeAfter;
+      this.#disposed = [];
+    } else {
+      this.#disposeAfter = void 0;
+      this.#disposed = void 0;
+    }
+    this.#hasDispose = !!this.#dispose;
+    this.#hasDisposeAfter = !!this.#disposeAfter;
+    this.noDisposeOnSet = !!noDisposeOnSet;
+    this.noUpdateTTL = !!noUpdateTTL;
+    this.noDeleteOnFetchRejection = !!noDeleteOnFetchRejection;
+    this.allowStaleOnFetchRejection = !!allowStaleOnFetchRejection;
+    this.allowStaleOnFetchAbort = !!allowStaleOnFetchAbort;
+    this.ignoreFetchAbort = !!ignoreFetchAbort;
+    if (this.maxEntrySize !== 0) {
+      if (this.#maxSize !== 0) {
+        if (!isPosInt(this.#maxSize)) {
+          throw new TypeError("maxSize must be a positive integer if specified");
+        }
+      }
+      if (!isPosInt(this.maxEntrySize)) {
+        throw new TypeError("maxEntrySize must be a positive integer if specified");
+      }
+      this.#initializeSizeTracking();
+    }
+    this.allowStale = !!allowStale;
+    this.noDeleteOnStaleGet = !!noDeleteOnStaleGet;
+    this.updateAgeOnGet = !!updateAgeOnGet;
+    this.updateAgeOnHas = !!updateAgeOnHas;
+    this.ttlResolution = isPosInt(ttlResolution) || ttlResolution === 0 ? ttlResolution : 1;
+    this.ttlAutopurge = !!ttlAutopurge;
+    this.ttl = ttl || 0;
+    if (this.ttl) {
+      if (!isPosInt(this.ttl)) {
+        throw new TypeError("ttl must be a positive integer if specified");
+      }
+      this.#initializeTTLTracking();
+    }
+    if (this.#max === 0 && this.ttl === 0 && this.#maxSize === 0) {
+      throw new TypeError("At least one of max, maxSize, or ttl is required");
+    }
+    if (!this.ttlAutopurge && !this.#max && !this.#maxSize) {
+      const code = "LRU_CACHE_UNBOUNDED";
+      if (shouldWarn(code)) {
+        warned.add(code);
+        const msg = "TTL caching without ttlAutopurge, max, or maxSize can result in unbounded memory consumption.";
+        emitWarning(msg, "UnboundedCacheWarning", code, _LRUCache);
+      }
+    }
+  }
+  /**
+   * Return the remaining TTL time for a given entry key
+   */
+  getRemainingTTL(key) {
+    return this.#keyMap.has(key) ? Infinity : 0;
+  }
+  #initializeTTLTracking() {
+    const ttls = new ZeroArray(this.#max);
+    const starts = new ZeroArray(this.#max);
+    this.#ttls = ttls;
+    this.#starts = starts;
+    this.#setItemTTL = (index2, ttl, start = perf.now()) => {
+      starts[index2] = ttl !== 0 ? start : 0;
+      ttls[index2] = ttl;
+      if (ttl !== 0 && this.ttlAutopurge) {
+        const t = setTimeout(() => {
+          if (this.#isStale(index2)) {
+            this.delete(this.#keyList[index2]);
+          }
+        }, ttl + 1);
+        if (t.unref) {
+          t.unref();
+        }
+      }
+    };
+    this.#updateItemAge = (index2) => {
+      starts[index2] = ttls[index2] !== 0 ? perf.now() : 0;
+    };
+    this.#statusTTL = (status, index2) => {
+      if (ttls[index2]) {
+        const ttl = ttls[index2];
+        const start = starts[index2];
+        if (!ttl || !start)
+          return;
+        status.ttl = ttl;
+        status.start = start;
+        status.now = cachedNow || getNow();
+        const age = status.now - start;
+        status.remainingTTL = ttl - age;
+      }
+    };
+    let cachedNow = 0;
+    const getNow = () => {
+      const n = perf.now();
+      if (this.ttlResolution > 0) {
+        cachedNow = n;
+        const t = setTimeout(() => cachedNow = 0, this.ttlResolution);
+        if (t.unref) {
+          t.unref();
+        }
+      }
+      return n;
+    };
+    this.getRemainingTTL = (key) => {
+      const index2 = this.#keyMap.get(key);
+      if (index2 === void 0) {
+        return 0;
+      }
+      const ttl = ttls[index2];
+      const start = starts[index2];
+      if (!ttl || !start) {
+        return Infinity;
+      }
+      const age = (cachedNow || getNow()) - start;
+      return ttl - age;
+    };
+    this.#isStale = (index2) => {
+      const s = starts[index2];
+      const t = ttls[index2];
+      return !!t && !!s && (cachedNow || getNow()) - s > t;
+    };
+  }
+  // conditionally set private methods related to TTL
+  #updateItemAge = () => {
+  };
+  #statusTTL = () => {
+  };
+  #setItemTTL = () => {
+  };
+  /* c8 ignore stop */
+  #isStale = () => false;
+  #initializeSizeTracking() {
+    const sizes = new ZeroArray(this.#max);
+    this.#calculatedSize = 0;
+    this.#sizes = sizes;
+    this.#removeItemSize = (index2) => {
+      this.#calculatedSize -= sizes[index2];
+      sizes[index2] = 0;
+    };
+    this.#requireSize = (k, v, size2, sizeCalculation) => {
+      if (this.#isBackgroundFetch(v)) {
+        return 0;
+      }
+      if (!isPosInt(size2)) {
+        if (sizeCalculation) {
+          if (typeof sizeCalculation !== "function") {
+            throw new TypeError("sizeCalculation must be a function");
+          }
+          size2 = sizeCalculation(v, k);
+          if (!isPosInt(size2)) {
+            throw new TypeError("sizeCalculation return invalid (expect positive integer)");
+          }
+        } else {
+          throw new TypeError("invalid size value (must be positive integer). When maxSize or maxEntrySize is used, sizeCalculation or size must be set.");
+        }
+      }
+      return size2;
+    };
+    this.#addItemSize = (index2, size2, status) => {
+      sizes[index2] = size2;
+      if (this.#maxSize) {
+        const maxSize = this.#maxSize - sizes[index2];
+        while (this.#calculatedSize > maxSize) {
+          this.#evict(true);
+        }
+      }
+      this.#calculatedSize += sizes[index2];
+      if (status) {
+        status.entrySize = size2;
+        status.totalCalculatedSize = this.#calculatedSize;
+      }
+    };
+  }
+  #removeItemSize = (_i) => {
+  };
+  #addItemSize = (_i, _s, _st) => {
+  };
+  #requireSize = (_k, _v, size2, sizeCalculation) => {
+    if (size2 || sizeCalculation) {
+      throw new TypeError("cannot set size without setting maxSize or maxEntrySize on cache");
+    }
+    return 0;
+  };
+  *#indexes({ allowStale = this.allowStale } = {}) {
+    if (this.#size) {
+      for (let i = this.#tail; true; ) {
+        if (!this.#isValidIndex(i)) {
+          break;
+        }
+        if (allowStale || !this.#isStale(i)) {
+          yield i;
+        }
+        if (i === this.#head) {
+          break;
+        } else {
+          i = this.#prev[i];
+        }
+      }
+    }
+  }
+  *#rindexes({ allowStale = this.allowStale } = {}) {
+    if (this.#size) {
+      for (let i = this.#head; true; ) {
+        if (!this.#isValidIndex(i)) {
+          break;
+        }
+        if (allowStale || !this.#isStale(i)) {
+          yield i;
+        }
+        if (i === this.#tail) {
+          break;
+        } else {
+          i = this.#next[i];
+        }
+      }
+    }
+  }
+  #isValidIndex(index2) {
+    return index2 !== void 0 && this.#keyMap.get(this.#keyList[index2]) === index2;
+  }
+  /**
+   * Return a generator yielding `[key, value]` pairs,
+   * in order from most recently used to least recently used.
+   */
+  *entries() {
+    for (const i of this.#indexes()) {
+      if (this.#valList[i] !== void 0 && this.#keyList[i] !== void 0 && !this.#isBackgroundFetch(this.#valList[i])) {
+        yield [this.#keyList[i], this.#valList[i]];
+      }
+    }
+  }
+  /**
+   * Inverse order version of {@link LRUCache.entries}
+   *
+   * Return a generator yielding `[key, value]` pairs,
+   * in order from least recently used to most recently used.
+   */
+  *rentries() {
+    for (const i of this.#rindexes()) {
+      if (this.#valList[i] !== void 0 && this.#keyList[i] !== void 0 && !this.#isBackgroundFetch(this.#valList[i])) {
+        yield [this.#keyList[i], this.#valList[i]];
+      }
+    }
+  }
+  /**
+   * Return a generator yielding the keys in the cache,
+   * in order from most recently used to least recently used.
+   */
+  *keys() {
+    for (const i of this.#indexes()) {
+      const k = this.#keyList[i];
+      if (k !== void 0 && !this.#isBackgroundFetch(this.#valList[i])) {
+        yield k;
+      }
+    }
+  }
+  /**
+   * Inverse order version of {@link LRUCache.keys}
+   *
+   * Return a generator yielding the keys in the cache,
+   * in order from least recently used to most recently used.
+   */
+  *rkeys() {
+    for (const i of this.#rindexes()) {
+      const k = this.#keyList[i];
+      if (k !== void 0 && !this.#isBackgroundFetch(this.#valList[i])) {
+        yield k;
+      }
+    }
+  }
+  /**
+   * Return a generator yielding the values in the cache,
+   * in order from most recently used to least recently used.
+   */
+  *values() {
+    for (const i of this.#indexes()) {
+      const v = this.#valList[i];
+      if (v !== void 0 && !this.#isBackgroundFetch(this.#valList[i])) {
+        yield this.#valList[i];
+      }
+    }
+  }
+  /**
+   * Inverse order version of {@link LRUCache.values}
+   *
+   * Return a generator yielding the values in the cache,
+   * in order from least recently used to most recently used.
+   */
+  *rvalues() {
+    for (const i of this.#rindexes()) {
+      const v = this.#valList[i];
+      if (v !== void 0 && !this.#isBackgroundFetch(this.#valList[i])) {
+        yield this.#valList[i];
+      }
+    }
+  }
+  /**
+   * Iterating over the cache itself yields the same results as
+   * {@link LRUCache.entries}
+   */
+  [Symbol.iterator]() {
+    return this.entries();
+  }
+  /**
+   * A String value that is used in the creation of the default string description of an object.
+   * Called by the built-in method Object.prototype.toString.
+   */
+  [Symbol.toStringTag] = "LRUCache";
+  /**
+   * Find a value for which the supplied fn method returns a truthy value,
+   * similar to Array.find().  fn is called as fn(value, key, cache).
+   */
+  find(fn, getOptions = {}) {
+    for (const i of this.#indexes()) {
+      const v = this.#valList[i];
+      const value = this.#isBackgroundFetch(v) ? v.__staleWhileFetching : v;
+      if (value === void 0)
+        continue;
+      if (fn(value, this.#keyList[i], this)) {
+        return this.get(this.#keyList[i], getOptions);
+      }
+    }
+  }
+  /**
+   * Call the supplied function on each item in the cache, in order from
+   * most recently used to least recently used.  fn is called as
+   * fn(value, key, cache).  Does not update age or recenty of use.
+   * Does not iterate over stale values.
+   */
+  forEach(fn, thisp = this) {
+    for (const i of this.#indexes()) {
+      const v = this.#valList[i];
+      const value = this.#isBackgroundFetch(v) ? v.__staleWhileFetching : v;
+      if (value === void 0)
+        continue;
+      fn.call(thisp, value, this.#keyList[i], this);
+    }
+  }
+  /**
+   * The same as {@link LRUCache.forEach} but items are iterated over in
+   * reverse order.  (ie, less recently used items are iterated over first.)
+   */
+  rforEach(fn, thisp = this) {
+    for (const i of this.#rindexes()) {
+      const v = this.#valList[i];
+      const value = this.#isBackgroundFetch(v) ? v.__staleWhileFetching : v;
+      if (value === void 0)
+        continue;
+      fn.call(thisp, value, this.#keyList[i], this);
+    }
+  }
+  /**
+   * Delete any stale entries. Returns true if anything was removed,
+   * false otherwise.
+   */
+  purgeStale() {
+    let deleted = false;
+    for (const i of this.#rindexes({ allowStale: true })) {
+      if (this.#isStale(i)) {
+        this.delete(this.#keyList[i]);
+        deleted = true;
+      }
+    }
+    return deleted;
+  }
+  /**
+   * Get the extended info about a given entry, to get its value, size, and
+   * TTL info simultaneously. Like {@link LRUCache#dump}, but just for a
+   * single key. Always returns stale values, if their info is found in the
+   * cache, so be sure to check for expired TTLs if relevant.
+   */
+  info(key) {
+    const i = this.#keyMap.get(key);
+    if (i === void 0)
+      return void 0;
+    const v = this.#valList[i];
+    const value = this.#isBackgroundFetch(v) ? v.__staleWhileFetching : v;
+    if (value === void 0)
+      return void 0;
+    const entry = { value };
+    if (this.#ttls && this.#starts) {
+      const ttl = this.#ttls[i];
+      const start = this.#starts[i];
+      if (ttl && start) {
+        const remain = ttl - (perf.now() - start);
+        entry.ttl = remain;
+        entry.start = Date.now();
+      }
+    }
+    if (this.#sizes) {
+      entry.size = this.#sizes[i];
+    }
+    return entry;
+  }
+  /**
+   * Return an array of [key, {@link LRUCache.Entry}] tuples which can be
+   * passed to cache.load()
+   */
+  dump() {
+    const arr = [];
+    for (const i of this.#indexes({ allowStale: true })) {
+      const key = this.#keyList[i];
+      const v = this.#valList[i];
+      const value = this.#isBackgroundFetch(v) ? v.__staleWhileFetching : v;
+      if (value === void 0 || key === void 0)
+        continue;
+      const entry = { value };
+      if (this.#ttls && this.#starts) {
+        entry.ttl = this.#ttls[i];
+        const age = perf.now() - this.#starts[i];
+        entry.start = Math.floor(Date.now() - age);
+      }
+      if (this.#sizes) {
+        entry.size = this.#sizes[i];
+      }
+      arr.unshift([key, entry]);
+    }
+    return arr;
+  }
+  /**
+   * Reset the cache and load in the items in entries in the order listed.
+   * Note that the shape of the resulting cache may be different if the
+   * same options are not used in both caches.
+   */
+  load(arr) {
+    this.clear();
+    for (const [key, entry] of arr) {
+      if (entry.start) {
+        const age = Date.now() - entry.start;
+        entry.start = perf.now() - age;
+      }
+      this.set(key, entry.value, entry);
+    }
+  }
+  /**
+   * Add a value to the cache.
+   *
+   * Note: if `undefined` is specified as a value, this is an alias for
+   * {@link LRUCache#delete}
+   */
+  set(k, v, setOptions = {}) {
+    if (v === void 0) {
+      this.delete(k);
+      return this;
+    }
+    const { ttl = this.ttl, start, noDisposeOnSet = this.noDisposeOnSet, sizeCalculation = this.sizeCalculation, status } = setOptions;
+    let { noUpdateTTL = this.noUpdateTTL } = setOptions;
+    const size2 = this.#requireSize(k, v, setOptions.size || 0, sizeCalculation);
+    if (this.maxEntrySize && size2 > this.maxEntrySize) {
+      if (status) {
+        status.set = "miss";
+        status.maxEntrySizeExceeded = true;
+      }
+      this.delete(k);
+      return this;
+    }
+    let index2 = this.#size === 0 ? void 0 : this.#keyMap.get(k);
+    if (index2 === void 0) {
+      index2 = this.#size === 0 ? this.#tail : this.#free.length !== 0 ? this.#free.pop() : this.#size === this.#max ? this.#evict(false) : this.#size;
+      this.#keyList[index2] = k;
+      this.#valList[index2] = v;
+      this.#keyMap.set(k, index2);
+      this.#next[this.#tail] = index2;
+      this.#prev[index2] = this.#tail;
+      this.#tail = index2;
+      this.#size++;
+      this.#addItemSize(index2, size2, status);
+      if (status)
+        status.set = "add";
+      noUpdateTTL = false;
+    } else {
+      this.#moveToTail(index2);
+      const oldVal = this.#valList[index2];
+      if (v !== oldVal) {
+        if (this.#hasFetchMethod && this.#isBackgroundFetch(oldVal)) {
+          oldVal.__abortController.abort(new Error("replaced"));
+          const { __staleWhileFetching: s } = oldVal;
+          if (s !== void 0 && !noDisposeOnSet) {
+            if (this.#hasDispose) {
+              this.#dispose?.(s, k, "set");
+            }
+            if (this.#hasDisposeAfter) {
+              this.#disposed?.push([s, k, "set"]);
+            }
+          }
+        } else if (!noDisposeOnSet) {
+          if (this.#hasDispose) {
+            this.#dispose?.(oldVal, k, "set");
+          }
+          if (this.#hasDisposeAfter) {
+            this.#disposed?.push([oldVal, k, "set"]);
+          }
+        }
+        this.#removeItemSize(index2);
+        this.#addItemSize(index2, size2, status);
+        this.#valList[index2] = v;
+        if (status) {
+          status.set = "replace";
+          const oldValue = oldVal && this.#isBackgroundFetch(oldVal) ? oldVal.__staleWhileFetching : oldVal;
+          if (oldValue !== void 0)
+            status.oldValue = oldValue;
+        }
+      } else if (status) {
+        status.set = "update";
+      }
+    }
+    if (ttl !== 0 && !this.#ttls) {
+      this.#initializeTTLTracking();
+    }
+    if (this.#ttls) {
+      if (!noUpdateTTL) {
+        this.#setItemTTL(index2, ttl, start);
+      }
+      if (status)
+        this.#statusTTL(status, index2);
+    }
+    if (!noDisposeOnSet && this.#hasDisposeAfter && this.#disposed) {
+      const dt = this.#disposed;
+      let task;
+      while (task = dt?.shift()) {
+        this.#disposeAfter?.(...task);
+      }
+    }
+    return this;
+  }
+  /**
+   * Evict the least recently used item, returning its value or
+   * `undefined` if cache is empty.
+   */
+  pop() {
+    try {
+      while (this.#size) {
+        const val3 = this.#valList[this.#head];
+        this.#evict(true);
+        if (this.#isBackgroundFetch(val3)) {
+          if (val3.__staleWhileFetching) {
+            return val3.__staleWhileFetching;
+          }
+        } else if (val3 !== void 0) {
+          return val3;
+        }
+      }
+    } finally {
+      if (this.#hasDisposeAfter && this.#disposed) {
+        const dt = this.#disposed;
+        let task;
+        while (task = dt?.shift()) {
+          this.#disposeAfter?.(...task);
+        }
+      }
+    }
+  }
+  #evict(free) {
+    const head = this.#head;
+    const k = this.#keyList[head];
+    const v = this.#valList[head];
+    if (this.#hasFetchMethod && this.#isBackgroundFetch(v)) {
+      v.__abortController.abort(new Error("evicted"));
+    } else if (this.#hasDispose || this.#hasDisposeAfter) {
+      if (this.#hasDispose) {
+        this.#dispose?.(v, k, "evict");
+      }
+      if (this.#hasDisposeAfter) {
+        this.#disposed?.push([v, k, "evict"]);
+      }
+    }
+    this.#removeItemSize(head);
+    if (free) {
+      this.#keyList[head] = void 0;
+      this.#valList[head] = void 0;
+      this.#free.push(head);
+    }
+    if (this.#size === 1) {
+      this.#head = this.#tail = 0;
+      this.#free.length = 0;
+    } else {
+      this.#head = this.#next[head];
+    }
+    this.#keyMap.delete(k);
+    this.#size--;
+    return head;
+  }
+  /**
+   * Check if a key is in the cache, without updating the recency of use.
+   * Will return false if the item is stale, even though it is technically
+   * in the cache.
+   *
+   * Will not update item age unless
+   * {@link LRUCache.OptionsBase.updateAgeOnHas} is set.
+   */
+  has(k, hasOptions = {}) {
+    const { updateAgeOnHas = this.updateAgeOnHas, status } = hasOptions;
+    const index2 = this.#keyMap.get(k);
+    if (index2 !== void 0) {
+      const v = this.#valList[index2];
+      if (this.#isBackgroundFetch(v) && v.__staleWhileFetching === void 0) {
+        return false;
+      }
+      if (!this.#isStale(index2)) {
+        if (updateAgeOnHas) {
+          this.#updateItemAge(index2);
+        }
+        if (status) {
+          status.has = "hit";
+          this.#statusTTL(status, index2);
+        }
+        return true;
+      } else if (status) {
+        status.has = "stale";
+        this.#statusTTL(status, index2);
+      }
+    } else if (status) {
+      status.has = "miss";
+    }
+    return false;
+  }
+  /**
+   * Like {@link LRUCache#get} but doesn't update recency or delete stale
+   * items.
+   *
+   * Returns `undefined` if the item is stale, unless
+   * {@link LRUCache.OptionsBase.allowStale} is set.
+   */
+  peek(k, peekOptions = {}) {
+    const { allowStale = this.allowStale } = peekOptions;
+    const index2 = this.#keyMap.get(k);
+    if (index2 === void 0 || !allowStale && this.#isStale(index2)) {
+      return;
+    }
+    const v = this.#valList[index2];
+    return this.#isBackgroundFetch(v) ? v.__staleWhileFetching : v;
+  }
+  #backgroundFetch(k, index2, options, context) {
+    const v = index2 === void 0 ? void 0 : this.#valList[index2];
+    if (this.#isBackgroundFetch(v)) {
+      return v;
+    }
+    const ac = new AC();
+    const { signal } = options;
+    signal?.addEventListener("abort", () => ac.abort(signal.reason), {
+      signal: ac.signal
+    });
+    const fetchOpts = {
+      signal: ac.signal,
+      options,
+      context
+    };
+    const cb = (v2, updateCache = false) => {
+      const { aborted } = ac.signal;
+      const ignoreAbort = options.ignoreFetchAbort && v2 !== void 0;
+      if (options.status) {
+        if (aborted && !updateCache) {
+          options.status.fetchAborted = true;
+          options.status.fetchError = ac.signal.reason;
+          if (ignoreAbort)
+            options.status.fetchAbortIgnored = true;
+        } else {
+          options.status.fetchResolved = true;
+        }
+      }
+      if (aborted && !ignoreAbort && !updateCache) {
+        return fetchFail(ac.signal.reason);
+      }
+      const bf2 = p;
+      if (this.#valList[index2] === p) {
+        if (v2 === void 0) {
+          if (bf2.__staleWhileFetching) {
+            this.#valList[index2] = bf2.__staleWhileFetching;
+          } else {
+            this.delete(k);
+          }
+        } else {
+          if (options.status)
+            options.status.fetchUpdated = true;
+          this.set(k, v2, fetchOpts.options);
+        }
+      }
+      return v2;
+    };
+    const eb = (er) => {
+      if (options.status) {
+        options.status.fetchRejected = true;
+        options.status.fetchError = er;
+      }
+      return fetchFail(er);
+    };
+    const fetchFail = (er) => {
+      const { aborted } = ac.signal;
+      const allowStaleAborted = aborted && options.allowStaleOnFetchAbort;
+      const allowStale = allowStaleAborted || options.allowStaleOnFetchRejection;
+      const noDelete = allowStale || options.noDeleteOnFetchRejection;
+      const bf2 = p;
+      if (this.#valList[index2] === p) {
+        const del = !noDelete || bf2.__staleWhileFetching === void 0;
+        if (del) {
+          this.delete(k);
+        } else if (!allowStaleAborted) {
+          this.#valList[index2] = bf2.__staleWhileFetching;
+        }
+      }
+      if (allowStale) {
+        if (options.status && bf2.__staleWhileFetching !== void 0) {
+          options.status.returnedStale = true;
+        }
+        return bf2.__staleWhileFetching;
+      } else if (bf2.__returned === bf2) {
+        throw er;
+      }
+    };
+    const pcall = (res, rej) => {
+      const fmp = this.#fetchMethod?.(k, v, fetchOpts);
+      if (fmp && fmp instanceof Promise) {
+        fmp.then((v2) => res(v2 === void 0 ? void 0 : v2), rej);
+      }
+      ac.signal.addEventListener("abort", () => {
+        if (!options.ignoreFetchAbort || options.allowStaleOnFetchAbort) {
+          res(void 0);
+          if (options.allowStaleOnFetchAbort) {
+            res = (v2) => cb(v2, true);
+          }
+        }
+      });
+    };
+    if (options.status)
+      options.status.fetchDispatched = true;
+    const p = new Promise(pcall).then(cb, eb);
+    const bf = Object.assign(p, {
+      __abortController: ac,
+      __staleWhileFetching: v,
+      __returned: void 0
+    });
+    if (index2 === void 0) {
+      this.set(k, bf, { ...fetchOpts.options, status: void 0 });
+      index2 = this.#keyMap.get(k);
+    } else {
+      this.#valList[index2] = bf;
+    }
+    return bf;
+  }
+  #isBackgroundFetch(p) {
+    if (!this.#hasFetchMethod)
+      return false;
+    const b = p;
+    return !!b && b instanceof Promise && b.hasOwnProperty("__staleWhileFetching") && b.__abortController instanceof AC;
+  }
+  async fetch(k, fetchOptions = {}) {
+    const {
+      // get options
+      allowStale = this.allowStale,
+      updateAgeOnGet = this.updateAgeOnGet,
+      noDeleteOnStaleGet = this.noDeleteOnStaleGet,
+      // set options
+      ttl = this.ttl,
+      noDisposeOnSet = this.noDisposeOnSet,
+      size: size2 = 0,
+      sizeCalculation = this.sizeCalculation,
+      noUpdateTTL = this.noUpdateTTL,
+      // fetch exclusive options
+      noDeleteOnFetchRejection = this.noDeleteOnFetchRejection,
+      allowStaleOnFetchRejection = this.allowStaleOnFetchRejection,
+      ignoreFetchAbort = this.ignoreFetchAbort,
+      allowStaleOnFetchAbort = this.allowStaleOnFetchAbort,
+      context,
+      forceRefresh = false,
+      status,
+      signal
+    } = fetchOptions;
+    if (!this.#hasFetchMethod) {
+      if (status)
+        status.fetch = "get";
+      return this.get(k, {
+        allowStale,
+        updateAgeOnGet,
+        noDeleteOnStaleGet,
+        status
+      });
+    }
+    const options = {
+      allowStale,
+      updateAgeOnGet,
+      noDeleteOnStaleGet,
+      ttl,
+      noDisposeOnSet,
+      size: size2,
+      sizeCalculation,
+      noUpdateTTL,
+      noDeleteOnFetchRejection,
+      allowStaleOnFetchRejection,
+      allowStaleOnFetchAbort,
+      ignoreFetchAbort,
+      status,
+      signal
+    };
+    let index2 = this.#keyMap.get(k);
+    if (index2 === void 0) {
+      if (status)
+        status.fetch = "miss";
+      const p = this.#backgroundFetch(k, index2, options, context);
+      return p.__returned = p;
+    } else {
+      const v = this.#valList[index2];
+      if (this.#isBackgroundFetch(v)) {
+        const stale = allowStale && v.__staleWhileFetching !== void 0;
+        if (status) {
+          status.fetch = "inflight";
+          if (stale)
+            status.returnedStale = true;
+        }
+        return stale ? v.__staleWhileFetching : v.__returned = v;
+      }
+      const isStale = this.#isStale(index2);
+      if (!forceRefresh && !isStale) {
+        if (status)
+          status.fetch = "hit";
+        this.#moveToTail(index2);
+        if (updateAgeOnGet) {
+          this.#updateItemAge(index2);
+        }
+        if (status)
+          this.#statusTTL(status, index2);
+        return v;
+      }
+      const p = this.#backgroundFetch(k, index2, options, context);
+      const hasStale = p.__staleWhileFetching !== void 0;
+      const staleVal = hasStale && allowStale;
+      if (status) {
+        status.fetch = isStale ? "stale" : "refresh";
+        if (staleVal && isStale)
+          status.returnedStale = true;
+      }
+      return staleVal ? p.__staleWhileFetching : p.__returned = p;
+    }
+  }
+  /**
+   * Return a value from the cache. Will update the recency of the cache
+   * entry found.
+   *
+   * If the key is not found, get() will return `undefined`.
+   */
+  get(k, getOptions = {}) {
+    const { allowStale = this.allowStale, updateAgeOnGet = this.updateAgeOnGet, noDeleteOnStaleGet = this.noDeleteOnStaleGet, status } = getOptions;
+    const index2 = this.#keyMap.get(k);
+    if (index2 !== void 0) {
+      const value = this.#valList[index2];
+      const fetching = this.#isBackgroundFetch(value);
+      if (status)
+        this.#statusTTL(status, index2);
+      if (this.#isStale(index2)) {
+        if (status)
+          status.get = "stale";
+        if (!fetching) {
+          if (!noDeleteOnStaleGet) {
+            this.delete(k);
+          }
+          if (status && allowStale)
+            status.returnedStale = true;
+          return allowStale ? value : void 0;
+        } else {
+          if (status && allowStale && value.__staleWhileFetching !== void 0) {
+            status.returnedStale = true;
+          }
+          return allowStale ? value.__staleWhileFetching : void 0;
+        }
+      } else {
+        if (status)
+          status.get = "hit";
+        if (fetching) {
+          return value.__staleWhileFetching;
+        }
+        this.#moveToTail(index2);
+        if (updateAgeOnGet) {
+          this.#updateItemAge(index2);
+        }
+        return value;
+      }
+    } else if (status) {
+      status.get = "miss";
+    }
+  }
+  #connect(p, n) {
+    this.#prev[n] = p;
+    this.#next[p] = n;
+  }
+  #moveToTail(index2) {
+    if (index2 !== this.#tail) {
+      if (index2 === this.#head) {
+        this.#head = this.#next[index2];
+      } else {
+        this.#connect(this.#prev[index2], this.#next[index2]);
+      }
+      this.#connect(this.#tail, index2);
+      this.#tail = index2;
+    }
+  }
+  /**
+   * Deletes a key out of the cache.
+   * Returns true if the key was deleted, false otherwise.
+   */
+  delete(k) {
+    let deleted = false;
+    if (this.#size !== 0) {
+      const index2 = this.#keyMap.get(k);
+      if (index2 !== void 0) {
+        deleted = true;
+        if (this.#size === 1) {
+          this.clear();
+        } else {
+          this.#removeItemSize(index2);
+          const v = this.#valList[index2];
+          if (this.#isBackgroundFetch(v)) {
+            v.__abortController.abort(new Error("deleted"));
+          } else if (this.#hasDispose || this.#hasDisposeAfter) {
+            if (this.#hasDispose) {
+              this.#dispose?.(v, k, "delete");
+            }
+            if (this.#hasDisposeAfter) {
+              this.#disposed?.push([v, k, "delete"]);
+            }
+          }
+          this.#keyMap.delete(k);
+          this.#keyList[index2] = void 0;
+          this.#valList[index2] = void 0;
+          if (index2 === this.#tail) {
+            this.#tail = this.#prev[index2];
+          } else if (index2 === this.#head) {
+            this.#head = this.#next[index2];
+          } else {
+            const pi2 = this.#prev[index2];
+            this.#next[pi2] = this.#next[index2];
+            const ni = this.#next[index2];
+            this.#prev[ni] = this.#prev[index2];
+          }
+          this.#size--;
+          this.#free.push(index2);
+        }
+      }
+    }
+    if (this.#hasDisposeAfter && this.#disposed?.length) {
+      const dt = this.#disposed;
+      let task;
+      while (task = dt?.shift()) {
+        this.#disposeAfter?.(...task);
+      }
+    }
+    return deleted;
+  }
+  /**
+   * Clear the cache entirely, throwing away all values.
+   */
+  clear() {
+    for (const index2 of this.#rindexes({ allowStale: true })) {
+      const v = this.#valList[index2];
+      if (this.#isBackgroundFetch(v)) {
+        v.__abortController.abort(new Error("deleted"));
+      } else {
+        const k = this.#keyList[index2];
+        if (this.#hasDispose) {
+          this.#dispose?.(v, k, "delete");
+        }
+        if (this.#hasDisposeAfter) {
+          this.#disposed?.push([v, k, "delete"]);
+        }
+      }
+    }
+    this.#keyMap.clear();
+    this.#valList.fill(void 0);
+    this.#keyList.fill(void 0);
+    if (this.#ttls && this.#starts) {
+      this.#ttls.fill(0);
+      this.#starts.fill(0);
+    }
+    if (this.#sizes) {
+      this.#sizes.fill(0);
+    }
+    this.#head = 0;
+    this.#tail = 0;
+    this.#free.length = 0;
+    this.#calculatedSize = 0;
+    this.#size = 0;
+    if (this.#hasDisposeAfter && this.#disposed) {
+      const dt = this.#disposed;
+      let task;
+      while (task = dt?.shift()) {
+        this.#disposeAfter?.(...task);
+      }
+    }
+  }
+};
+
+// src/FXGetter/mastercard.ts
+var cache = new LRUCache({
+  max: 500
+});
 var currenciesList = [
   "AFN",
   "ALL",
@@ -75880,21 +77200,33 @@ var mastercardFXM = class extends fxManager {
               if (["cash", "remit", "middle"].includes(
                 prop2.toString()
               )) {
-                const request3 = (0, import_sync_request.default)(
-                  "GET",
-                  `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`
-                );
+                if (!cache.has(`${from}${to}`)) {
+                  const request3 = (0, import_sync_request.default)(
+                    "GET",
+                    `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`
+                  );
+                  cache.set(
+                    `${from}${to}`,
+                    request3.getBody().toString()
+                  );
+                }
                 const data2 = JSON.parse(
-                  request3.getBody().toString()
+                  cache.get(`${from}${to}`)
                 );
                 return fraction(data2.data.conversionRate);
               } else if (prop2 == "updated") {
-                const request3 = (0, import_sync_request.default)(
-                  "GET",
-                  `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`
-                );
+                if (!cache.has(`${from}${to}`)) {
+                  const request3 = (0, import_sync_request.default)(
+                    "GET",
+                    `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`
+                  );
+                  cache.set(
+                    `${from}${to}`,
+                    request3.getBody().toString()
+                  );
+                }
                 const data2 = JSON.parse(
-                  request3.getBody().toString()
+                  cache.get(`${from}${to}`)
                 );
                 return new Date(data2.data.fxDate);
               }

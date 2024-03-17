@@ -2,6 +2,12 @@ import fxManager from 'src/fxm/fxManager';
 import syncRequest from 'sync-request';
 import { Fraction, fraction } from 'mathjs';
 
+import { LRUCache } from 'lru-cache';
+
+const cache = new LRUCache<string, string>({
+    max: 500,
+});
+
 const currenciesList: string[] = [
     'AFN',
     'ALL',
@@ -181,21 +187,33 @@ export default class mastercardFXM extends fxManager {
                                     prop.toString(),
                                 )
                             ) {
-                                const request = syncRequest(
-                                    'GET',
-                                    `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`,
-                                );
+                                if (!cache.has(`${from}${to}`)) {
+                                    const request = syncRequest(
+                                        'GET',
+                                        `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`,
+                                    );
+                                    cache.set(
+                                        `${from}${to}`,
+                                        request.getBody().toString(),
+                                    );
+                                }
                                 const data = JSON.parse(
-                                    request.getBody().toString(),
+                                    cache.get(`${from}${to}`),
                                 );
                                 return fraction(data.data.conversionRate);
                             } else if (prop == 'updated') {
-                                const request = syncRequest(
-                                    'GET',
-                                    `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`,
-                                );
+                                if (!cache.has(`${from}${to}`)) {
+                                    const request = syncRequest(
+                                        'GET',
+                                        `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`,
+                                    );
+                                    cache.set(
+                                        `${from}${to}`,
+                                        request.getBody().toString(),
+                                    );
+                                }
                                 const data = JSON.parse(
-                                    request.getBody().toString(),
+                                    cache.get(`${from}${to}`),
                                 );
                                 return new Date(data.data.fxDate);
                             }
