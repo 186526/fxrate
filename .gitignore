@@ -174,5 +174,3 @@ out
 .history
 .ionide
 .vercel
-
-dist/[index.cjs,readme.md]
