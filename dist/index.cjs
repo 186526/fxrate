@@ -17959,6 +17959,7 @@ var package_default2 = {
   license: "SEE LICENSE IN LICENSE",
   author: "Bo Xu <i@186526.xyz> (https://186526.xyz/)",
   dependencies: {
+    "@dotenvx/dotenvx": "^0.25.1",
     axios: "^1.6.7",
     cheerio: "^1.0.0-rc.12",
     "fast-xml-parser": "^4.3.4",
@@ -17984,7 +17985,8 @@ var package_default2 = {
     lint: 'eslint "src/**/*.ts" --fix',
     build: "yarn clean && esbuild src/index.ts --format=cjs --platform=node --bundle --outfile=dist/index.cjs",
     clean: "rm -rf dist/index.cjs",
-    dev: "tsx src/index.ts",
+    dev: "dotenvx run -- tsx watch src/index.ts",
+    "dev:production": "dotenvx run --env-file=.env.production.local --env-file=.env -- tsx watch src/index.ts",
     start: "yarn build && node dist/index.cjs"
   }
 };
@@ -58312,7 +58314,8 @@ var fxmManager = class extends router {
     if (!this.has(source)) {
       throw new Error("Source not found");
     }
-    const fxRates = await this.fxRateGetter[source]();
+    this.log(`${source} is updating...`);
+    const fxRates = await this.fxRateGetter[source](this);
     fxRates.forEach((f) => this.fxms[source].update(f));
     this.fxmStatus[source] = "ready";
     this.log(`${source} is updated, now is ready.`);
@@ -75649,6 +75652,42 @@ var getUnionPayFXRates = async () => {
 };
 var unionpay_default = getUnionPayFXRates;
 
+// src/FXGetter/wise.ts
+var getWiseFXRates = (isInSandbox = true, WiseToken) => {
+  let endPoint = "https://api.wise.com/v1/rates";
+  if (isInSandbox) {
+    endPoint = "https://api.sandbox.transferwise.tech/v1/rates";
+  }
+  return async (fxmManager2) => {
+    if (fxmManager2 && isInSandbox)
+      fxmManager2.log("Getting Wise FX Rates in sandbox mode.");
+    else if (fxmManager2)
+      fxmManager2.log("Getting Wise FX Rates in production mode.");
+    const response3 = await axios_default.get(endPoint, {
+      headers: {
+        Authorization: `Bearer ${WiseToken}`
+      }
+    });
+    const rates = [];
+    const data2 = response3.data;
+    for (const rate of data2) {
+      rates.push({
+        currency: {
+          from: rate.source,
+          to: rate.target
+        },
+        rate: {
+          middle: parseFloat(rate.rate)
+        },
+        unit: 1,
+        updated: new Date(rate.time)
+      });
+    }
+    return rates;
+  };
+};
+var wise_default = getWiseFXRates;
+
 // src/index.ts
 var App = new dist_default();
 var Manager = new fxmManager_default({
@@ -75664,13 +75703,25 @@ var Manager = new fxmManager_default({
   pboc: pboc_default,
   unionpay: unionpay_default
 });
+if (import_node_process2.default.env.ENABLE_WISE == "1") {
+  if (import_node_process2.default.env.WISE_TOKEN == void 0)
+    throw new Error("WISE_TOKEN is not set.");
+  Manager.register(
+    "wise",
+    wise_default(
+      import_node_process2.default.env.WISE_SANDBOX_API == "1",
+      import_node_process2.default.env.WISE_TOKEN
+    )
+  );
+}
 (async () => {
   App.use([Manager], "/(.*)");
+  App.use([Manager], "/v1/(.*)");
   App.useMappingAdapter();
   if (import_node_process2.default.env.VERCEL != "1")
     App.listen(Number(import_node_process2.default?.env?.PORT) || 8080);
   console.log(
-    `[${(/* @__PURE__ */ new Date()).toUTCString()}] Server is started at ${Number(import_node_process2.default?.env?.PORT) || 8080}.`
+    `[${(/* @__PURE__ */ new Date()).toUTCString()}] Server is started at ${Number(import_node_process2.default?.env?.PORT) || 8080} with NODE_ENV ${import_node_process2.default.env.NODE_ENV || "development"}.`
   );
   App.binding(
     "/",

@@ -16,6 +16,7 @@ import getPSBCFXRates from './FXGetter/psbc';
 import getCMBFXRates from './FXGetter/cmb';
 import getPBOCFXRates from './FXGetter/pboc';
 import getUnionPayFXRates from './FXGetter/unionpay';
+import getWiseFXRates from './FXGetter/wise';
 
 const App = new rootRouter();
 
@@ -33,15 +34,28 @@ const Manager = new fxmManager({
     unionpay: getUnionPayFXRates,
 });
 
+if (process.env.ENABLE_WISE == '1') {
+    if (process.env.WISE_TOKEN == undefined)
+        throw new Error('WISE_TOKEN is not set.');
+    Manager.register(
+        'wise',
+        getWiseFXRates(
+            process.env.WISE_SANDBOX_API == '1',
+            process.env.WISE_TOKEN,
+        ),
+    );
+}
+
 (async () => {
     App.use([Manager], '/(.*)');
+    App.use([Manager], '/v1/(.*)');
 
     App.useMappingAdapter();
     if (process.env.VERCEL != '1')
         App.listen(Number(process?.env?.PORT) || 8080);
 
     console.log(
-        `[${new Date().toUTCString()}] Server is started at ${Number(process?.env?.PORT) || 8080}.`,
+        `[${new Date().toUTCString()}] Server is started at ${Number(process?.env?.PORT) || 8080} with NODE_ENV ${process.env.NODE_ENV || 'development'}.`,
     );
 
     App.binding(

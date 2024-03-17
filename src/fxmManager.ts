@@ -70,7 +70,7 @@ class fxmManager extends router {
     } = {};
 
     private fxRateGetter: {
-        [source: string]: () => Promise<FXRate[]>;
+        [source: string]: (fxmManager?: fxmManager) => Promise<FXRate[]>;
     } = {};
 
     constructor(sources: { [source: string]: () => Promise<FXRate[]> }) {
@@ -93,7 +93,7 @@ class fxmManager extends router {
         );
     }
 
-    private log(str: string) {
+    public log(str: string) {
         setTimeout(() => {
             console.log(`[${new Date().toUTCString()}] [fxmManager] ${str}`);
         }, 0);
@@ -107,7 +107,8 @@ class fxmManager extends router {
         if (!this.has(source)) {
             throw new Error('Source not found');
         }
-        const fxRates = await this.fxRateGetter[source]();
+        this.log(`${source} is updating...`);
+        const fxRates = await this.fxRateGetter[source](this);
         fxRates.forEach((f) => this.fxms[source].update(f));
         this.fxmStatus[source] = 'ready';
         this.log(`${source} is updated, now is ready.`);
