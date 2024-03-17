@@ -48,7 +48,7 @@ const getWiseFXRates = (
             });
         }
 
-        return rates;
+        return rates.sort();
     };
 };
 

@@ -6,7 +6,7 @@ Yet another foreign exchange rate API project.
 
 ## Usage
 
-Test URL: [fxrate-186526.vercel.app](https://fxrate-186526.vercel.app/)
+Test URL: <https://fxrate.186526.eu.org/>
 
 ### API v1 Usage
 

@@ -15,8 +15,27 @@ const useBasic = (response: response<any>): void => {
     response.headers.set('Date', new Date().toUTCString());
 };
 
-const useJson = (response: response<any>): void => {
+const useJson = (response: response<any>, request: request<any>): void => {
     useBasic(response);
+
+    const answer = JSON.parse(response.body);
+
+    const keys = Object.keys(answer).sort(),
+        sortedAnswer = {};
+
+    for (const key of keys) {
+        sortedAnswer[key] = answer[key];
+    }
+
+    response.body = JSON.stringify(sortedAnswer);
+
+    if (
+        request.query.has('pretty') ||
+        request.headers.get('Sec-Fetch-Dest') === 'document'
+    ) {
+        response.body = JSON.stringify(sortedAnswer, null, 4);
+    }
+
     response.headers.set('Content-type', 'application/json; charset=utf-8');
 };
 
@@ -81,14 +100,17 @@ class fxmManager extends router {
 
         this.binding(
             '/info',
-            this.create('GET', async () => {
-                return {
+            this.create('GET', async (request: request<any>) => {
+                const rep = new response<any>('', 200);
+                rep.body = JSON.stringify({
                     status: 'ok',
                     sources: Object.keys(this.fxms),
                     version: `${packageJson.name}/${packageJson.version}`,
                     apiVersion: 'v1',
                     environment: process.env.NODE_ENV || 'development',
-                };
+                });
+                useJson(rep, request);
+                return rep;
             }),
         );
     }
@@ -158,10 +180,10 @@ class fxmManager extends router {
                             currency: Object.keys(
                                 (await this.requestFXManager(source))
                                     .fxRateList,
-                            ),
+                            ).sort(),
                             date: new Date().toUTCString(),
                         });
-                        useJson(response);
+                        useJson(response, request);
                         return response;
                     }
                     const result: {
@@ -180,7 +202,7 @@ class fxmManager extends router {
                         );
                     }
                     response.body = JSON.stringify(result);
-                    useJson(response);
+                    useJson(response, request);
                     return response;
                 },
             ]),
@@ -198,7 +220,7 @@ class fxmManager extends router {
                         request,
                     );
                     response.body = JSON.stringify(result);
-                    useJson(response);
+                    useJson(response, request);
                     response.headers.set(
                         'Date',
                         (await this.requestFXManager(source))

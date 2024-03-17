@@ -123,7 +123,7 @@ const getUnionPayFXRates = async (): Promise<FXRate[]> => {
         });
     });
 
-    return answer;
+    return answer.sort();
 };
 
 export default getUnionPayFXRates;

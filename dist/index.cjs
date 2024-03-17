@@ -13405,9 +13405,9 @@ var require_form_data = __commonJS({
       } else if (value.hasOwnProperty("httpVersion")) {
         callback(null, +value.headers["content-length"]);
       } else if (value.hasOwnProperty("httpModule")) {
-        value.on("response", function(response3) {
+        value.on("response", function(response2) {
           value.pause();
-          callback(null, +response3.headers["content-length"]);
+          callback(null, +response2.headers["content-length"]);
         });
         value.resume();
       } else {
@@ -14544,9 +14544,9 @@ var require_follow_redirects = __commonJS({
         this.on("response", responseCallback);
       }
       var self2 = this;
-      this._onNativeResponse = function(response3) {
+      this._onNativeResponse = function(response2) {
         try {
-          self2._processResponse(response3);
+          self2._processResponse(response2);
         } catch (cause) {
           self2.emit("error", cause instanceof RedirectionError ? cause : new RedirectionError({ cause }));
         }
@@ -14744,25 +14744,25 @@ var require_follow_redirects = __commonJS({
         })();
       }
     };
-    RedirectableRequest.prototype._processResponse = function(response3) {
-      var statusCode = response3.statusCode;
+    RedirectableRequest.prototype._processResponse = function(response2) {
+      var statusCode = response2.statusCode;
       if (this._options.trackRedirects) {
         this._redirects.push({
           url: this._currentUrl,
-          headers: response3.headers,
+          headers: response2.headers,
           statusCode
         });
       }
-      var location = response3.headers.location;
+      var location = response2.headers.location;
       if (!location || this._options.followRedirects === false || statusCode < 300 || statusCode >= 400) {
-        response3.responseUrl = this._currentUrl;
-        response3.redirects = this._redirects;
-        this.emit("response", response3);
+        response2.responseUrl = this._currentUrl;
+        response2.redirects = this._redirects;
+        this.emit("response", response2);
         this._requestBodyBuffers = [];
         return;
       }
       destroyRequest(this._currentRequest);
-      response3.destroy();
+      response2.destroy();
       if (++this._redirectCount > this._options.maxRedirects) {
         throw new TooManyRedirectsError();
       }
@@ -14771,7 +14771,7 @@ var require_follow_redirects = __commonJS({
       if (beforeRedirect) {
         requestHeaders = Object.assign({
           // The Host header was set by nativeProtocol.request
-          Host: response3.req.getHeader("host")
+          Host: response2.req.getHeader("host")
         }, this._options.headers);
       }
       var method = this._options.method;
@@ -14797,7 +14797,7 @@ var require_follow_redirects = __commonJS({
       }
       if (isFunction3(beforeRedirect)) {
         var responseDetails = {
-          headers: response3.headers,
+          headers: response2.headers,
           statusCode
         };
         var requestDetails = {
@@ -17532,8 +17532,8 @@ var NodePlatformAdapter = class {
     const server = import_http.default.createServer();
     server.on("request", async (req, res) => {
       const request3 = await this.handleRequest(req);
-      const response3 = await this.router.respond(request3);
-      this.handleResponse(response3, res);
+      const response2 = await this.router.respond(request3);
+      this.handleResponse(response2, res);
     });
     server.listen(port);
     return;
@@ -17555,12 +17555,12 @@ var NodePlatformAdapter = class {
     }
     return new request(nativeRequest.method, new URL(nativeRequest.url, `http://${requestHeaders.get("host") ?? "localhost"}`), requestHeaders, body, {}, ip);
   }
-  handleResponse(response3, nativeResponse) {
-    nativeResponse.statusCode = response3.status;
-    response3.headers.forEach((key, value) => {
+  handleResponse(response2, nativeResponse) {
+    nativeResponse.statusCode = response2.status;
+    response2.headers.forEach((key, value) => {
       nativeResponse.setHeader(key, value);
     });
-    nativeResponse.end(response3.body);
+    nativeResponse.end(response2.body);
   }
 };
 
@@ -17580,13 +17580,13 @@ var SWPlatformAdapter = class {
     const requestMessage = new request(nativeRequest.method, new URL(nativeRequest.url), requestHeaders, await nativeRequest.text(), {}, requestHeaders.get("CF-Connecting-IP") || "");
     return requestMessage;
   }
-  async handleResponse(response3) {
-    if (response3.status === 204) {
-      response3.body = null;
+  async handleResponse(response2) {
+    if (response2.status === 204) {
+      response2.body = null;
     }
-    const nativResponse = new Response(response3.body, {
-      status: response3.status,
-      headers: response3.headers.headers
+    const nativResponse = new Response(response2.body, {
+      status: response2.status,
+      headers: response2.headers.headers
     });
     return nativResponse;
   }
@@ -17726,13 +17726,13 @@ var HttpConn = class {
     const requestMessage = new request(method, url2, requestHeaders, body, {}, this.conn.remoteAddress.ip);
     return requestMessage;
   }
-  handleResponse(response3) {
+  handleResponse(response2) {
     let responseMessage = "";
-    responseMessage += "HTTP/1.1 " + response3.status + " " + statusCode_default[response3.status.toString()];
-    response3.headers.forEach((key, value) => {
+    responseMessage += "HTTP/1.1 " + response2.status + " " + statusCode_default[response2.status.toString()];
+    response2.headers.forEach((key, value) => {
       responseMessage += "\n" + key + ": " + value;
     });
-    responseMessage += "\n\n" + response3.body;
+    responseMessage += "\n\n" + response2.body;
     this.conn.write(new TextEncoder().encode(responseMessage));
     this.conn.shutdown();
     this.closed = true;
@@ -17758,8 +17758,8 @@ var HttpConn = class {
           done: false,
           value: {
             request: await httpConn.read(),
-            respondWith: (response3) => {
-              httpConn.handleResponse(response3);
+            respondWith: (response2) => {
+              httpConn.handleResponse(response2);
             }
           }
         };
@@ -17792,8 +17792,8 @@ var TxikiPlatformAdapter = class {
   async handleRequest(nativeRequest) {
     return nativeRequest;
   }
-  async handleResponse(response3) {
-    return response3;
+  async handleResponse(response2) {
+    return response2;
   }
 };
 
@@ -58248,13 +58248,22 @@ ${e2.message}`
 
 // src/fxmManager.ts
 var import_node_process = __toESM(require("node:process"), 1);
-var useBasic = (response3) => {
-  response3.status = 200;
-  response3.headers.set("Date", (/* @__PURE__ */ new Date()).toUTCString());
+var useBasic = (response2) => {
+  response2.status = 200;
+  response2.headers.set("Date", (/* @__PURE__ */ new Date()).toUTCString());
 };
-var useJson = (response3) => {
-  useBasic(response3);
-  response3.headers.set("Content-type", "application/json; charset=utf-8");
+var useJson = (response2, request3) => {
+  useBasic(response2);
+  const answer = JSON.parse(response2.body);
+  const keys = Object.keys(answer).sort(), sortedAnswer = {};
+  for (const key of keys) {
+    sortedAnswer[key] = answer[key];
+  }
+  response2.body = JSON.stringify(sortedAnswer);
+  if (request3.query.has("pretty") || request3.headers.get("Sec-Fetch-Dest") === "document") {
+    response2.body = JSON.stringify(sortedAnswer, null, 4);
+  }
+  response2.headers.set("Content-type", "application/json; charset=utf-8");
 };
 var getConvert = async (from, to, type, fxManager2, request3, amount = 100) => {
   let answer = fxManager2.convert(
@@ -58291,14 +58300,17 @@ var fxmManager = class extends router {
     }
     this.binding(
       "/info",
-      this.create("GET", async () => {
-        return {
+      this.create("GET", async (request3) => {
+        const rep = new response("", 200);
+        rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
           version: `${package_default2.name}/${package_default2.version}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
-        };
+        });
+        useJson(rep, request3);
+        return rep;
       })
     );
   }
@@ -58343,25 +58355,25 @@ var fxmManager = class extends router {
     fxmRouter.binding(
       "/:from",
       new handler("GET", [
-        async (request3, response3) => {
+        async (request3, response2) => {
           const { from } = request3.params;
           if (!(await this.requestFXManager(source)).fxRateList[from]) {
             if (from != source) {
-              response3.status = 404;
-              response3.body = "404 Not Found";
-              useBasic(response3);
-              return response3;
+              response2.status = 404;
+              response2.body = "404 Not Found";
+              useBasic(response2);
+              return response2;
             }
-            response3.body = JSON.stringify({
+            response2.body = JSON.stringify({
               status: "ok",
               source,
               currency: Object.keys(
                 (await this.requestFXManager(source)).fxRateList
-              ),
+              ).sort(),
               date: (/* @__PURE__ */ new Date()).toUTCString()
             });
-            useJson(response3);
-            return response3;
+            useJson(response2, request3);
+            return response2;
           }
           const result = {};
           for (const to in (await this.requestFXManager(source)).fxRateList[from]) {
@@ -58374,16 +58386,16 @@ var fxmManager = class extends router {
               request3
             );
           }
-          response3.body = JSON.stringify(result);
-          useJson(response3);
-          return response3;
+          response2.body = JSON.stringify(result);
+          useJson(response2, request3);
+          return response2;
         }
       ])
     );
     fxmRouter.binding(
       "/:from/:to",
       new handler("GET", [
-        async (request3, response3) => {
+        async (request3, response2) => {
           const { from, to } = request3.params;
           const result = await getDetails(
             from,
@@ -58391,23 +58403,23 @@ var fxmManager = class extends router {
             await this.requestFXManager(source),
             request3
           );
-          response3.body = JSON.stringify(result);
-          useJson(response3);
-          response3.headers.set(
+          response2.body = JSON.stringify(result);
+          useJson(response2, request3);
+          response2.headers.set(
             "Date",
             (await this.requestFXManager(source)).getUpdatedDate(
               from,
               to
             ).toUTCString()
           );
-          return response3;
+          return response2;
         }
       ])
     );
     fxmRouter.binding(
       "/:from/:to/:type",
       new handler("GET", [
-        async (request3, response3) => {
+        async (request3, response2) => {
           const { from, to, type } = request3.params;
           const result = await getConvert(
             from,
@@ -58416,23 +58428,23 @@ var fxmManager = class extends router {
             await this.requestFXManager(source),
             request3
           );
-          response3.body = result.toString();
-          useBasic(response3);
-          response3.headers.set(
+          response2.body = result.toString();
+          useBasic(response2);
+          response2.headers.set(
             "Date",
             (await this.requestFXManager(source)).getUpdatedDate(
               from,
               to
             ).toUTCString()
           );
-          return response3;
+          return response2;
         }
       ])
     );
     fxmRouter.binding(
       "/:from/:to/:type/:amount",
       new handler("GET", [
-        async (request3, response3) => {
+        async (request3, response2) => {
           const { from, to, type, amount } = request3.params;
           const result = await getConvert(
             from,
@@ -58442,16 +58454,16 @@ var fxmManager = class extends router {
             request3,
             Number(amount)
           );
-          response3.body = result.toString();
-          useBasic(response3);
-          response3.headers.set(
+          response2.body = result.toString();
+          useBasic(response2);
+          response2.headers.set(
             "Date",
             (await this.requestFXManager(source)).getUpdatedDate(
               from,
               to
             ).toUTCString()
           );
-          return response3;
+          return response2;
         }
       ])
     );
@@ -58827,7 +58839,7 @@ var utils_default = {
 };
 
 // node_modules/axios/lib/core/AxiosError.js
-function AxiosError(message, code, config4, request3, response3) {
+function AxiosError(message, code, config4, request3, response2) {
   Error.call(this);
   if (Error.captureStackTrace) {
     Error.captureStackTrace(this, this.constructor);
@@ -58839,7 +58851,7 @@ function AxiosError(message, code, config4, request3, response3) {
   code && (this.code = code);
   config4 && (this.config = config4);
   request3 && (this.request = request3);
-  response3 && (this.response = response3);
+  response2 && (this.response = response2);
 }
 utils_default.inherits(AxiosError, Error, {
   toJSON: function toJSON() {
@@ -58883,14 +58895,14 @@ var descriptors = {};
 });
 Object.defineProperties(AxiosError, descriptors);
 Object.defineProperty(prototype, "isAxiosError", { value: true });
-AxiosError.from = (error, code, config4, request3, response3, customProps) => {
+AxiosError.from = (error, code, config4, request3, response2, customProps) => {
   const axiosError = Object.create(prototype);
   utils_default.toFlatObject(error, axiosError, function filter6(obj) {
     return obj !== Error.prototype;
   }, (prop2) => {
     return prop2 !== "isAxiosError";
   });
-  AxiosError.call(axiosError, error.message, code, config4, request3, response3);
+  AxiosError.call(axiosError, error.message, code, config4, request3, response2);
   axiosError.cause = error;
   axiosError.name = error.name;
   customProps && Object.assign(axiosError, customProps);
@@ -59621,13 +59633,13 @@ utils_default.freezeMethods(AxiosHeaders);
 var AxiosHeaders_default = AxiosHeaders;
 
 // node_modules/axios/lib/core/transformData.js
-function transformData(fns, response3) {
+function transformData(fns, response2) {
   const config4 = this || defaults_default;
-  const context = response3 || config4;
+  const context = response2 || config4;
   const headers2 = AxiosHeaders_default.from(context.headers);
   let data2 = context.data;
   utils_default.forEach(fns, function transform(fn) {
-    data2 = fn.call(config4, data2, headers2.normalize(), response3 ? response3.status : void 0);
+    data2 = fn.call(config4, data2, headers2.normalize(), response2 ? response2.status : void 0);
   });
   headers2.normalize();
   return data2;
@@ -59649,17 +59661,17 @@ utils_default.inherits(CanceledError, AxiosError_default, {
 var CanceledError_default = CanceledError;
 
 // node_modules/axios/lib/core/settle.js
-function settle(resolve, reject, response3) {
-  const validateStatus2 = response3.config.validateStatus;
-  if (!response3.status || !validateStatus2 || validateStatus2(response3.status)) {
-    resolve(response3);
+function settle(resolve, reject, response2) {
+  const validateStatus2 = response2.config.validateStatus;
+  if (!response2.status || !validateStatus2 || validateStatus2(response2.status)) {
+    resolve(response2);
   } else {
     reject(new AxiosError_default(
-      "Request failed with status code " + response3.status,
-      [AxiosError_default.ERR_BAD_REQUEST, AxiosError_default.ERR_BAD_RESPONSE][Math.floor(response3.status / 100) - 4],
-      response3.config,
-      response3.request,
-      response3
+      "Request failed with status code " + response2.status,
+      [AxiosError_default.ERR_BAD_REQUEST, AxiosError_default.ERR_BAD_RESPONSE][Math.floor(response2.status / 100) - 4],
+      response2.config,
+      response2.request,
+      response2
     ));
   }
 }
@@ -60455,7 +60467,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
         offListeners();
         onFinished();
       });
-      const response3 = {
+      const response2 = {
         status: res.statusCode,
         statusText: res.statusMessage,
         headers: new AxiosHeaders_default(res.headers),
@@ -60463,8 +60475,8 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
         request: lastRequest
       };
       if (responseType === "stream") {
-        response3.data = responseStream;
-        settle(resolve, reject, response3);
+        response2.data = responseStream;
+        settle(resolve, reject, response2);
       } else {
         const responseBuffer = [];
         let totalResponseBytes = 0;
@@ -60509,11 +60521,11 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
                 responseData = utils_default.stripBOM(responseData);
               }
             }
-            response3.data = responseData;
+            response2.data = responseData;
           } catch (err) {
-            return reject(AxiosError_default.from(err, null, config4, response3.request, response3));
+            return reject(AxiosError_default.from(err, null, config4, response2.request, response2));
           }
-          settle(resolve, reject, response3);
+          settle(resolve, reject, response2);
         });
       }
       emitter.once("abort", (err) => {
@@ -60722,7 +60734,7 @@ var xhr_default = isXHRAdapterSupported && function(config4) {
         "getAllResponseHeaders" in request3 && request3.getAllResponseHeaders()
       );
       const responseData = !responseType || responseType === "text" || responseType === "json" ? request3.responseText : request3.response;
-      const response3 = {
+      const response2 = {
         data: responseData,
         status: request3.status,
         statusText: request3.statusText,
@@ -60736,7 +60748,7 @@ var xhr_default = isXHRAdapterSupported && function(config4) {
       }, function _reject(err) {
         reject(err);
         done();
-      }, response3);
+      }, response2);
       request3 = null;
     }
     if ("onloadend" in request3) {
@@ -60900,15 +60912,15 @@ function dispatchRequest(config4) {
     config4.headers.setContentType("application/x-www-form-urlencoded", false);
   }
   const adapter2 = adapters_default.getAdapter(config4.adapter || defaults_default.adapter);
-  return adapter2(config4).then(function onAdapterResolution(response3) {
+  return adapter2(config4).then(function onAdapterResolution(response2) {
     throwIfCancellationRequested(config4);
-    response3.data = transformData.call(
+    response2.data = transformData.call(
       config4,
       config4.transformResponse,
-      response3
+      response2
     );
-    response3.headers = AxiosHeaders_default.from(response3.headers);
-    return response3;
+    response2.headers = AxiosHeaders_default.from(response2.headers);
+    return response2;
   }, function onAdapterRejection(reason) {
     if (!isCancel(reason)) {
       throwIfCancellationRequested(config4);
@@ -75052,7 +75064,7 @@ var getICBCFXRates = async () => {
     }
   );
   const data2 = res.data;
-  let FXRates = [];
+  const FXRates = [];
   if (data2.code != 0)
     throw new Error(`Get ICBC FX Rates failed.`);
   data2.data.forEach((fx) => {
@@ -75076,8 +75088,7 @@ var getICBCFXRates = async () => {
       updated: /* @__PURE__ */ new Date(`${fx.publishDate} ${fx.publishTime} UTC+8`)
     });
   });
-  FXRates = FXRates.sort();
-  return FXRates;
+  return FXRates.sort();
 };
 var icbc_default = getICBCFXRates;
 
@@ -75648,7 +75659,7 @@ var getUnionPayFXRates = async () => {
       answer.push(k);
     });
   });
-  return answer;
+  return answer.sort();
 };
 var unionpay_default = getUnionPayFXRates;
 
@@ -75663,13 +75674,13 @@ var getWiseFXRates = (isInSandbox = true, WiseToken) => {
       fxmManager2.log("Getting Wise FX Rates in sandbox mode.");
     else if (fxmManager2)
       fxmManager2.log("Getting Wise FX Rates in production mode.");
-    const response3 = await axios_default.get(endPoint, {
+    const response2 = await axios_default.get(endPoint, {
       headers: {
         Authorization: `Bearer ${WiseToken}`
       }
     });
     const rates = [];
-    const data2 = response3.data;
+    const data2 = response2.data;
     for (const rate of data2) {
       rates.push({
         currency: {
@@ -75683,7 +75694,7 @@ var getWiseFXRates = (isInSandbox = true, WiseToken) => {
         updated: new Date(rate.time)
       });
     }
-    return rates;
+    return rates.sort();
   };
 };
 var wise_default = getWiseFXRates;
@@ -75730,16 +75741,16 @@ if (import_node_process2.default.env.ENABLE_WISE == "1") {
   App.binding(
     "/(.*)",
     new handler("ANY", [
-      async (request3, response3) => {
+      async (request3, response2) => {
         setTimeout(
           () => console.log(
             `[${(/* @__PURE__ */ new Date()).toUTCString()}] ${request3.ip} ${request3.method} ${request3.url}`
           ),
           0
         );
-        response3.headers.set("X-Powered-By", package_default2.name);
-        response3.headers.set("X-Author", package_default2.author);
-        response3.headers.set(
+        response2.headers.set("X-Powered-By", package_default2.name);
+        response2.headers.set("X-Author", package_default2.author);
+        response2.headers.set(
           "X-License",
           "MIT, Data copyright belongs to its source. More details at <https://github.com/186526/fxrate>."
         );
@@ -75749,8 +75760,8 @@ if (import_node_process2.default.env.ENABLE_WISE == "1") {
 })();
 var src_default = async (req, res) => {
   const request3 = await App.adapater.handleRequest(req);
-  const response3 = await App.adapater.router.respond(request3);
-  App.adapater.handleResponse(response3, res);
+  const response2 = await App.adapater.router.respond(request3);
+  App.adapater.handleResponse(response2, res);
 };
 /*! Bundled license information:
 

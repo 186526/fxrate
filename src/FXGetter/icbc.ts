@@ -13,7 +13,7 @@ const getICBCFXRates = async (): Promise<FXRate[]> => {
 
     const data = res.data;
 
-    let FXRates: FXRate[] = [];
+    const FXRates: FXRate[] = [];
 
     if (data.code != 0) throw new Error(`Get ICBC FX Rates failed.`);
 
@@ -39,9 +39,7 @@ const getICBCFXRates = async (): Promise<FXRate[]> => {
         });
     });
 
-    FXRates = FXRates.sort();
-
-    return FXRates;
+    return FXRates.sort();
 };
 
 export default getICBCFXRates;
