@@ -17333,7 +17333,7 @@ var headers_default = headers;
 var package_default = {
   name: "handlers.js",
   description: "Handlers.js is a unified and lightweight web application framework for multiple platforms.",
-  version: "0.1.1",
+  version: "0.1.1-1",
   main: "./dist/index.js",
   webpack: "./dist/index.js",
   browser: "./dist/main.serviceworker.js",
@@ -17452,6 +17452,7 @@ var handler = class {
             responseMessage = thisResponse;
           }
         }
+        return responseMessage;
     }
   }
 };
@@ -17965,7 +17966,7 @@ var package_default2 = {
     axios: "^1.6.7",
     cheerio: "^1.0.0-rc.12",
     "fast-xml-parser": "^4.3.4",
-    "handlers.js": "^0.1.1",
+    "handlers.js": "^0.1.1-1",
     "lru-cache": "^10.2.0",
     mathjs: "^12.3.2",
     "sync-request": "^6.1.0"
@@ -58085,6 +58086,7 @@ var { multiply: multiply2, divide: divide3, fraction: fraction2, add: add3 } = m
 var fxManager = class {
   constructor(FXRates) {
     this._fxRateList = {};
+    this.ableToGetAllFXRate = true;
     FXRates.forEach((fxRate) => {
       try {
         this.update(fxRate);
@@ -58401,123 +58403,106 @@ var fxmManager = class extends router {
   }
   mountFXMRouter(source) {
     this.use([this.getFXMRouter(source)], `/${source}/(.*)`);
+    this.use([this.getFXMRouter(source)], `/${source}`);
   }
   getFXMRouter(source) {
     const fxmRouter = new router();
+    const handlerSourceInfo = async (request3, response2) => {
+      if (request3.params[0] && request3.params[0] != source) {
+        return response2;
+      }
+      response2.body = JSON.stringify({
+        status: "ok",
+        source,
+        currency: Object.keys(
+          (await this.requestFXManager(source)).fxRateList
+        ).sort(),
+        date: (/* @__PURE__ */ new Date()).toUTCString()
+      });
+      useJson(response2, request3);
+      throw response2;
+    };
+    const handlerCurrencyAllFXRates = async (request3, response2) => {
+      const { from } = request3.params;
+      const result = {};
+      if (!(await this.requestFXManager(source)).ableToGetAllFXRate) {
+        response2.status = 403;
+        result["status"] = "error";
+        result["message"] = `Not able to get all FX rate with ${from} on ${source}`;
+        response2.body = JSON.stringify(result);
+        useJson(response2, request3);
+        return response2;
+      }
+      for (const to in (await this.requestFXManager(source)).fxRateList[from]) {
+        if (to == from)
+          continue;
+        result[to] = await getDetails(
+          from,
+          to,
+          await this.requestFXManager(source),
+          request3
+        );
+      }
+      response2.body = JSON.stringify(result);
+      useJson(response2, request3);
+      return response2;
+    };
+    const handlerCurrencyConvert = async (request3, response2) => {
+      const { from, to } = request3.params;
+      const result = await getDetails(
+        from,
+        to,
+        await this.requestFXManager(source),
+        request3
+      );
+      response2.body = JSON.stringify(result);
+      useJson(response2, request3);
+      response2.headers.set(
+        "Date",
+        (await this.requestFXManager(source)).getUpdatedDate(
+          from,
+          to
+        ).toUTCString()
+      );
+      return response2;
+    };
+    const handlerCurrencyConvertAmount = async (request3, response2) => {
+      const { from, to, type, amount } = request3.params;
+      const result = await getConvert(
+        from,
+        to,
+        type,
+        await this.requestFXManager(source),
+        request3,
+        Number(amount)
+      );
+      response2.body = result.toString();
+      useBasic(response2);
+      response2.headers.set(
+        "Date",
+        (await this.requestFXManager(source)).getUpdatedDate(
+          from,
+          to
+        ).toUTCString()
+      );
+      return response2;
+    };
+    fxmRouter.binding("/", new handler("GET", [handlerSourceInfo]));
     fxmRouter.binding(
       "/:from",
-      new handler("GET", [
-        async (request3, response2) => {
-          const { from } = request3.params;
-          if (!(await this.requestFXManager(source)).fxRateList[from]) {
-            if (from != source) {
-              response2.status = 404;
-              response2.body = "404 Not Found";
-              useBasic(response2);
-              return response2;
-            }
-            response2.body = JSON.stringify({
-              status: "ok",
-              source,
-              currency: Object.keys(
-                (await this.requestFXManager(source)).fxRateList
-              ).sort(),
-              date: (/* @__PURE__ */ new Date()).toUTCString()
-            });
-            useJson(response2, request3);
-            return response2;
-          }
-          const result = {};
-          for (const to in (await this.requestFXManager(source)).fxRateList[from]) {
-            if (to == from)
-              continue;
-            result[to] = await getDetails(
-              from,
-              to,
-              await this.requestFXManager(source),
-              request3
-            );
-          }
-          response2.body = JSON.stringify(result);
-          useJson(response2, request3);
-          return response2;
-        }
-      ])
+      new handler("GET", [handlerSourceInfo, handlerCurrencyAllFXRates])
     );
     fxmRouter.binding(
       "/:from/:to",
-      new handler("GET", [
-        async (request3, response2) => {
-          const { from, to } = request3.params;
-          const result = await getDetails(
-            from,
-            to,
-            await this.requestFXManager(source),
-            request3
-          );
-          response2.body = JSON.stringify(result);
-          useJson(response2, request3);
-          response2.headers.set(
-            "Date",
-            (await this.requestFXManager(source)).getUpdatedDate(
-              from,
-              to
-            ).toUTCString()
-          );
-          return response2;
-        }
-      ])
+      new handler("GET", [handlerCurrencyConvert])
     );
     fxmRouter.binding(
       "/:from/:to/:type",
-      new handler("GET", [
-        async (request3, response2) => {
-          const { from, to, type } = request3.params;
-          const result = await getConvert(
-            from,
-            to,
-            type,
-            await this.requestFXManager(source),
-            request3
-          );
-          response2.body = result.toString();
-          useBasic(response2);
-          response2.headers.set(
-            "Date",
-            (await this.requestFXManager(source)).getUpdatedDate(
-              from,
-              to
-            ).toUTCString()
-          );
-          return response2;
-        }
-      ])
+      new handler("GET", [handlerCurrencyConvertAmount])
     );
     fxmRouter.binding(
       "/:from/:to/:type/:amount",
-      new handler("GET", [
-        async (request3, response2) => {
-          const { from, to, type, amount } = request3.params;
-          const result = await getConvert(
-            from,
-            to,
-            type,
-            await this.requestFXManager(source),
-            request3,
-            Number(amount)
-          );
-          response2.body = result.toString();
-          useBasic(response2);
-          response2.headers.set(
-            "Date",
-            (await this.requestFXManager(source)).getUpdatedDate(
-              from,
-              to
-            ).toUTCString()
-          );
-          return response2;
-        }
-      ])
+      new handler("GET", [handlerCurrencyConvertAmount])
     );
     return fxmRouter;
   }
@@ -77188,6 +77173,10 @@ var currenciesList = [
   "ZWL"
 ];
 var mastercardFXM = class extends fxManager {
+  constructor() {
+    super([]);
+    this.ableToGetAllFXRate = false;
+  }
   get fxRateList() {
     const fxRateList = {};
     currenciesList.forEach((from) => {
@@ -77239,9 +77228,6 @@ var mastercardFXM = class extends fxManager {
     });
     return fxRateList;
   }
-  constructor() {
-    super([]);
-  }
   update() {
     throw new Error("Method is deprecated");
   }
@@ -77275,8 +77261,6 @@ if (import_node_process2.default.env.ENABLE_WISE == "1") {
   );
 }
 (async () => {
-  App.use([Manager], "/(.*)");
-  App.use([Manager], "/v1/(.*)");
   App.useMappingAdapter();
   if (import_node_process2.default.env.VERCEL != "1")
     App.listen(Number(import_node_process2.default?.env?.PORT) || 8080);
@@ -77291,11 +77275,8 @@ if (import_node_process2.default.env.ENABLE_WISE == "1") {
     "/(.*)",
     new handler("ANY", [
       async (request3, response2) => {
-        setTimeout(
-          () => console.log(
-            `[${(/* @__PURE__ */ new Date()).toUTCString()}] ${request3.ip} ${request3.method} ${request3.url}`
-          ),
-          0
+        console.log(
+          `[${(/* @__PURE__ */ new Date()).toUTCString()}] ${request3.ip} ${request3.method} ${request3.originURL}`
         );
         response2.headers.set("X-Powered-By", package_default2.name);
         response2.headers.set("X-Author", package_default2.author);
@@ -77306,6 +77287,8 @@ if (import_node_process2.default.env.ENABLE_WISE == "1") {
       }
     ])
   );
+  App.use([Manager], "/(.*)");
+  App.use([Manager], "/v1/(.*)");
 })();
 var src_default = async (req, res) => {
   const request3 = await App.adapater.handleRequest(req);

@@ -163,6 +163,8 @@ const currenciesList: string[] = [
 ];
 
 export default class mastercardFXM extends fxManager {
+    ableToGetAllFXRate: boolean = false;
+
     public get fxRateList() {
         const fxRateList: {
             [currency in keyof currency]: {

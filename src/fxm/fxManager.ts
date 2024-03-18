@@ -25,6 +25,8 @@ export default class fxManager {
         this._fxRateList = value;
     }
 
+    ableToGetAllFXRate: boolean = true;
+
     constructor(FXRates: FXRate[]) {
         FXRates.forEach((fxRate) => {
             try {

@@ -162,141 +162,138 @@ class fxmManager extends router {
 
     private mountFXMRouter(source: string): void {
         this.use([this.getFXMRouter(source)], `/${source}/(.*)`);
+        this.use([this.getFXMRouter(source)], `/${source}`);
     }
 
     private getFXMRouter(source: string): router {
         const fxmRouter = new router();
 
+        const handlerSourceInfo = async (
+            request: request<any>,
+            response: response<any>,
+        ) => {
+            if (request.params[0] && request.params[0] != source) {
+                return response;
+            }
+            response.body = JSON.stringify({
+                status: 'ok',
+                source,
+                currency: Object.keys(
+                    (await this.requestFXManager(source)).fxRateList,
+                ).sort(),
+                date: new Date().toUTCString(),
+            });
+            useJson(response, request);
+            throw response;
+        };
+
+        const handlerCurrencyAllFXRates = async (
+            request: request<any>,
+            response: response<any>,
+        ) => {
+            const { from } = request.params;
+            const result: {
+                [to in keyof currency]: {
+                    [type in string]: string;
+                };
+            } = {} as any;
+            if (!(await this.requestFXManager(source)).ableToGetAllFXRate) {
+                response.status = 403;
+                result['status'] = 'error';
+                result['message'] =
+                    `Not able to get all FX rate with ${from} on ${source}`;
+                response.body = JSON.stringify(result);
+                useJson(response, request);
+                return response;
+            }
+            for (const to in (await this.requestFXManager(source)).fxRateList[
+                from
+            ]) {
+                if (to == from) continue;
+                result[to] = await getDetails(
+                    from as unknown as currency,
+                    to as unknown as currency,
+                    await this.requestFXManager(source),
+                    request,
+                );
+            }
+            response.body = JSON.stringify(result);
+            useJson(response, request);
+            return response;
+        };
+
+        const handlerCurrencyConvert = async (
+            request: request<any>,
+            response: response<any>,
+        ) => {
+            const { from, to } = request.params;
+            const result = await getDetails(
+                from as unknown as currency,
+                to as unknown as currency,
+                await this.requestFXManager(source),
+                request,
+            );
+            response.body = JSON.stringify(result);
+            useJson(response, request);
+            response.headers.set(
+                'Date',
+                (await this.requestFXManager(source))
+                    .getUpdatedDate(
+                        from as unknown as currency,
+                        to as unknown as currency,
+                    )
+                    .toUTCString(),
+            );
+            return response;
+        };
+
+        const handlerCurrencyConvertAmount = async (
+            request: request<any>,
+            response: response<any>,
+        ) => {
+            const { from, to, type, amount } = request.params;
+            const result = await getConvert(
+                from as unknown as currency,
+                to as unknown as currency,
+                type,
+                await this.requestFXManager(source),
+                request,
+                Number(amount),
+            );
+            response.body = result.toString();
+            useBasic(response);
+            response.headers.set(
+                'Date',
+                (await this.requestFXManager(source))
+                    .getUpdatedDate(
+                        from as unknown as currency.unknown,
+                        to as unknown as currency.unknown,
+                    )
+                    .toUTCString(),
+            );
+            return response;
+        };
+
+        fxmRouter.binding('/', new handler('GET', [handlerSourceInfo]));
+
         fxmRouter.binding(
             '/:from',
-            new handler('GET', [
-                async (request, response) => {
-                    const { from } = request.params;
-                    if (
-                        !(await this.requestFXManager(source)).fxRateList[from]
-                    ) {
-                        if (from != source) {
-                            response.status = 404;
-                            response.body = '404 Not Found';
-                            useBasic(response);
-                            return response;
-                        }
-                        response.body = JSON.stringify({
-                            status: 'ok',
-                            source,
-                            currency: Object.keys(
-                                (await this.requestFXManager(source))
-                                    .fxRateList,
-                            ).sort(),
-                            date: new Date().toUTCString(),
-                        });
-                        useJson(response, request);
-                        return response;
-                    }
-                    const result: {
-                        [to in keyof currency]: {
-                            [type in string]: string;
-                        };
-                    } = {} as any;
-                    for (const to in (await this.requestFXManager(source))
-                        .fxRateList[from]) {
-                        if (to == from) continue;
-                        result[to] = await getDetails(
-                            from as unknown as currency,
-                            to as unknown as currency,
-                            await this.requestFXManager(source),
-                            request,
-                        );
-                    }
-                    response.body = JSON.stringify(result);
-                    useJson(response, request);
-                    return response;
-                },
-            ]),
+            new handler('GET', [handlerSourceInfo, handlerCurrencyAllFXRates]),
         );
 
         fxmRouter.binding(
             '/:from/:to',
-            new handler('GET', [
-                async (request, response) => {
-                    const { from, to } = request.params;
-                    const result = await getDetails(
-                        from as unknown as currency,
-                        to as unknown as currency,
-                        await this.requestFXManager(source),
-                        request,
-                    );
-                    response.body = JSON.stringify(result);
-                    useJson(response, request);
-                    response.headers.set(
-                        'Date',
-                        (await this.requestFXManager(source))
-                            .getUpdatedDate(
-                                from as unknown as currency,
-                                to as unknown as currency,
-                            )
-                            .toUTCString(),
-                    );
-                    return response;
-                },
-            ]),
+            new handler('GET', [handlerCurrencyConvert]),
         );
 
         fxmRouter.binding(
             '/:from/:to/:type',
-            new handler('GET', [
-                async (request, response) => {
-                    const { from, to, type } = request.params;
-                    const result = await getConvert(
-                        from as unknown as currency,
-                        to as unknown as currency,
-                        type,
-                        await this.requestFXManager(source),
-                        request,
-                    );
-                    response.body = result.toString();
-                    useBasic(response);
-                    response.headers.set(
-                        'Date',
-                        (await this.requestFXManager(source))
-                            .getUpdatedDate(
-                                from as unknown as currency.unknown,
-                                to as unknown as currency.unknown,
-                            )
-                            .toUTCString(),
-                    );
-                    return response;
-                },
-            ]),
+            new handler('GET', [handlerCurrencyConvertAmount]),
         );
 
         fxmRouter.binding(
             '/:from/:to/:type/:amount',
-            new handler('GET', [
-                async (request, response) => {
-                    const { from, to, type, amount } = request.params;
-                    const result = await getConvert(
-                        from as unknown as currency,
-                        to as unknown as currency,
-                        type,
-                        await this.requestFXManager(source),
-                        request,
-                        Number(amount),
-                    );
-                    response.body = result.toString();
-                    useBasic(response);
-                    response.headers.set(
-                        'Date',
-                        (await this.requestFXManager(source))
-                            .getUpdatedDate(
-                                from as unknown as currency.unknown,
-                                to as unknown as currency.unknown,
-                            )
-                            .toUTCString(),
-                    );
-                    return response;
-                },
-            ]),
+            new handler('GET', [handlerCurrencyConvertAmount]),
         );
 
         return fxmRouter;

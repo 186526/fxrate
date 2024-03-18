@@ -51,9 +51,6 @@ if (process.env.ENABLE_WISE == '1') {
 }
 
 (async () => {
-    App.use([Manager], '/(.*)');
-    App.use([Manager], '/v1/(.*)');
-
     App.useMappingAdapter();
     if (process.env.VERCEL != '1')
         App.listen(Number(process?.env?.PORT) || 8080);
@@ -71,13 +68,10 @@ if (process.env.ENABLE_WISE == '1') {
         '/(.*)',
         new handler('ANY', [
             async (request, response) => {
-                setTimeout(
-                    () =>
-                        console.log(
-                            `[${new Date().toUTCString()}] ${request.ip} ${request.method} ${request.url}`,
-                        ),
-                    0,
+                console.log(
+                    `[${new Date().toUTCString()}] ${request.ip} ${request.method} ${request.originURL}`,
                 );
+
                 response.headers.set('X-Powered-By', packageJson.name);
                 response.headers.set('X-Author', packageJson.author);
                 response.headers.set(
@@ -87,6 +81,9 @@ if (process.env.ENABLE_WISE == '1') {
             },
         ]),
     );
+
+    App.use([Manager], '/(.*)');
+    App.use([Manager], '/v1/(.*)');
 })();
 
 export default async (req: http.IncomingMessage, res: http.ServerResponse) => {
