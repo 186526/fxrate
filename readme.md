@@ -104,3 +104,11 @@ Some APIs require configuration tokens to work properly.
 yarn install
 yarn start
 ```
+
+## License
+
+```markdown
+The Program's code is under MIT LICENSE (SEE LICENSE IN LICENSE.MIT).
+
+Data copyright belongs to its source (SEE LICENSE IN LICENSE.DATA).
+```

@@ -17,6 +17,8 @@ import getCMBFXRates from './FXGetter/cmb';
 import getPBOCFXRates from './FXGetter/pboc';
 import getUnionPayFXRates from './FXGetter/unionpay';
 import getWiseFXRates from './FXGetter/wise';
+import getHSBCHKFXRates from './FXGetter/hsbc.hk';
+import getHSBCCNFXRates from './FXGetter/hsbc.cn';
 
 import mastercardFXM from './FXGetter/mastercard';
 import visaFXM from './FXGetter/visa';
@@ -35,6 +37,8 @@ const Manager = new fxmManager({
     cmb: getCMBFXRates,
     pboc: getPBOCFXRates,
     unionpay: getUnionPayFXRates,
+    'hsbc.hk': getHSBCHKFXRates,
+    'hsbc.cn': getHSBCCNFXRates,
 });
 
 Manager.registerFXM('mastercard', new mastercardFXM());

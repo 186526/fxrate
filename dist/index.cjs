@@ -58601,13 +58601,23 @@ var useBasic = (response2) => {
   response2.status = 200;
   response2.headers.set("Date", (/* @__PURE__ */ new Date()).toUTCString());
 };
+var sortObject = (obj) => {
+  if (obj instanceof Array) {
+    return obj.sort();
+  }
+  if (typeof obj !== "object") {
+    return obj;
+  }
+  const keys = Object.keys(obj).sort(), sortedObj = {};
+  for (const key of keys) {
+    sortedObj[key] = sortObject(obj[key]);
+  }
+  return sortedObj;
+};
 var useJson = (response2, request3) => {
   useBasic(response2);
   const answer = JSON.parse(response2.body);
-  const keys = Object.keys(answer).sort(), sortedAnswer = {};
-  for (const key of keys) {
-    sortedAnswer[key] = answer[key];
-  }
+  const sortedAnswer = sortObject(answer);
   response2.body = JSON.stringify(sortedAnswer);
   if (request3.query.has("pretty") || request3.headers.get("Sec-Fetch-Dest") === "document") {
     response2.body = JSON.stringify(sortedAnswer, null, 4);
@@ -76037,6 +76047,78 @@ var getWiseFXRates = (isInSandbox = true, WiseToken) => {
 };
 var wise_default = getWiseFXRates;
 
+// src/FXGetter/hsbc.hk.ts
+var getHSBCHKFXRates = async () => {
+  const req = await axios_default.get(
+    `https://rbwm-api.hsbc.com.hk/digital-pws-tools-investments-eapi-prod-proxy/v1/investments/exchange-rate?locale=en_HK`,
+    {
+      headers: {
+        "User-Agent": "fxrate axios/latest"
+      }
+    }
+  );
+  const data2 = req.data.detailRates;
+  return data2.map((k) => {
+    const answer = {
+      currency: {
+        from: k.ccy,
+        to: "HKD"
+      },
+      rate: {
+        buy: {},
+        sell: {}
+      },
+      updated: new Date(k.lastUpdateDate),
+      unit: 1
+    };
+    if (k.ttBuyRt)
+      answer.rate.buy.remit = parseFloat(k.ttBuyRt);
+    if (k.bankBuyRt)
+      answer.rate.buy.cash = parseFloat(k.bankBuyRt);
+    if (k.ttSelRt)
+      answer.rate.sell.remit = parseFloat(k.ttSelRt);
+    if (k.bankSellRt)
+      answer.rate.sell.cash = parseFloat(k.bankSellRt);
+    return answer;
+  });
+};
+var hsbc_hk_default = getHSBCHKFXRates;
+
+// src/FXGetter/hsbc.cn.ts
+var getHSBCCNFXRates = async () => {
+  const req = await axios_default.get(
+    "https://www.services.cn-banking.hsbc.com.cn/mobile/channel/digital-proxy/cnyTransfer/ratesInfo/remittanceRate?locale=en_CN",
+    {
+      headers: {
+        "User-Agent": "fxrate axios/latest",
+        "Content-Type": "application/json"
+      }
+    }
+  );
+  const data2 = req.data.data.counterForRepeatingBlock;
+  return data2.map((k) => {
+    return {
+      currency: {
+        from: "CNY",
+        to: k.exchangeRateCurrency
+      },
+      rate: {
+        buy: {
+          cash: parseFloat(k.notesSellingRate),
+          remit: parseFloat(k.transferSellingRate)
+        },
+        sell: {
+          cash: parseFloat(k.notesBuyingRate),
+          remit: parseFloat(k.transferBuyingRate)
+        }
+      },
+      unit: 1,
+      updated: /* @__PURE__ */ new Date()
+    };
+  });
+};
+var hsbc_cn_default = getHSBCCNFXRates;
+
 // src/FXGetter/mastercard.ts
 var import_sync_request = __toESM(require("sync-request"), 1);
 
@@ -77832,7 +77914,9 @@ var Manager = new fxmManager_default({
   psbc: psbc_default,
   cmb: cmb_default,
   pboc: pboc_default,
-  unionpay: unionpay_default
+  unionpay: unionpay_default,
+  "hsbc.hk": hsbc_hk_default,
+  "hsbc.cn": hsbc_cn_default
 });
 Manager.registerFXM("mastercard", new mastercardFXM());
 Manager.registerFXM("visa", new mastercardFXM2());

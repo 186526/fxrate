@@ -15,17 +15,28 @@ const useBasic = (response: response<any>): void => {
     response.headers.set('Date', new Date().toUTCString());
 };
 
+const sortObject = (obj: unknown): any => {
+    if (obj instanceof Array) {
+        return obj.sort();
+    }
+    if (typeof obj !== 'object') {
+        return obj;
+    }
+    const keys = Object.keys(obj).sort(),
+        sortedObj = {};
+
+    for (const key of keys) {
+        sortedObj[key] = sortObject(obj[key]);
+    }
+
+    return sortedObj;
+};
+
 const useJson = (response: response<any>, request: request<any>): void => {
     useBasic(response);
 
     const answer = JSON.parse(response.body);
-
-    const keys = Object.keys(answer).sort(),
-        sortedAnswer = {};
-
-    for (const key of keys) {
-        sortedAnswer[key] = answer[key];
-    }
+    const sortedAnswer = sortObject(answer);
 
     response.body = JSON.stringify(sortedAnswer);
 
