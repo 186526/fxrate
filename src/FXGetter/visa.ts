@@ -198,7 +198,7 @@ const currenciesList: string[] = [
     'ZWL',
 ];
 
-export default class mastercardFXM extends fxManager {
+export default class visaFXM extends fxManager {
     ableToGetAllFXRate: boolean = false;
 
     public get fxRateList() {
@@ -299,7 +299,7 @@ export default class mastercardFXM extends fxManager {
         );
 
         const data = req.data;
-        cache.set(`${from}${to}`, data);
+        cache.set(`${from}${to}`, JSON.stringify(data));
 
         return this.fxRateList[from][to];
     }

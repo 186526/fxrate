@@ -257,7 +257,7 @@ export default class mastercardFXM extends fxManager {
         );
 
         const data = req.data;
-        cache.set(`${from}${to}`, data);
+        cache.set(`${from}${to}`, JSON.stringify(data));
 
         return this.fxRateList[from][to];
     }

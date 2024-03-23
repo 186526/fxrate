@@ -5,7 +5,7 @@ import { router, response, request, handler } from 'handlers.js';
 import fxManager from './fxm/fxManager';
 import { FXRate, currency } from './types';
 
-import { round } from 'mathjs';
+import { round, multiply, Fraction } from 'mathjs';
 
 import packageJson from '../package.json';
 import process from 'node:process';
@@ -57,6 +57,7 @@ const getConvert = async (
     fxManager: fxManager,
     request: request<any>,
     amount: number = 100,
+    fees: number = 0,
 ) => {
     let answer = await fxManager.convert(
         from,
@@ -65,6 +66,10 @@ const getConvert = async (
         Number(request.query.get('amount')) || amount || 100,
         request.query.has('reverse'),
     );
+    answer = multiply(
+        answer,
+        1 + (Number(request.query.get('fees')) || fees) / 100,
+    ) as Fraction;
     answer =
         Number(request.query.get('precision')) !== -1
             ? round(answer, Number(request.query.get('precision')) || 5)

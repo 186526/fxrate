@@ -46,12 +46,13 @@ interface result {
 export default result;
 ```
 
--   `GET (/v1)/:source/:from(?reverse&precision&amount)` - show currency's FX rates to other currency in source's db.
+-   `GET (/v1)/:source/:from(?reverse&precision&amount&fees)` - show currency's FX rates to other currency in source's db.
 
 ```typescript
 // query use ?reverse means calculating how much currency is needed to obtain the $amount $from currency is needed.
 // query use ?precision means get data rounded to $precision decimal place. use -1 as the flag means that getting infinite recurrent decimal.
 // query use ?amount means convert from/to $amount currency.
+// query use ?fees means add $fees% ftf.
 interface FXRate {
     updated: UTCString;
     // number: 721.55
@@ -68,23 +69,17 @@ interface result {
 return result;
 ```
 
--   `GET (/v1)/:source/:from/:to(?reverse&precision&amount)` - show currency's FX rates to other currency in source's db.
+-   `GET (/v1)/:source/:from/:to(?reverse&precision&amount&fees)` - show currency's FX rates to other currency in source's db.
 
 ```typescript
-// query use ?reverse means calculating how much currency is needed to obtain the $amount $from currency is needed.
-// query use ?precision means get data rounded to $precision decimal place. use -1 as the flag means that getting infinite recurrent decimal.
-// query use ?amount means convert from/to $amount currency.
 type result = FXRate;
 
 export default result;
 ```
 
--   `GET (/v1)/:source/:from/:to/:type(/:amount)(?reverse&precision&amount)` - show currency's FX rates to other currency in source's db.
+-   `GET (/v1)/:source/:from/:to/:type(/:amount)(?reverse&precision&amount&fees)` - show currency's FX rates to other currency in source's db.
 
 ```typescript
-// query use ?reverse means calculating how much currency is needed to obtain the $amount $from currency is needed.
-// query use ?precision means get data rounded to $precision decimal place. use -1 as the flag means that getting infinite recurrent decimal.
-// query use ?amount means convert from/to $amount currency.
 type result = FXRate;
 
 export default result[type];

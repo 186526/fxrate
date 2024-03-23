@@ -2649,7 +2649,7 @@ var require_fraction = __commonJS({
         if (d === 0) {
           throw DivisionByZero();
         }
-        var f = Object.create(Fraction7.prototype);
+        var f = Object.create(Fraction8.prototype);
         f["s"] = n < 0 ? -1 : 1;
         n = n < 0 ? -n : n;
         var a = gcd(n, d);
@@ -2864,9 +2864,9 @@ var require_fraction = __commonJS({
         }
       }
       ;
-      function Fraction7(a, b) {
+      function Fraction8(a, b) {
         parse8(a, b);
-        if (this instanceof Fraction7) {
+        if (this instanceof Fraction8) {
           a = gcd(P3["d"], P3["n"]);
           this["s"] = P3["s"];
           this["n"] = P3["n"] / a;
@@ -2884,7 +2884,7 @@ var require_fraction = __commonJS({
       var NonIntegerParameter = function() {
         return new Error("Parameters must be integer");
       };
-      Fraction7.prototype = {
+      Fraction8.prototype = {
         "s": 1,
         "n": 0,
         "d": 1,
@@ -2967,7 +2967,7 @@ var require_fraction = __commonJS({
          **/
         "mod": function(a, b) {
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction7(NaN);
+            return new Fraction8(NaN);
           }
           if (a === void 0) {
             return newFraction(this["s"] * this["n"] % this["d"], 1);
@@ -3010,7 +3010,7 @@ var require_fraction = __commonJS({
         "ceil": function(places) {
           places = Math.pow(10, places || 0);
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction7(NaN);
+            return new Fraction8(NaN);
           }
           return newFraction(Math.ceil(places * this["s"] * this["n"] / this["d"]), places);
         },
@@ -3022,7 +3022,7 @@ var require_fraction = __commonJS({
         "floor": function(places) {
           places = Math.pow(10, places || 0);
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction7(NaN);
+            return new Fraction8(NaN);
           }
           return newFraction(Math.floor(places * this["s"] * this["n"] / this["d"]), places);
         },
@@ -3034,7 +3034,7 @@ var require_fraction = __commonJS({
         "round": function(places) {
           places = Math.pow(10, places || 0);
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction7(NaN);
+            return new Fraction8(NaN);
           }
           return newFraction(Math.round(places * this["s"] * this["n"] / this["d"]), places);
         },
@@ -3267,12 +3267,12 @@ var require_fraction = __commonJS({
         }
       };
       if (typeof exports2 === "object") {
-        Object.defineProperty(Fraction7, "__esModule", { "value": true });
-        Fraction7["default"] = Fraction7;
-        Fraction7["Fraction"] = Fraction7;
-        module2["exports"] = Fraction7;
+        Object.defineProperty(Fraction8, "__esModule", { "value": true });
+        Fraction8["default"] = Fraction8;
+        Fraction8["Fraction"] = Fraction8;
+        module2["exports"] = Fraction8;
       } else {
-        root3["Fraction"] = Fraction7;
+        root3["Fraction"] = Fraction8;
       }
     })(exports2);
   }
@@ -20351,7 +20351,7 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     BigNumber: BigNumber2,
     Complex: Complex3,
     DenseMatrix: DenseMatrix2,
-    Fraction: Fraction7
+    Fraction: Fraction8
   } = _ref;
   var typed3 = _createTyped2();
   typed3.clear();
@@ -20571,10 +20571,10 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     from: "number",
     to: "Fraction",
     convert: function convert(x) {
-      if (!Fraction7) {
+      if (!Fraction8) {
         throwNoFraction(x);
       }
-      var f = new Fraction7(x);
+      var f = new Fraction8(x);
       if (f.valueOf() !== x) {
         throw new TypeError("Cannot implicitly convert a number to a Fraction when there will be a loss of precision (value: " + x + "). Use function fraction(x) to convert to Fraction.");
       }
@@ -20614,11 +20614,11 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     from: "string",
     to: "Fraction",
     convert: function convert(x) {
-      if (!Fraction7) {
+      if (!Fraction8) {
         throwNoFraction(x);
       }
       try {
-        return new Fraction7(x);
+        return new Fraction8(x);
       } catch (err) {
         throw new Error('Cannot convert "' + x + '" to Fraction');
       }
@@ -20655,10 +20655,10 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     from: "boolean",
     to: "Fraction",
     convert: function convert(x) {
-      if (!Fraction7) {
+      if (!Fraction8) {
         throwNoFraction(x);
       }
-      return new Fraction7(+x);
+      return new Fraction8(+x);
     }
   }, {
     from: "boolean",
@@ -24265,7 +24265,7 @@ var createIsInteger = /* @__PURE__ */ factory(name9, dependencies10, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.isInt();
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x.d === 1 && isFinite(x.n);
     },
     "Array | Matrix": typed3.referToSelf((self2) => (x) => deepMap(x, self2))
@@ -24784,7 +24784,7 @@ var createIsNegative = /* @__PURE__ */ factory(name10, dependencies11, (_ref) =>
     BigNumber: function BigNumber2(x) {
       return x.isNeg() && !x.isZero() && !x.isNaN();
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x.s < 0;
     },
     Unit: typed3.referToSelf((self2) => (x) => typed3.find(self2, x.valueType())(x.value)),
@@ -24837,7 +24837,7 @@ var createIsPositive = /* @__PURE__ */ factory(name13, dependencies14, (_ref) =>
     BigNumber: function BigNumber2(x) {
       return !x.isNeg() && !x.isZero() && !x.isNaN();
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x.s > 0 && x.n > 0;
     },
     Unit: typed3.referToSelf((self2) => (x) => typed3.find(self2, x.valueType())(x.value)),
@@ -24860,7 +24860,7 @@ var createIsZero = /* @__PURE__ */ factory(name14, dependencies15, (_ref) => {
     Complex: function Complex3(x) {
       return x.re === 0 && x.im === 0;
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x.d === 1 && x.n === 0;
     },
     Unit: typed3.referToSelf((self2) => (x) => typed3.find(self2, x.valueType())(x.value)),
@@ -24880,7 +24880,7 @@ var createIsNaN = /* @__PURE__ */ factory(name15, dependencies16, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.isNaN();
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return false;
     },
     Complex: function Complex3(x) {
@@ -25900,7 +25900,7 @@ var createNumber = /* @__PURE__ */ factory(name19, dependencies20, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.toNumber();
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x.valueOf();
     },
     Unit: typed3.referToSelf((self2) => (x) => {
@@ -26031,7 +26031,7 @@ var createBignumber = /* @__PURE__ */ factory(name22, dependencies23, (_ref) => 
       clone5.value = self2(x.value);
       return clone5;
     }),
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return new BigNumber2(x.n).div(x.d).times(x.s);
     },
     null: function _null(x) {
@@ -26063,7 +26063,7 @@ var createComplex = /* @__PURE__ */ factory(name23, dependencies24, (_ref) => {
     "BigNumber, BigNumber": function BigNumberBigNumber(re, im) {
       return new Complex3(re.toNumber(), im.toNumber());
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return new Complex3(x.valueOf(), 0);
     },
     Complex: function Complex4(x) {
@@ -26094,28 +26094,28 @@ var dependencies25 = ["typed", "Fraction"];
 var createFraction = /* @__PURE__ */ factory(name24, dependencies25, (_ref) => {
   var {
     typed: typed3,
-    Fraction: Fraction7
+    Fraction: Fraction8
   } = _ref;
   return typed3("fraction", {
     number: function number2(x) {
       if (!isFinite(x) || isNaN(x)) {
         throw new Error(x + " cannot be represented as a fraction");
       }
-      return new Fraction7(x);
+      return new Fraction8(x);
     },
     string: function string(x) {
-      return new Fraction7(x);
+      return new Fraction8(x);
     },
     "number, number": function numberNumber(numerator, denominator) {
-      return new Fraction7(numerator, denominator);
+      return new Fraction8(numerator, denominator);
     },
     null: function _null(x) {
-      return new Fraction7(0);
+      return new Fraction8(0);
     },
     BigNumber: function BigNumber2(x) {
-      return new Fraction7(x.toString());
+      return new Fraction8(x.toString());
     },
-    Fraction: function Fraction8(x) {
+    Fraction: function Fraction9(x) {
       return x;
     },
     Unit: typed3.referToSelf((self2) => (x) => {
@@ -26124,7 +26124,7 @@ var createFraction = /* @__PURE__ */ factory(name24, dependencies25, (_ref) => {
       return clone5;
     }),
     Object: function Object2(x) {
-      return new Fraction7(x);
+      return new Fraction8(x);
     },
     "Array | Matrix": typed3.referToSelf((self2) => (x) => deepMap(x, self2))
   });
@@ -26377,7 +26377,7 @@ var createUnaryPlus = /* @__PURE__ */ factory(name31, dependencies32, (_ref) => 
     BigNumber: function BigNumber3(x) {
       return x;
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x;
     },
     Unit: function Unit(x) {
@@ -26549,7 +26549,7 @@ var createCbrt = /* @__PURE__ */ factory(name36, dependencies37, (_ref) => {
     matrix: matrix2,
     Complex: Complex3,
     BigNumber: BigNumber2,
-    Fraction: Fraction7
+    Fraction: Fraction8
   } = _ref;
   return typed3(name36, {
     number: cbrtNumber,
@@ -26589,7 +26589,7 @@ var createCbrt = /* @__PURE__ */ factory(name36, dependencies37, (_ref) => {
       if (isBigNumber(x.value)) {
         third = new BigNumber2(1).div(3);
       } else if (isFraction(x.value)) {
-        third = new Fraction7(1, 3);
+        third = new Fraction8(1, 3);
       } else {
         third = 1 / 3;
       }
@@ -26833,7 +26833,7 @@ var createCeil = /* @__PURE__ */ factory(name40, dependencies41, (_ref2) => {
         return x.toDecimalPlaces(n.toNumber(), decimal_default.ROUND_CEIL);
       }
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x.ceil();
     },
     "Fraction, number": function FractionNumber(x, n) {
@@ -26883,7 +26883,7 @@ var createCube = /* @__PURE__ */ factory(name41, dependencies42, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.times(x).times(x);
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x.pow(3);
     },
     Unit: function Unit(x) {
@@ -26990,7 +26990,7 @@ var createFix = /* @__PURE__ */ factory(name44, dependencies45, (_ref2) => {
     "BigNumber, number | BigNumber": function BigNumberNumberBigNumber(x, n) {
       return x.isNegative() ? ceil2(x, n) : floor2(x, n);
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x.s < 0 ? x.ceil() : x.floor();
     },
     "Fraction, number | BigNumber": function FractionNumberBigNumber(x, n) {
@@ -27097,7 +27097,7 @@ var createFloor = /* @__PURE__ */ factory(name45, dependencies46, (_ref2) => {
         return x.toDecimalPlaces(n.toNumber(), decimal_default.ROUND_FLOOR);
       }
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x.floor();
     },
     "Fraction, number": function FractionNumber(x, n) {
@@ -28823,7 +28823,7 @@ var createSign = /* @__PURE__ */ factory(name64, dependencies64, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return new _BigNumber(x.cmp(0));
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return new _Fraction(x.s, 1);
     },
     // deep map collection, skip zeros since sign(0) = 0
@@ -28888,7 +28888,7 @@ var createSquare = /* @__PURE__ */ factory(name66, dependencies66, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.times(x);
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x.mul(x);
     },
     Unit: function Unit(x) {
@@ -32341,7 +32341,7 @@ var createRound = /* @__PURE__ */ factory(name127, dependencies127, (_ref) => {
       var xSelected = nearlyEqual2(x, xEpsilon, config4.epsilon) ? xEpsilon : x;
       return xSelected.toDecimalPlaces(n.toNumber());
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x.round();
     },
     "Fraction, number": function FractionNumber(x, n) {
@@ -33601,7 +33601,7 @@ var createCompare = /* @__PURE__ */ factory(name142, dependencies142, (_ref) => 
     equalScalar: equalScalar2,
     matrix: matrix2,
     BigNumber: BigNumber2,
-    Fraction: Fraction7,
+    Fraction: Fraction8,
     DenseMatrix: DenseMatrix2,
     concat: concat3
   } = _ref;
@@ -33635,7 +33635,7 @@ var createCompare = /* @__PURE__ */ factory(name142, dependencies142, (_ref) => 
       return nearlyEqual2(x, y, config4.epsilon) ? new BigNumber2(0) : new BigNumber2(x.cmp(y));
     },
     "Fraction, Fraction": function FractionFraction(x, y) {
-      return new Fraction7(x.compare(y));
+      return new Fraction8(x.compare(y));
     },
     "Complex, Complex": function ComplexComplex() {
       throw new TypeError("No ordering relation is defined for complex numbers");
@@ -38221,7 +38221,7 @@ var createUnitClass = /* @__PURE__ */ factory(name161, dependencies161, (_ref) =
         return new _BigNumber(x.n).div(x.d).times(x.s);
       return new _BigNumber(x + "");
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return new _Fraction(x);
     },
     Complex: function Complex4(x) {
@@ -58624,13 +58624,17 @@ var useJson = (response2, request3) => {
   }
   response2.headers.set("Content-type", "application/json; charset=utf-8");
 };
-var getConvert = async (from, to, type, fxManager2, request3, amount = 100) => {
+var getConvert = async (from, to, type, fxManager2, request3, amount = 100, fees = 0) => {
   let answer = await fxManager2.convert(
     from,
     to,
     type,
     Number(request3.query.get("amount")) || amount || 100,
     request3.query.has("reverse")
+  );
+  answer = multiply(
+    answer,
+    1 + (Number(request3.query.get("fees")) || fees) / 100
   );
   answer = Number(request3.query.get("precision")) !== -1 ? round2(answer, Number(request3.query.get("precision")) || 5) : answer;
   return Number(answer.toString()) || answer.toString();
@@ -77624,7 +77628,7 @@ var mastercardFXM = class extends fxManager {
       }
     );
     const data2 = req.data;
-    cache.set(`${from}${to}`, data2);
+    cache.set(`${from}${to}`, JSON.stringify(data2));
     return this.fxRateList[from][to];
   }
   update() {
@@ -77819,7 +77823,7 @@ var currenciesList2 = [
   "ZMW",
   "ZWL"
 ];
-var mastercardFXM2 = class extends fxManager {
+var visaFXM = class extends fxManager {
   constructor() {
     super([]);
     this.ableToGetAllFXRate = false;
@@ -77893,7 +77897,7 @@ var mastercardFXM2 = class extends fxManager {
       }
     );
     const data2 = req.data;
-    cache2.set(`${from}${to}`, data2);
+    cache2.set(`${from}${to}`, JSON.stringify(data2));
     return this.fxRateList[from][to];
   }
   update() {
@@ -77919,7 +77923,7 @@ var Manager = new fxmManager_default({
   "hsbc.cn": hsbc_cn_default
 });
 Manager.registerFXM("mastercard", new mastercardFXM());
-Manager.registerFXM("visa", new mastercardFXM2());
+Manager.registerFXM("visa", new visaFXM());
 if (import_node_process2.default.env.ENABLE_WISE == "1") {
   if (import_node_process2.default.env.WISE_TOKEN == void 0)
     throw new Error("WISE_TOKEN is not set.");
