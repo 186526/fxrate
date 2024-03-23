@@ -2649,7 +2649,7 @@ var require_fraction = __commonJS({
         if (d === 0) {
           throw DivisionByZero();
         }
-        var f = Object.create(Fraction6.prototype);
+        var f = Object.create(Fraction7.prototype);
         f["s"] = n < 0 ? -1 : 1;
         n = n < 0 ? -n : n;
         var a = gcd(n, d);
@@ -2864,9 +2864,9 @@ var require_fraction = __commonJS({
         }
       }
       ;
-      function Fraction6(a, b) {
+      function Fraction7(a, b) {
         parse8(a, b);
-        if (this instanceof Fraction6) {
+        if (this instanceof Fraction7) {
           a = gcd(P3["d"], P3["n"]);
           this["s"] = P3["s"];
           this["n"] = P3["n"] / a;
@@ -2884,7 +2884,7 @@ var require_fraction = __commonJS({
       var NonIntegerParameter = function() {
         return new Error("Parameters must be integer");
       };
-      Fraction6.prototype = {
+      Fraction7.prototype = {
         "s": 1,
         "n": 0,
         "d": 1,
@@ -2967,7 +2967,7 @@ var require_fraction = __commonJS({
          **/
         "mod": function(a, b) {
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction6(NaN);
+            return new Fraction7(NaN);
           }
           if (a === void 0) {
             return newFraction(this["s"] * this["n"] % this["d"], 1);
@@ -3010,7 +3010,7 @@ var require_fraction = __commonJS({
         "ceil": function(places) {
           places = Math.pow(10, places || 0);
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction6(NaN);
+            return new Fraction7(NaN);
           }
           return newFraction(Math.ceil(places * this["s"] * this["n"] / this["d"]), places);
         },
@@ -3022,7 +3022,7 @@ var require_fraction = __commonJS({
         "floor": function(places) {
           places = Math.pow(10, places || 0);
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction6(NaN);
+            return new Fraction7(NaN);
           }
           return newFraction(Math.floor(places * this["s"] * this["n"] / this["d"]), places);
         },
@@ -3034,7 +3034,7 @@ var require_fraction = __commonJS({
         "round": function(places) {
           places = Math.pow(10, places || 0);
           if (isNaN(this["n"]) || isNaN(this["d"])) {
-            return new Fraction6(NaN);
+            return new Fraction7(NaN);
           }
           return newFraction(Math.round(places * this["s"] * this["n"] / this["d"]), places);
         },
@@ -3267,12 +3267,12 @@ var require_fraction = __commonJS({
         }
       };
       if (typeof exports2 === "object") {
-        Object.defineProperty(Fraction6, "__esModule", { "value": true });
-        Fraction6["default"] = Fraction6;
-        Fraction6["Fraction"] = Fraction6;
-        module2["exports"] = Fraction6;
+        Object.defineProperty(Fraction7, "__esModule", { "value": true });
+        Fraction7["default"] = Fraction7;
+        Fraction7["Fraction"] = Fraction7;
+        module2["exports"] = Fraction7;
       } else {
-        root3["Fraction"] = Fraction6;
+        root3["Fraction"] = Fraction7;
       }
     })(exports2);
   }
@@ -13421,20 +13421,20 @@ var require_form_data = __commonJS({
       var contentDisposition = this._getContentDisposition(value, options);
       var contentType = this._getContentType(value, options);
       var contents2 = "";
-      var headers2 = {
+      var headers3 = {
         // add custom disposition as third element or keep it two elements if not
         "Content-Disposition": ["form-data", 'name="' + field + '"'].concat(contentDisposition || []),
         // if no content type. allow it to be empty array
         "Content-Type": [].concat(contentType || [])
       };
       if (typeof options.header == "object") {
-        populate(headers2, options.header);
+        populate(headers3, options.header);
       }
       var header;
-      for (var prop2 in headers2) {
-        if (!headers2.hasOwnProperty(prop2))
+      for (var prop2 in headers3) {
+        if (!headers3.hasOwnProperty(prop2))
           continue;
-        header = headers2[prop2];
+        header = headers3[prop2];
         if (header == null) {
           continue;
         }
@@ -14898,12 +14898,12 @@ var require_follow_redirects = __commonJS({
       spread3.path = spread3.search ? spread3.pathname + spread3.search : spread3.pathname;
       return spread3;
     }
-    function removeMatchingHeaders(regex, headers2) {
+    function removeMatchingHeaders(regex, headers3) {
       var lastValue;
-      for (var header in headers2) {
+      for (var header in headers3) {
         if (regex.test(header)) {
-          lastValue = headers2[header];
-          delete headers2[header];
+          lastValue = headers3[header];
+          delete headers3[header];
         }
       }
       return lastValue === null || typeof lastValue === "undefined" ? void 0 : String(lastValue).trim();
@@ -17228,6 +17228,300 @@ var require_boolbase = __commonJS({
   }
 });
 
+// node_modules/dayjs/dayjs.min.js
+var require_dayjs_min = __commonJS({
+  "node_modules/dayjs/dayjs.min.js"(exports2, module2) {
+    !function(t, e2) {
+      "object" == typeof exports2 && "undefined" != typeof module2 ? module2.exports = e2() : "function" == typeof define && define.amd ? define(e2) : (t = "undefined" != typeof globalThis ? globalThis : t || self).dayjs = e2();
+    }(exports2, function() {
+      "use strict";
+      var t = 1e3, e2 = 6e4, n = 36e5, r = "millisecond", i = "second", s = "minute", u = "hour", a = "day", o = "week", c = "month", f = "quarter", h = "year", d = "date", l = "Invalid Date", $2 = /^(\d{4})[-/]?(\d{1,2})?[-/]?(\d{0,2})[Tt\s]*(\d{1,2})?:?(\d{1,2})?:?(\d{1,2})?[.:]?(\d+)?$/, y = /\[([^\]]+)]|Y{1,4}|M{1,4}|D{1,2}|d{1,4}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS/g, M = { name: "en", weekdays: "Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday".split("_"), months: "January_February_March_April_May_June_July_August_September_October_November_December".split("_"), ordinal: function(t2) {
+        var e3 = ["th", "st", "nd", "rd"], n3 = t2 % 100;
+        return "[" + t2 + (e3[(n3 - 20) % 10] || e3[n3] || e3[0]) + "]";
+      } }, m = function(t2, e3, n3) {
+        var r2 = String(t2);
+        return !r2 || r2.length >= e3 ? t2 : "" + Array(e3 + 1 - r2.length).join(n3) + t2;
+      }, v = { s: m, z: function(t2) {
+        var e3 = -t2.utcOffset(), n3 = Math.abs(e3), r2 = Math.floor(n3 / 60), i2 = n3 % 60;
+        return (e3 <= 0 ? "+" : "-") + m(r2, 2, "0") + ":" + m(i2, 2, "0");
+      }, m: function t2(e3, n3) {
+        if (e3.date() < n3.date())
+          return -t2(n3, e3);
+        var r2 = 12 * (n3.year() - e3.year()) + (n3.month() - e3.month()), i2 = e3.clone().add(r2, c), s2 = n3 - i2 < 0, u2 = e3.clone().add(r2 + (s2 ? -1 : 1), c);
+        return +(-(r2 + (n3 - i2) / (s2 ? i2 - u2 : u2 - i2)) || 0);
+      }, a: function(t2) {
+        return t2 < 0 ? Math.ceil(t2) || 0 : Math.floor(t2);
+      }, p: function(t2) {
+        return { M: c, y: h, w: o, d: a, D: d, h: u, m: s, s: i, ms: r, Q: f }[t2] || String(t2 || "").toLowerCase().replace(/s$/, "");
+      }, u: function(t2) {
+        return void 0 === t2;
+      } }, g = "en", D = {};
+      D[g] = M;
+      var p = "$isDayjsObject", S = function(t2) {
+        return t2 instanceof _ || !(!t2 || !t2[p]);
+      }, w = function t2(e3, n3, r2) {
+        var i2;
+        if (!e3)
+          return g;
+        if ("string" == typeof e3) {
+          var s2 = e3.toLowerCase();
+          D[s2] && (i2 = s2), n3 && (D[s2] = n3, i2 = s2);
+          var u2 = e3.split("-");
+          if (!i2 && u2.length > 1)
+            return t2(u2[0]);
+        } else {
+          var a2 = e3.name;
+          D[a2] = e3, i2 = a2;
+        }
+        return !r2 && i2 && (g = i2), i2 || !r2 && g;
+      }, O = function(t2, e3) {
+        if (S(t2))
+          return t2.clone();
+        var n3 = "object" == typeof e3 ? e3 : {};
+        return n3.date = t2, n3.args = arguments, new _(n3);
+      }, b = v;
+      b.l = w, b.i = S, b.w = function(t2, e3) {
+        return O(t2, { locale: e3.$L, utc: e3.$u, x: e3.$x, $offset: e3.$offset });
+      };
+      var _ = function() {
+        function M2(t2) {
+          this.$L = w(t2.locale, null, true), this.parse(t2), this.$x = this.$x || t2.x || {}, this[p] = true;
+        }
+        var m2 = M2.prototype;
+        return m2.parse = function(t2) {
+          this.$d = function(t3) {
+            var e3 = t3.date, n3 = t3.utc;
+            if (null === e3)
+              return /* @__PURE__ */ new Date(NaN);
+            if (b.u(e3))
+              return /* @__PURE__ */ new Date();
+            if (e3 instanceof Date)
+              return new Date(e3);
+            if ("string" == typeof e3 && !/Z$/i.test(e3)) {
+              var r2 = e3.match($2);
+              if (r2) {
+                var i2 = r2[2] - 1 || 0, s2 = (r2[7] || "0").substring(0, 3);
+                return n3 ? new Date(Date.UTC(r2[1], i2, r2[3] || 1, r2[4] || 0, r2[5] || 0, r2[6] || 0, s2)) : new Date(r2[1], i2, r2[3] || 1, r2[4] || 0, r2[5] || 0, r2[6] || 0, s2);
+              }
+            }
+            return new Date(e3);
+          }(t2), this.init();
+        }, m2.init = function() {
+          var t2 = this.$d;
+          this.$y = t2.getFullYear(), this.$M = t2.getMonth(), this.$D = t2.getDate(), this.$W = t2.getDay(), this.$H = t2.getHours(), this.$m = t2.getMinutes(), this.$s = t2.getSeconds(), this.$ms = t2.getMilliseconds();
+        }, m2.$utils = function() {
+          return b;
+        }, m2.isValid = function() {
+          return !(this.$d.toString() === l);
+        }, m2.isSame = function(t2, e3) {
+          var n3 = O(t2);
+          return this.startOf(e3) <= n3 && n3 <= this.endOf(e3);
+        }, m2.isAfter = function(t2, e3) {
+          return O(t2) < this.startOf(e3);
+        }, m2.isBefore = function(t2, e3) {
+          return this.endOf(e3) < O(t2);
+        }, m2.$g = function(t2, e3, n3) {
+          return b.u(t2) ? this[e3] : this.set(n3, t2);
+        }, m2.unix = function() {
+          return Math.floor(this.valueOf() / 1e3);
+        }, m2.valueOf = function() {
+          return this.$d.getTime();
+        }, m2.startOf = function(t2, e3) {
+          var n3 = this, r2 = !!b.u(e3) || e3, f2 = b.p(t2), l2 = function(t3, e4) {
+            var i2 = b.w(n3.$u ? Date.UTC(n3.$y, e4, t3) : new Date(n3.$y, e4, t3), n3);
+            return r2 ? i2 : i2.endOf(a);
+          }, $3 = function(t3, e4) {
+            return b.w(n3.toDate()[t3].apply(n3.toDate("s"), (r2 ? [0, 0, 0, 0] : [23, 59, 59, 999]).slice(e4)), n3);
+          }, y2 = this.$W, M3 = this.$M, m3 = this.$D, v2 = "set" + (this.$u ? "UTC" : "");
+          switch (f2) {
+            case h:
+              return r2 ? l2(1, 0) : l2(31, 11);
+            case c:
+              return r2 ? l2(1, M3) : l2(0, M3 + 1);
+            case o:
+              var g2 = this.$locale().weekStart || 0, D2 = (y2 < g2 ? y2 + 7 : y2) - g2;
+              return l2(r2 ? m3 - D2 : m3 + (6 - D2), M3);
+            case a:
+            case d:
+              return $3(v2 + "Hours", 0);
+            case u:
+              return $3(v2 + "Minutes", 1);
+            case s:
+              return $3(v2 + "Seconds", 2);
+            case i:
+              return $3(v2 + "Milliseconds", 3);
+            default:
+              return this.clone();
+          }
+        }, m2.endOf = function(t2) {
+          return this.startOf(t2, false);
+        }, m2.$set = function(t2, e3) {
+          var n3, o2 = b.p(t2), f2 = "set" + (this.$u ? "UTC" : ""), l2 = (n3 = {}, n3[a] = f2 + "Date", n3[d] = f2 + "Date", n3[c] = f2 + "Month", n3[h] = f2 + "FullYear", n3[u] = f2 + "Hours", n3[s] = f2 + "Minutes", n3[i] = f2 + "Seconds", n3[r] = f2 + "Milliseconds", n3)[o2], $3 = o2 === a ? this.$D + (e3 - this.$W) : e3;
+          if (o2 === c || o2 === h) {
+            var y2 = this.clone().set(d, 1);
+            y2.$d[l2]($3), y2.init(), this.$d = y2.set(d, Math.min(this.$D, y2.daysInMonth())).$d;
+          } else
+            l2 && this.$d[l2]($3);
+          return this.init(), this;
+        }, m2.set = function(t2, e3) {
+          return this.clone().$set(t2, e3);
+        }, m2.get = function(t2) {
+          return this[b.p(t2)]();
+        }, m2.add = function(r2, f2) {
+          var d2, l2 = this;
+          r2 = Number(r2);
+          var $3 = b.p(f2), y2 = function(t2) {
+            var e3 = O(l2);
+            return b.w(e3.date(e3.date() + Math.round(t2 * r2)), l2);
+          };
+          if ($3 === c)
+            return this.set(c, this.$M + r2);
+          if ($3 === h)
+            return this.set(h, this.$y + r2);
+          if ($3 === a)
+            return y2(1);
+          if ($3 === o)
+            return y2(7);
+          var M3 = (d2 = {}, d2[s] = e2, d2[u] = n, d2[i] = t, d2)[$3] || 1, m3 = this.$d.getTime() + r2 * M3;
+          return b.w(m3, this);
+        }, m2.subtract = function(t2, e3) {
+          return this.add(-1 * t2, e3);
+        }, m2.format = function(t2) {
+          var e3 = this, n3 = this.$locale();
+          if (!this.isValid())
+            return n3.invalidDate || l;
+          var r2 = t2 || "YYYY-MM-DDTHH:mm:ssZ", i2 = b.z(this), s2 = this.$H, u2 = this.$m, a2 = this.$M, o2 = n3.weekdays, c2 = n3.months, f2 = n3.meridiem, h2 = function(t3, n4, i3, s3) {
+            return t3 && (t3[n4] || t3(e3, r2)) || i3[n4].slice(0, s3);
+          }, d2 = function(t3) {
+            return b.s(s2 % 12 || 12, t3, "0");
+          }, $3 = f2 || function(t3, e4, n4) {
+            var r3 = t3 < 12 ? "AM" : "PM";
+            return n4 ? r3.toLowerCase() : r3;
+          };
+          return r2.replace(y, function(t3, r3) {
+            return r3 || function(t4) {
+              switch (t4) {
+                case "YY":
+                  return String(e3.$y).slice(-2);
+                case "YYYY":
+                  return b.s(e3.$y, 4, "0");
+                case "M":
+                  return a2 + 1;
+                case "MM":
+                  return b.s(a2 + 1, 2, "0");
+                case "MMM":
+                  return h2(n3.monthsShort, a2, c2, 3);
+                case "MMMM":
+                  return h2(c2, a2);
+                case "D":
+                  return e3.$D;
+                case "DD":
+                  return b.s(e3.$D, 2, "0");
+                case "d":
+                  return String(e3.$W);
+                case "dd":
+                  return h2(n3.weekdaysMin, e3.$W, o2, 2);
+                case "ddd":
+                  return h2(n3.weekdaysShort, e3.$W, o2, 3);
+                case "dddd":
+                  return o2[e3.$W];
+                case "H":
+                  return String(s2);
+                case "HH":
+                  return b.s(s2, 2, "0");
+                case "h":
+                  return d2(1);
+                case "hh":
+                  return d2(2);
+                case "a":
+                  return $3(s2, u2, true);
+                case "A":
+                  return $3(s2, u2, false);
+                case "m":
+                  return String(u2);
+                case "mm":
+                  return b.s(u2, 2, "0");
+                case "s":
+                  return String(e3.$s);
+                case "ss":
+                  return b.s(e3.$s, 2, "0");
+                case "SSS":
+                  return b.s(e3.$ms, 3, "0");
+                case "Z":
+                  return i2;
+              }
+              return null;
+            }(t3) || i2.replace(":", "");
+          });
+        }, m2.utcOffset = function() {
+          return 15 * -Math.round(this.$d.getTimezoneOffset() / 15);
+        }, m2.diff = function(r2, d2, l2) {
+          var $3, y2 = this, M3 = b.p(d2), m3 = O(r2), v2 = (m3.utcOffset() - this.utcOffset()) * e2, g2 = this - m3, D2 = function() {
+            return b.m(y2, m3);
+          };
+          switch (M3) {
+            case h:
+              $3 = D2() / 12;
+              break;
+            case c:
+              $3 = D2();
+              break;
+            case f:
+              $3 = D2() / 3;
+              break;
+            case o:
+              $3 = (g2 - v2) / 6048e5;
+              break;
+            case a:
+              $3 = (g2 - v2) / 864e5;
+              break;
+            case u:
+              $3 = g2 / n;
+              break;
+            case s:
+              $3 = g2 / e2;
+              break;
+            case i:
+              $3 = g2 / t;
+              break;
+            default:
+              $3 = g2;
+          }
+          return l2 ? $3 : b.a($3);
+        }, m2.daysInMonth = function() {
+          return this.endOf(c).$D;
+        }, m2.$locale = function() {
+          return D[this.$L];
+        }, m2.locale = function(t2, e3) {
+          if (!t2)
+            return this.$L;
+          var n3 = this.clone(), r2 = w(t2, e3, true);
+          return r2 && (n3.$L = r2), n3;
+        }, m2.clone = function() {
+          return b.w(this.$d, this);
+        }, m2.toDate = function() {
+          return new Date(this.valueOf());
+        }, m2.toJSON = function() {
+          return this.isValid() ? this.toISOString() : null;
+        }, m2.toISOString = function() {
+          return this.$d.toISOString();
+        }, m2.toString = function() {
+          return this.$d.toUTCString();
+        }, M2;
+      }(), k = _.prototype;
+      return O.prototype = k, [["$ms", r], ["$s", i], ["$m", s], ["$H", u], ["$W", a], ["$M", c], ["$y", h], ["$D", d]].forEach(function(t2) {
+        k[t2[1]] = function(e3) {
+          return this.$g(e3, t2[0], t2[1]);
+        };
+      }), O.extend = function(t2, e3) {
+        return t2.$i || (t2(e3, _, O), t2.$i = true), O;
+      }, O.locale = w, O.isDayjs = S, O.unix = function(t2) {
+        return O(1e3 * t2);
+      }, O.en = D[g], O.Ls = D, O.p = {}, O;
+    });
+  }
+});
+
 // src/index.ts
 var src_exports = {};
 __export(src_exports, {
@@ -17247,14 +17541,14 @@ var request = class {
   params;
   custom;
   ip;
-  constructor(method, url2, headers2, body, params, ip = "0.0.0.0") {
+  constructor(method, url2, headers3, body, params, ip = "0.0.0.0") {
     this.method = method;
     this.url = url2;
-    this.headers = headers2;
+    this.headers = headers3;
     this.body = body;
     this.query = new URLSearchParams(url2.search);
     this.params = params;
-    this.ip = headers2.get("X-REAL-IP") ?? headers2.get("X-Forwarded-For")?.split(" ")[0] ?? ip;
+    this.ip = headers3.get("X-REAL-IP") ?? headers3.get("X-Forwarded-For")?.split(" ")[0] ?? ip;
   }
   extends(custom) {
     this.custom = custom;
@@ -17300,10 +17594,10 @@ var version = (() => {
 // node_modules/handlers.js/dist/src/interface/headers.js
 var headers = class {
   headers = {};
-  constructor(headers2) {
+  constructor(headers3) {
     this.headers = {};
-    Object.keys(headers2).forEach((key) => {
-      this.headers[firstUpperCase(key)] = headers2[key];
+    Object.keys(headers3).forEach((key) => {
+      this.headers[firstUpperCase(key)] = headers3[key];
     });
   }
   delete(key) {
@@ -17401,8 +17695,8 @@ var package_default = {
 
 // node_modules/handlers.js/dist/src/interface/response.js
 var defaultHeaders = class extends headers_default {
-  constructor(headers2 = {}) {
-    super(headers2);
+  constructor(headers3 = {}) {
+    super(headers3);
     if (!this.has("Content-Type"))
       this.set("Content-Type", "text/plain; charset=utf-8");
     this.set("Server", `Handlers.js/${package_default.version} ${platform}/${version}`);
@@ -17413,9 +17707,9 @@ var response = class {
   headers;
   body;
   custom;
-  constructor(body, status = 200, headers2 = new defaultHeaders()) {
+  constructor(body, status = 200, headers3 = new defaultHeaders()) {
     this.status = status;
-    this.headers = headers2;
+    this.headers = headers3;
     this.body = body;
   }
   extends(custom) {
@@ -17965,6 +18259,7 @@ var package_default2 = {
     "@dotenvx/dotenvx": "^0.25.1",
     axios: "^1.6.7",
     cheerio: "^1.0.0-rc.12",
+    dayjs: "^1.11.10",
     "fast-xml-parser": "^4.3.4",
     "handlers.js": "^0.1.1-1",
     "lru-cache": "^10.2.0",
@@ -20056,7 +20351,7 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     BigNumber: BigNumber2,
     Complex: Complex3,
     DenseMatrix: DenseMatrix2,
-    Fraction: Fraction6
+    Fraction: Fraction7
   } = _ref;
   var typed3 = _createTyped2();
   typed3.clear();
@@ -20276,10 +20571,10 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     from: "number",
     to: "Fraction",
     convert: function convert(x) {
-      if (!Fraction6) {
+      if (!Fraction7) {
         throwNoFraction(x);
       }
-      var f = new Fraction6(x);
+      var f = new Fraction7(x);
       if (f.valueOf() !== x) {
         throw new TypeError("Cannot implicitly convert a number to a Fraction when there will be a loss of precision (value: " + x + "). Use function fraction(x) to convert to Fraction.");
       }
@@ -20319,11 +20614,11 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     from: "string",
     to: "Fraction",
     convert: function convert(x) {
-      if (!Fraction6) {
+      if (!Fraction7) {
         throwNoFraction(x);
       }
       try {
-        return new Fraction6(x);
+        return new Fraction7(x);
       } catch (err) {
         throw new Error('Cannot convert "' + x + '" to Fraction');
       }
@@ -20360,10 +20655,10 @@ var createTyped = /* @__PURE__ */ factory("typed", dependencies, function create
     from: "boolean",
     to: "Fraction",
     convert: function convert(x) {
-      if (!Fraction6) {
+      if (!Fraction7) {
         throwNoFraction(x);
       }
-      return new Fraction6(+x);
+      return new Fraction7(+x);
     }
   }, {
     from: "boolean",
@@ -23970,7 +24265,7 @@ var createIsInteger = /* @__PURE__ */ factory(name9, dependencies10, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.isInt();
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x.d === 1 && isFinite(x.n);
     },
     "Array | Matrix": typed3.referToSelf((self2) => (x) => deepMap(x, self2))
@@ -24489,7 +24784,7 @@ var createIsNegative = /* @__PURE__ */ factory(name10, dependencies11, (_ref) =>
     BigNumber: function BigNumber2(x) {
       return x.isNeg() && !x.isZero() && !x.isNaN();
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x.s < 0;
     },
     Unit: typed3.referToSelf((self2) => (x) => typed3.find(self2, x.valueType())(x.value)),
@@ -24542,7 +24837,7 @@ var createIsPositive = /* @__PURE__ */ factory(name13, dependencies14, (_ref) =>
     BigNumber: function BigNumber2(x) {
       return !x.isNeg() && !x.isZero() && !x.isNaN();
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x.s > 0 && x.n > 0;
     },
     Unit: typed3.referToSelf((self2) => (x) => typed3.find(self2, x.valueType())(x.value)),
@@ -24565,7 +24860,7 @@ var createIsZero = /* @__PURE__ */ factory(name14, dependencies15, (_ref) => {
     Complex: function Complex3(x) {
       return x.re === 0 && x.im === 0;
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x.d === 1 && x.n === 0;
     },
     Unit: typed3.referToSelf((self2) => (x) => typed3.find(self2, x.valueType())(x.value)),
@@ -24585,7 +24880,7 @@ var createIsNaN = /* @__PURE__ */ factory(name15, dependencies16, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.isNaN();
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return false;
     },
     Complex: function Complex3(x) {
@@ -25605,7 +25900,7 @@ var createNumber = /* @__PURE__ */ factory(name19, dependencies20, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.toNumber();
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x.valueOf();
     },
     Unit: typed3.referToSelf((self2) => (x) => {
@@ -25736,7 +26031,7 @@ var createBignumber = /* @__PURE__ */ factory(name22, dependencies23, (_ref) => 
       clone5.value = self2(x.value);
       return clone5;
     }),
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return new BigNumber2(x.n).div(x.d).times(x.s);
     },
     null: function _null(x) {
@@ -25768,7 +26063,7 @@ var createComplex = /* @__PURE__ */ factory(name23, dependencies24, (_ref) => {
     "BigNumber, BigNumber": function BigNumberBigNumber(re, im) {
       return new Complex3(re.toNumber(), im.toNumber());
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return new Complex3(x.valueOf(), 0);
     },
     Complex: function Complex4(x) {
@@ -25799,28 +26094,28 @@ var dependencies25 = ["typed", "Fraction"];
 var createFraction = /* @__PURE__ */ factory(name24, dependencies25, (_ref) => {
   var {
     typed: typed3,
-    Fraction: Fraction6
+    Fraction: Fraction7
   } = _ref;
   return typed3("fraction", {
     number: function number2(x) {
       if (!isFinite(x) || isNaN(x)) {
         throw new Error(x + " cannot be represented as a fraction");
       }
-      return new Fraction6(x);
+      return new Fraction7(x);
     },
     string: function string(x) {
-      return new Fraction6(x);
+      return new Fraction7(x);
     },
     "number, number": function numberNumber(numerator, denominator) {
-      return new Fraction6(numerator, denominator);
+      return new Fraction7(numerator, denominator);
     },
     null: function _null(x) {
-      return new Fraction6(0);
+      return new Fraction7(0);
     },
     BigNumber: function BigNumber2(x) {
-      return new Fraction6(x.toString());
+      return new Fraction7(x.toString());
     },
-    Fraction: function Fraction7(x) {
+    Fraction: function Fraction8(x) {
       return x;
     },
     Unit: typed3.referToSelf((self2) => (x) => {
@@ -25829,7 +26124,7 @@ var createFraction = /* @__PURE__ */ factory(name24, dependencies25, (_ref) => {
       return clone5;
     }),
     Object: function Object2(x) {
-      return new Fraction6(x);
+      return new Fraction7(x);
     },
     "Array | Matrix": typed3.referToSelf((self2) => (x) => deepMap(x, self2))
   });
@@ -26082,7 +26377,7 @@ var createUnaryPlus = /* @__PURE__ */ factory(name31, dependencies32, (_ref) => 
     BigNumber: function BigNumber3(x) {
       return x;
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x;
     },
     Unit: function Unit(x) {
@@ -26254,7 +26549,7 @@ var createCbrt = /* @__PURE__ */ factory(name36, dependencies37, (_ref) => {
     matrix: matrix2,
     Complex: Complex3,
     BigNumber: BigNumber2,
-    Fraction: Fraction6
+    Fraction: Fraction7
   } = _ref;
   return typed3(name36, {
     number: cbrtNumber,
@@ -26294,7 +26589,7 @@ var createCbrt = /* @__PURE__ */ factory(name36, dependencies37, (_ref) => {
       if (isBigNumber(x.value)) {
         third = new BigNumber2(1).div(3);
       } else if (isFraction(x.value)) {
-        third = new Fraction6(1, 3);
+        third = new Fraction7(1, 3);
       } else {
         third = 1 / 3;
       }
@@ -26538,7 +26833,7 @@ var createCeil = /* @__PURE__ */ factory(name40, dependencies41, (_ref2) => {
         return x.toDecimalPlaces(n.toNumber(), decimal_default.ROUND_CEIL);
       }
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x.ceil();
     },
     "Fraction, number": function FractionNumber(x, n) {
@@ -26588,7 +26883,7 @@ var createCube = /* @__PURE__ */ factory(name41, dependencies42, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.times(x).times(x);
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x.pow(3);
     },
     Unit: function Unit(x) {
@@ -26695,7 +26990,7 @@ var createFix = /* @__PURE__ */ factory(name44, dependencies45, (_ref2) => {
     "BigNumber, number | BigNumber": function BigNumberNumberBigNumber(x, n) {
       return x.isNegative() ? ceil2(x, n) : floor2(x, n);
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x.s < 0 ? x.ceil() : x.floor();
     },
     "Fraction, number | BigNumber": function FractionNumberBigNumber(x, n) {
@@ -26802,7 +27097,7 @@ var createFloor = /* @__PURE__ */ factory(name45, dependencies46, (_ref2) => {
         return x.toDecimalPlaces(n.toNumber(), decimal_default.ROUND_FLOOR);
       }
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x.floor();
     },
     "Fraction, number": function FractionNumber(x, n) {
@@ -28528,7 +28823,7 @@ var createSign = /* @__PURE__ */ factory(name64, dependencies64, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return new _BigNumber(x.cmp(0));
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return new _Fraction(x.s, 1);
     },
     // deep map collection, skip zeros since sign(0) = 0
@@ -28593,7 +28888,7 @@ var createSquare = /* @__PURE__ */ factory(name66, dependencies66, (_ref) => {
     BigNumber: function BigNumber2(x) {
       return x.times(x);
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x.mul(x);
     },
     Unit: function Unit(x) {
@@ -32046,7 +32341,7 @@ var createRound = /* @__PURE__ */ factory(name127, dependencies127, (_ref) => {
       var xSelected = nearlyEqual2(x, xEpsilon, config4.epsilon) ? xEpsilon : x;
       return xSelected.toDecimalPlaces(n.toNumber());
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return x.round();
     },
     "Fraction, number": function FractionNumber(x, n) {
@@ -33306,7 +33601,7 @@ var createCompare = /* @__PURE__ */ factory(name142, dependencies142, (_ref) => 
     equalScalar: equalScalar2,
     matrix: matrix2,
     BigNumber: BigNumber2,
-    Fraction: Fraction6,
+    Fraction: Fraction7,
     DenseMatrix: DenseMatrix2,
     concat: concat3
   } = _ref;
@@ -33340,7 +33635,7 @@ var createCompare = /* @__PURE__ */ factory(name142, dependencies142, (_ref) => 
       return nearlyEqual2(x, y, config4.epsilon) ? new BigNumber2(0) : new BigNumber2(x.cmp(y));
     },
     "Fraction, Fraction": function FractionFraction(x, y) {
-      return new Fraction6(x.compare(y));
+      return new Fraction7(x.compare(y));
     },
     "Complex, Complex": function ComplexComplex() {
       throw new TypeError("No ordering relation is defined for complex numbers");
@@ -37926,7 +38221,7 @@ var createUnitClass = /* @__PURE__ */ factory(name161, dependencies161, (_ref) =
         return new _BigNumber(x.n).div(x.d).times(x.s);
       return new _BigNumber(x + "");
     },
-    Fraction: function Fraction6(x) {
+    Fraction: function Fraction7(x) {
       return new _Fraction(x);
     },
     Complex: function Complex4(x) {
@@ -53233,21 +53528,21 @@ var createStirlingS2 = /* @__PURE__ */ factory(name273, dependencies273, (_ref) 
         throw new TypeError("k must be less than or equal to n in function stirlingS2");
       }
       var big = !(isNumber(n) && isNumber(k));
-      var cache2 = big ? bigCache : smallCache;
+      var cache3 = big ? bigCache : smallCache;
       var make = big ? bignumber2 : number2;
       var nn = number2(n);
       var nk = number2(k);
-      if (cache2[nn] && cache2[nn].length > nk) {
-        return cache2[nn][nk];
+      if (cache3[nn] && cache3[nn].length > nk) {
+        return cache3[nn][nk];
       }
       for (var m = 0; m <= nn; ++m) {
-        if (!cache2[m]) {
-          cache2[m] = [m === 0 ? make(1) : make(0)];
+        if (!cache3[m]) {
+          cache3[m] = [m === 0 ? make(1) : make(0)];
         }
         if (m === 0)
           continue;
-        var row = cache2[m];
-        var prev2 = cache2[m - 1];
+        var row = cache3[m];
+        var prev2 = cache3[m - 1];
         for (var i = row.length; i <= m && i <= nk; ++i) {
           if (i === m) {
             row[i] = 1;
@@ -53256,7 +53551,7 @@ var createStirlingS2 = /* @__PURE__ */ factory(name273, dependencies273, (_ref) 
           }
         }
       }
-      return cache2[nn][nk];
+      return cache3[nn][nk];
     }
   });
 });
@@ -58102,6 +58397,12 @@ var fxManager = class {
   set fxRateList(value) {
     this._fxRateList = value;
   }
+  async getfxRateList(from, to) {
+    return this.fxRateList[from][to];
+  }
+  async setfxRateList(from, to, value) {
+    this.fxRateList[from][to] = value;
+  }
   update(FXRate) {
     const { currency, unit } = FXRate;
     let { rate } = FXRate;
@@ -58203,8 +58504,8 @@ var fxManager = class {
       );
     }
   }
-  convertDirect(from, to, type, amount, reverse = false) {
-    if (!this.fxRateList[from][to][type]) {
+  async convertDirect(from, to, type, amount, reverse = false) {
+    if (!(await this.getfxRateList(from, to))[type]) {
       throw new Error(
         `FX Path from ${from} to ${to} not support ${type} now`
       );
@@ -58212,15 +58513,15 @@ var fxManager = class {
     if (reverse) {
       return divide3(
         fraction2(amount),
-        this.fxRateList[from][to][type]
+        (await this.fxRateList[from][to])[type]
       );
     }
     return multiply2(
-      this.fxRateList[from][to][type],
+      (await this.fxRateList[from][to])[type],
       fraction2(amount)
     );
   }
-  getFXPath(from, to) {
+  async getFXPath(from, to) {
     const FXPath = {
       from,
       end: to,
@@ -58261,15 +58562,15 @@ var fxManager = class {
     }
     throw new Error("No FX path found between " + from + " and " + to);
   }
-  convert(from, to, type, amount, reverse = false) {
-    const FXPath = this.getFXPath(from, to);
+  async convert(from, to, type, amount, reverse = false) {
+    const FXPath = await this.getFXPath(from, to);
     if (reverse)
       FXPath.path = FXPath.path.reverse();
     let current = from;
     let result = fraction2(amount);
     try {
       for (const next2 of FXPath.path) {
-        result = this.convertDirect(
+        result = await this.convertDirect(
           current,
           next2,
           type,
@@ -58286,11 +58587,11 @@ ${e2.message}`
     }
     return result;
   }
-  getUpdatedDate(from, to) {
-    if (!this.fxRateList[from][to]) {
+  async getUpdatedDate(from, to) {
+    if (!await this.fxRateList[from][to]) {
       throw new Error(`FX Path from ${from} to ${to} not found`);
     }
-    return this.fxRateList[from][to].updated;
+    return (await this.fxRateList[from][to]).updated;
   }
 };
 
@@ -58314,7 +58615,7 @@ var useJson = (response2, request3) => {
   response2.headers.set("Content-type", "application/json; charset=utf-8");
 };
 var getConvert = async (from, to, type, fxManager2, request3, amount = 100) => {
-  let answer = fxManager2.convert(
+  let answer = await fxManager2.convert(
     from,
     to,
     type,
@@ -58326,7 +58627,7 @@ var getConvert = async (from, to, type, fxManager2, request3, amount = 100) => {
 };
 var getDetails = async (from, to, fxManager2, request3) => {
   const result = {
-    updated: fxManager2.getUpdatedDate(from, to).toUTCString()
+    updated: (await fxManager2.getUpdatedDate(from, to)).toUTCString()
   };
   for (const type of ["cash", "remit", "middle"]) {
     try {
@@ -58459,10 +58760,10 @@ var fxmManager = class extends router {
       useJson(response2, request3);
       response2.headers.set(
         "Date",
-        (await this.requestFXManager(source)).getUpdatedDate(
+        (await (await this.requestFXManager(source)).getUpdatedDate(
           from,
           to
-        ).toUTCString()
+        )).toUTCString()
       );
       return response2;
     };
@@ -58480,10 +58781,10 @@ var fxmManager = class extends router {
       useBasic(response2);
       response2.headers.set(
         "Date",
-        (await this.requestFXManager(source)).getUpdatedDate(
+        (await (await this.requestFXManager(source)).getUpdatedDate(
           from,
           to
-        ).toUTCString()
+        )).toUTCString()
       );
       return response2;
     };
@@ -58519,9 +58820,9 @@ function bind(fn, thisArg) {
 // node_modules/axios/lib/utils.js
 var { toString } = Object.prototype;
 var { getPrototypeOf } = Object;
-var kindOf = /* @__PURE__ */ ((cache2) => (thing) => {
+var kindOf = /* @__PURE__ */ ((cache3) => (thing) => {
   const str = toString.call(thing);
-  return cache2[str] || (cache2[str] = str.slice(8, -1).toLowerCase());
+  return cache3[str] || (cache3[str] = str.slice(8, -1).toLowerCase());
 })(/* @__PURE__ */ Object.create(null));
 var kindOfTest = (type) => {
   type = type.toLowerCase();
@@ -59317,8 +59618,8 @@ function stringifySafely(rawValue, parser3, encoder) {
 var defaults = {
   transitional: transitional_default,
   adapter: ["xhr", "http"],
-  transformRequest: [function transformRequest(data2, headers2) {
-    const contentType = headers2.getContentType() || "";
+  transformRequest: [function transformRequest(data2, headers3) {
+    const contentType = headers3.getContentType() || "";
     const hasJSONContentType = contentType.indexOf("application/json") > -1;
     const isObjectPayload = utils_default.isObject(data2);
     if (isObjectPayload && utils_default.isHTMLForm(data2)) {
@@ -59335,7 +59636,7 @@ var defaults = {
       return data2.buffer;
     }
     if (utils_default.isURLSearchParams(data2)) {
-      headers2.setContentType("application/x-www-form-urlencoded;charset=utf-8", false);
+      headers3.setContentType("application/x-www-form-urlencoded;charset=utf-8", false);
       return data2.toString();
     }
     let isFileList2;
@@ -59353,7 +59654,7 @@ var defaults = {
       }
     }
     if (isObjectPayload || hasJSONContentType) {
-      headers2.setContentType("application/json", false);
+      headers3.setContentType("application/json", false);
       return stringifySafely(data2);
     }
     return data2;
@@ -59505,8 +59806,8 @@ function buildAccessors(obj, header) {
   });
 }
 var AxiosHeaders = class {
-  constructor(headers2) {
-    headers2 && this.set(headers2);
+  constructor(headers3) {
+    headers3 && this.set(headers3);
   }
   set(header, valueOrRewrite, rewrite) {
     const self2 = this;
@@ -59520,7 +59821,7 @@ var AxiosHeaders = class {
         self2[key || _header] = normalizeValue(_value);
       }
     }
-    const setHeaders = (headers2, _rewrite) => utils_default.forEach(headers2, (_value, _header) => setHeader(_value, _header, _rewrite));
+    const setHeaders = (headers3, _rewrite) => utils_default.forEach(headers3, (_value, _header) => setHeader(_value, _header, _rewrite));
     if (utils_default.isPlainObject(header) || header instanceof this.constructor) {
       setHeaders(header, valueOrRewrite);
     } else if (utils_default.isString(header) && (header = header.trim()) && !isValidHeaderName(header)) {
@@ -59595,9 +59896,9 @@ var AxiosHeaders = class {
   }
   normalize(format4) {
     const self2 = this;
-    const headers2 = {};
+    const headers3 = {};
     utils_default.forEach(this, (value, header) => {
-      const key = utils_default.findKey(headers2, header);
+      const key = utils_default.findKey(headers3, header);
       if (key) {
         self2[key] = normalizeValue(value);
         delete self2[header];
@@ -59608,7 +59909,7 @@ var AxiosHeaders = class {
         delete self2[header];
       }
       self2[normalized] = normalizeValue(value);
-      headers2[normalized] = true;
+      headers3[normalized] = true;
     });
     return this;
   }
@@ -59673,12 +59974,12 @@ var AxiosHeaders_default = AxiosHeaders;
 function transformData(fns, response2) {
   const config4 = this || defaults_default;
   const context = response2 || config4;
-  const headers2 = AxiosHeaders_default.from(context.headers);
+  const headers3 = AxiosHeaders_default.from(context.headers);
   let data2 = context.data;
   utils_default.forEach(fns, function transform(fn) {
-    data2 = fn.call(config4, data2, headers2.normalize(), response2 ? response2.status : void 0);
+    data2 = fn.call(config4, data2, headers3.normalize(), response2 ? response2.status : void 0);
   });
-  headers2.normalize();
+  headers3.normalize();
   return data2;
 }
 
@@ -60027,13 +60328,13 @@ var FormDataPart = class {
   constructor(name314, value) {
     const { escapeName } = this.constructor;
     const isStringValue = utils_default.isString(value);
-    let headers2 = `Content-Disposition: form-data; name="${escapeName(name314)}"${!isStringValue && value.name ? `; filename="${escapeName(value.name)}"` : ""}${CRLF}`;
+    let headers3 = `Content-Disposition: form-data; name="${escapeName(name314)}"${!isStringValue && value.name ? `; filename="${escapeName(value.name)}"` : ""}${CRLF}`;
     if (isStringValue) {
       value = textEncoder.encode(String(value).replace(/\r?\n|\r\n?/g, CRLF));
     } else {
-      headers2 += `Content-Type: ${value.type || "application/octet-stream"}${CRLF}`;
+      headers3 += `Content-Type: ${value.type || "application/octet-stream"}${CRLF}`;
     }
-    this.headers = textEncoder.encode(headers2 + CRLF);
+    this.headers = textEncoder.encode(headers3 + CRLF);
     this.contentLength = isStringValue ? value.byteLength : value.size;
     this.size = this.headers.byteLength + this.contentLength + CRLF_BYTES_COUNT;
     this.name = name314;
@@ -60311,33 +60612,33 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
         config4
       ));
     }
-    const headers2 = AxiosHeaders_default.from(config4.headers).normalize();
-    headers2.set("User-Agent", "axios/" + VERSION, false);
+    const headers3 = AxiosHeaders_default.from(config4.headers).normalize();
+    headers3.set("User-Agent", "axios/" + VERSION, false);
     const onDownloadProgress = config4.onDownloadProgress;
     const onUploadProgress = config4.onUploadProgress;
     const maxRate = config4.maxRate;
     let maxUploadRate = void 0;
     let maxDownloadRate = void 0;
     if (utils_default.isSpecCompliantForm(data2)) {
-      const userBoundary = headers2.getContentType(/boundary=([-_\w\d]{10,70})/i);
+      const userBoundary = headers3.getContentType(/boundary=([-_\w\d]{10,70})/i);
       data2 = formDataToStream_default(data2, (formHeaders) => {
-        headers2.set(formHeaders);
+        headers3.set(formHeaders);
       }, {
         tag: `axios-${VERSION}-boundary`,
         boundary: userBoundary && userBoundary[1] || void 0
       });
     } else if (utils_default.isFormData(data2) && utils_default.isFunction(data2.getHeaders)) {
-      headers2.set(data2.getHeaders());
-      if (!headers2.hasContentLength()) {
+      headers3.set(data2.getHeaders());
+      if (!headers3.hasContentLength()) {
         try {
           const knownLength = await import_util5.default.promisify(data2.getLength).call(data2);
-          Number.isFinite(knownLength) && knownLength >= 0 && headers2.setContentLength(knownLength);
+          Number.isFinite(knownLength) && knownLength >= 0 && headers3.setContentLength(knownLength);
         } catch (e2) {
         }
       }
     } else if (utils_default.isBlob(data2)) {
-      data2.size && headers2.setContentType(data2.type || "application/octet-stream");
-      headers2.setContentLength(data2.size || 0);
+      data2.size && headers3.setContentType(data2.type || "application/octet-stream");
+      headers3.setContentLength(data2.size || 0);
       data2 = import_stream4.default.Readable.from(readBlob_default(data2));
     } else if (data2 && !utils_default.isStream(data2)) {
       if (Buffer.isBuffer(data2)) {
@@ -60352,7 +60653,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
           config4
         ));
       }
-      headers2.setContentLength(data2.length, false);
+      headers3.setContentLength(data2.length, false);
       if (config4.maxBodyLength > -1 && data2.length > config4.maxBodyLength) {
         return reject(new AxiosError_default(
           "Request body larger than maxBodyLength limit",
@@ -60361,7 +60662,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
         ));
       }
     }
-    const contentLength = utils_default.toFiniteNumber(headers2.getContentLength());
+    const contentLength = utils_default.toFiniteNumber(headers3.getContentLength());
     if (utils_default.isArray(maxRate)) {
       maxUploadRate = maxRate[0];
       maxDownloadRate = maxRate[1];
@@ -60393,7 +60694,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
       const urlPassword = parsed.password;
       auth = urlUsername + ":" + urlPassword;
     }
-    auth && headers2.delete("authorization");
+    auth && headers3.delete("authorization");
     let path;
     try {
       path = buildURL(
@@ -60408,7 +60709,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
       customErr.exists = true;
       return reject(customErr);
     }
-    headers2.set(
+    headers3.set(
       "Accept-Encoding",
       "gzip, compress, deflate" + (isBrotliSupported ? ", br" : ""),
       false
@@ -60416,7 +60717,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
     const options = {
       path,
       method,
-      headers: headers2.toJSON(),
+      headers: headers3.toJSON(),
       agents: { http: config4.httpAgent, https: config4.httpsAgent },
       auth,
       protocol,
@@ -61155,7 +61456,7 @@ var Axios = class {
       config4 = configOrUrl || {};
     }
     config4 = mergeConfig(this.defaults, config4);
-    const { transitional: transitional2, paramsSerializer, headers: headers2 } = config4;
+    const { transitional: transitional2, paramsSerializer, headers: headers3 } = config4;
     if (transitional2 !== void 0) {
       validator_default.assertOptions(transitional2, {
         silentJSONParsing: validators2.transitional(validators2.boolean),
@@ -61176,17 +61477,17 @@ var Axios = class {
       }
     }
     config4.method = (config4.method || this.defaults.method || "get").toLowerCase();
-    let contextHeaders = headers2 && utils_default.merge(
-      headers2.common,
-      headers2[config4.method]
+    let contextHeaders = headers3 && utils_default.merge(
+      headers3.common,
+      headers3[config4.method]
     );
-    headers2 && utils_default.forEach(
+    headers3 && utils_default.forEach(
       ["delete", "get", "head", "post", "put", "patch", "common"],
       (method) => {
-        delete headers2[method];
+        delete headers3[method];
       }
     );
-    config4.headers = AxiosHeaders_default.concat(contextHeaders, headers2);
+    config4.headers = AxiosHeaders_default.concat(contextHeaders, headers3);
     const requestInterceptorChain = [];
     let synchronousRequestInterceptors = true;
     this.interceptors.request.forEach(function unshiftRequestInterceptors(interceptor) {
@@ -77186,40 +77487,37 @@ var mastercardFXM = class extends fxManager {
           {},
           {
             get: (_obj, prop2) => {
+              if (![
+                "cash",
+                "remit",
+                "middle",
+                "updated"
+              ].includes(prop2.toString())) {
+                return void 0;
+              }
+              if (!cache.has(`${from}${to}`)) {
+                const request3 = (0, import_sync_request.default)(
+                  "GET",
+                  `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`
+                );
+                cache.set(
+                  `${from}${to}`,
+                  request3.getBody().toString()
+                );
+              }
               if (["cash", "remit", "middle"].includes(
                 prop2.toString()
               )) {
-                if (!cache.has(`${from}${to}`)) {
-                  const request3 = (0, import_sync_request.default)(
-                    "GET",
-                    `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`
-                  );
-                  cache.set(
-                    `${from}${to}`,
-                    request3.getBody().toString()
-                  );
-                }
                 const data2 = JSON.parse(
                   cache.get(`${from}${to}`)
                 );
                 return fraction(data2.data.conversionRate);
-              } else if (prop2 == "updated") {
-                if (!cache.has(`${from}${to}`)) {
-                  const request3 = (0, import_sync_request.default)(
-                    "GET",
-                    `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`
-                  );
-                  cache.set(
-                    `${from}${to}`,
-                    request3.getBody().toString()
-                  );
-                }
+              } else {
                 const data2 = JSON.parse(
                   cache.get(`${from}${to}`)
                 );
                 return new Date(data2.data.fxDate);
               }
-              return void 0;
             }
           }
         );
@@ -77227,6 +77525,294 @@ var mastercardFXM = class extends fxManager {
       });
     });
     return fxRateList;
+  }
+  async getfxRateList(from, to) {
+    if (!(currenciesList.includes(from) && currenciesList.includes(to))) {
+      throw new Error("Currency not supported");
+    }
+    if (cache.has(`${from}${to}`)) {
+      return this.fxRateList[from][to];
+    }
+    const req = await axios_default.get(
+      `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`,
+      {
+        headers: {
+          "User-Agent": "fxrate axios/latest"
+        }
+      }
+    );
+    const data2 = req.data;
+    cache.set(`${from}${to}`, data2);
+    return this.fxRateList[from][to];
+  }
+  update() {
+    throw new Error("Method is deprecated");
+  }
+};
+
+// src/FXGetter/visa.ts
+var import_sync_request2 = __toESM(require("sync-request"), 1);
+var import_dayjs = __toESM(require_dayjs_min(), 1);
+var cache2 = new LRUCache({
+  max: 500
+});
+var headers2 = {
+  accept: "application/json, text/plain, */*",
+  "accept-language": "en,zh-CN;q=0.9,zh;q=0.8",
+  "sec-ch-ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+  "sec-ch-ua-mobile": "?0",
+  "sec-ch-ua-platform": '"Linux"',
+  "sec-fetch-dest": "empty",
+  "sec-fetch-mode": "cors",
+  "sec-fetch-site": "same-origin",
+  Referer: "https://usa.visa.com/support/consumer/travel-support/exchange-rate-calculator.html",
+  "Referrer-Policy": "no-referrer-when-downgrade"
+};
+var currenciesList2 = [
+  "AED",
+  "AFN",
+  "ALL",
+  "AMD",
+  "ANG",
+  "AOA",
+  "ARS",
+  "AUD",
+  "AWG",
+  "AZN",
+  "BAM",
+  "BBD",
+  "BDT",
+  "BGN",
+  "BHD",
+  "BIF",
+  "BMD",
+  "BND",
+  "BOB",
+  "BRL",
+  "BSD",
+  "BTN",
+  "BWP",
+  "BYN",
+  "BZD",
+  "CAD",
+  "CDF",
+  "CHF",
+  "CLP",
+  "CNY",
+  "COP",
+  "CRC",
+  "CVE",
+  "CYP",
+  "CZK",
+  "DJF",
+  "DKK",
+  "DOP",
+  "DZD",
+  "EEK",
+  "EGP",
+  "ERN",
+  "ETB",
+  "EUR",
+  "FJD",
+  "FKP",
+  "GBP",
+  "GEL",
+  "GHS",
+  "GIP",
+  "GMD",
+  "GNF",
+  "GQE",
+  "GTQ",
+  "GWP",
+  "GYD",
+  "HKD",
+  "HNL",
+  "HRK",
+  "HTG",
+  "HUF",
+  "IDR",
+  "ILS",
+  "INR",
+  "IQD",
+  "IRR",
+  "ISK",
+  "JMD",
+  "JOD",
+  "JPY",
+  "KES",
+  "KGS",
+  "KHR",
+  "KMF",
+  "KRW",
+  "KWD",
+  "KYD",
+  "KZT",
+  "LAK",
+  "LBP",
+  "LKR",
+  "LRD",
+  "LSL",
+  "LTL",
+  "LVL",
+  "LYD",
+  "MAD",
+  "MDL",
+  "MGA",
+  "MKD",
+  "MMK",
+  "MNT",
+  "MOP",
+  "MRO",
+  "MRU",
+  "MTL",
+  "MUR",
+  "MVR",
+  "MWK",
+  "MXN",
+  "MYR",
+  "MZN",
+  "NAD",
+  "NGN",
+  "NIO",
+  "NOK",
+  "NPR",
+  "NZD",
+  "None",
+  "OMR",
+  "PAB",
+  "PEN",
+  "PGK",
+  "PHP",
+  "PKR",
+  "PLN",
+  "PYG",
+  "QAR",
+  "RON",
+  "RSD",
+  "RUB",
+  "RWF",
+  "SAR",
+  "SBD",
+  "SCR",
+  "SDG",
+  "SEK",
+  "SGD",
+  "SHP",
+  "SIT",
+  "SKK",
+  "SLL",
+  "SOS",
+  "SRD",
+  "SSP",
+  "STD",
+  "STN",
+  "SVC",
+  "SYP",
+  "SZL",
+  "THB",
+  "TJS",
+  "TMT",
+  "TND",
+  "TOP",
+  "TRY",
+  "TTD",
+  "TWD",
+  "TZS",
+  "UAH",
+  "UGX",
+  "USD",
+  "UYU",
+  "UZS",
+  "VEF",
+  "VES",
+  "VND",
+  "VUV",
+  "WST",
+  "XAF",
+  "XCD",
+  "XOF",
+  "XPF",
+  "YER",
+  "ZAR",
+  "ZMW",
+  "ZWL"
+];
+var mastercardFXM2 = class extends fxManager {
+  constructor() {
+    super([]);
+    this.ableToGetAllFXRate = false;
+  }
+  get fxRateList() {
+    const fxRateList = {};
+    currenciesList2.forEach((from) => {
+      fxRateList[from] = {};
+      currenciesList2.forEach((to) => {
+        const currency = new Proxy(
+          {},
+          {
+            get: (_obj, prop2) => {
+              if (![
+                "cash",
+                "remit",
+                "middle",
+                "updated"
+              ].includes(prop2.toString())) {
+                return void 0;
+              }
+              const dateString = (0, import_dayjs.default)().format("MM/DD/YYYY");
+              if (!cache2.has(`${from}${to}`)) {
+                const request3 = (0, import_sync_request2.default)(
+                  "GET",
+                  `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${from}&toCurr=${to}`,
+                  {
+                    headers: headers2
+                  }
+                );
+                cache2.set(
+                  `${from}${to}`,
+                  request3.getBody().toString()
+                );
+              }
+              if (["cash", "remit", "middle"].includes(
+                prop2.toString()
+              )) {
+                const data2 = JSON.parse(
+                  cache2.get(`${from}${to}`)
+                );
+                return fraction(data2.reverseAmount);
+              } else {
+                const data2 = JSON.parse(
+                  cache2.get(`${from}${to}`)
+                );
+                return new Date(
+                  data2.originalValues.lastUpdatedVisaRate * 1e3
+                );
+              }
+            }
+          }
+        );
+        fxRateList[from][to] = currency;
+      });
+    });
+    return fxRateList;
+  }
+  async getfxRateList(from, to) {
+    if (!(currenciesList2.includes(from) && currenciesList2.includes(to))) {
+      throw new Error("Currency not supported");
+    }
+    if (cache2.has(`${from}${to}`)) {
+      return this.fxRateList[from][to];
+    }
+    const dateString = (0, import_dayjs.default)().format("MM/DD/YYYY");
+    const req = await axios_default.get(
+      `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${from}&toCurr=${to}`,
+      {
+        headers: headers2
+      }
+    );
+    const data2 = req.data;
+    cache2.set(`${from}${to}`, data2);
+    return this.fxRateList[from][to];
   }
   update() {
     throw new Error("Method is deprecated");
@@ -77249,6 +77835,7 @@ var Manager = new fxmManager_default({
   unionpay: unionpay_default
 });
 Manager.registerFXM("mastercard", new mastercardFXM());
+Manager.registerFXM("visa", new mastercardFXM2());
 if (import_node_process2.default.env.ENABLE_WISE == "1") {
   if (import_node_process2.default.env.WISE_TOKEN == void 0)
     throw new Error("WISE_TOKEN is not set.");

@@ -19,6 +19,7 @@ import getUnionPayFXRates from './FXGetter/unionpay';
 import getWiseFXRates from './FXGetter/wise';
 
 import mastercardFXM from './FXGetter/mastercard';
+import visaFXM from './FXGetter/visa';
 
 const App = new rootRouter();
 
@@ -37,6 +38,7 @@ const Manager = new fxmManager({
 });
 
 Manager.registerFXM('mastercard', new mastercardFXM());
+Manager.registerFXM('visa', new visaFXM());
 
 if (process.env.ENABLE_WISE == '1') {
     if (process.env.WISE_TOKEN == undefined)

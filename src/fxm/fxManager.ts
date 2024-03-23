@@ -7,22 +7,45 @@ const math = create(all, {
 
 const { multiply, divide, fraction, add } = math;
 
+type FXRateType = {
+    cash: Fraction;
+    remit: Fraction;
+    middle: Fraction;
+    updated: Date;
+};
+
 export default class fxManager {
     private _fxRateList: {
         [currency in keyof currency]: {
-            [currency in keyof currency]: {
-                cash: Fraction;
-                remit: Fraction;
-                middle: Fraction;
-                updated: Date;
-            };
+            [currency in keyof currency]: FXRateType;
         };
     } = {} as any;
+
     public get fxRateList() {
         return this._fxRateList;
     }
     public set fxRateList(value: any) {
         this._fxRateList = value;
+    }
+
+    public async getfxRateList(
+        from: currency,
+        to: currency,
+    ): Promise<FXRateType> {
+        return this.fxRateList[from][to];
+    }
+
+    public async setfxRateList(
+        from: currency,
+        to: currency,
+        value: {
+            cash: Fraction;
+            remit: Fraction;
+            middle: Fraction;
+            updated: Date;
+        },
+    ) {
+        this.fxRateList[from][to] = value;
     }
 
     ableToGetAllFXRate: boolean = true;
@@ -148,14 +171,14 @@ export default class fxManager {
         }
     }
 
-    private convertDirect(
+    private async convertDirect(
         from: currency,
         to: currency,
         type: 'cash' | 'remit' | 'middle',
         amount: number | Fraction,
         reverse: boolean = false,
-    ): Fraction {
-        if (!this.fxRateList[from][to][type]) {
+    ): Promise<Fraction> {
+        if (!(await this.getfxRateList(from, to))[type]) {
             throw new Error(
                 `FX Path from ${from} to ${to} not support ${type} now`,
             );
@@ -163,16 +186,16 @@ export default class fxManager {
         if (reverse) {
             return divide(
                 fraction(amount),
-                this.fxRateList[from][to][type],
+                (await this.fxRateList[from][to])[type],
             ) as unknown as Fraction;
         }
         return multiply(
-            this.fxRateList[from][to][type],
+            (await this.fxRateList[from][to])[type],
             fraction(amount),
         ) as unknown as Fraction;
     }
 
-    getFXPath(from: currency, to: currency): FXPath {
+    async getFXPath(from: currency, to: currency): Promise<FXPath> {
         const FXPath = {
             from,
             end: to,
@@ -220,14 +243,14 @@ export default class fxManager {
         throw new Error('No FX path found between ' + from + ' and ' + to);
     }
 
-    convert(
+    async convert(
         from: currency,
         to: currency,
         type: 'cash' | 'remit' | 'middle',
         amount: number,
         reverse: boolean = false,
-    ): Fraction {
-        const FXPath = this.getFXPath(from, to);
+    ): Promise<Fraction> {
+        const FXPath = await this.getFXPath(from, to);
         if (reverse) FXPath.path = FXPath.path.reverse();
 
         let current = from;
@@ -235,7 +258,7 @@ export default class fxManager {
 
         try {
             for (const next of FXPath.path) {
-                result = this.convertDirect(
+                result = await this.convertDirect(
                     current,
                     next,
                     type,
@@ -253,10 +276,10 @@ export default class fxManager {
         return result;
     }
 
-    public getUpdatedDate(from: currency, to: currency): Date {
-        if (!this.fxRateList[from][to]) {
+    public async getUpdatedDate(from: currency, to: currency): Promise<Date> {
+        if (!(await this.fxRateList[from][to])) {
             throw new Error(`FX Path from ${from} to ${to} not found`);
         }
-        return this.fxRateList[from][to].updated;
+        return (await this.fxRateList[from][to]).updated;
     }
 }

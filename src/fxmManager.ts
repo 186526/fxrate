@@ -47,7 +47,7 @@ const getConvert = async (
     request: request<any>,
     amount: number = 100,
 ) => {
-    let answer = fxManager.convert(
+    let answer = await fxManager.convert(
         from,
         to,
         type as 'cash' | 'remit' | 'middle',
@@ -68,7 +68,7 @@ const getDetails = async (
     request: request<any>,
 ) => {
     const result = {
-        updated: fxManager.getUpdatedDate(from, to).toUTCString(),
+        updated: (await fxManager.getUpdatedDate(from, to)).toUTCString(),
     };
     for (const type of ['cash', 'remit', 'middle']) {
         try {
@@ -237,12 +237,14 @@ class fxmManager extends router {
             useJson(response, request);
             response.headers.set(
                 'Date',
-                (await this.requestFXManager(source))
-                    .getUpdatedDate(
+                (
+                    await (
+                        await this.requestFXManager(source)
+                    ).getUpdatedDate(
                         from as unknown as currency,
                         to as unknown as currency,
                     )
-                    .toUTCString(),
+                ).toUTCString(),
             );
             return response;
         };
@@ -264,12 +266,14 @@ class fxmManager extends router {
             useBasic(response);
             response.headers.set(
                 'Date',
-                (await this.requestFXManager(source))
-                    .getUpdatedDate(
+                (
+                    await (
+                        await this.requestFXManager(source)
+                    ).getUpdatedDate(
                         from as unknown as currency.unknown,
                         to as unknown as currency.unknown,
                     )
-                    .toUTCString(),
+                ).toUTCString(),
             );
             return response;
         };
