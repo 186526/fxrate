@@ -121,7 +121,7 @@ class fxmManager extends router {
                 rep.body = JSON.stringify({
                     status: 'ok',
                     sources: Object.keys(this.fxms),
-                    version: `${packageJson.name}/${packageJson.version}`,
+                    version: `${packageJson.name}/${packageJson.version} ${globalThis.GITBUILD || ''} ${globalThis.BUILDTIME || 'devlopment'}`,
                     apiVersion: 'v1',
                     environment: process.env.NODE_ENV || 'development',
                 });
