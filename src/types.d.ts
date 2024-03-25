@@ -75,3 +75,10 @@ export interface FXPath {
     end: currency;
     path: currency[];
 }
+
+export enum JSONRPCMethods {
+    info = 'info',
+    getCurrency = 'getCurrency',
+    getFXRate = 'getFXRate',
+    convert = 'convert',
+}

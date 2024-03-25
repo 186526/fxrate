@@ -2,17 +2,36 @@
 /* eslint-disable indent */
 
 import { router, response, request, handler } from 'handlers.js';
+import { headers } from 'handlers.js/dist/src/interface';
 import fxManager from './fxm/fxManager';
-import { FXRate, currency } from './types';
+import { FXRate, JSONRPCMethods, currency } from './types';
 
 import { round, multiply, Fraction } from 'mathjs';
 
 import packageJson from '../package.json';
 import process from 'node:process';
 
+import JSONRPCRouter from 'handlers.js-jsonrpc';
+
 const useBasic = (response: response<any>): void => {
     response.status = 200;
     response.headers.set('Date', new Date().toUTCString());
+};
+
+const useInternalRestAPI = async (url: string, router: router) => {
+    return JSON.parse(
+        (
+            await router._respond(
+                new request(
+                    'GET',
+                    new URL(`http://this.internal${url}`),
+                    new headers({}),
+                    '',
+                    {},
+                ),
+            )
+        ).body,
+    );
 };
 
 const sortObject = (obj: unknown): any => {
@@ -128,6 +147,20 @@ class fxmManager extends router {
                 useJson(rep, request);
                 return rep;
             }),
+        );
+
+        this.use(
+            [
+                new JSONRPCRouter<any, any, JSONRPCMethods>([], {
+                    info: () => useInternalRestAPI('/info', this),
+                    getCurrency: () => new Error('Not implemented'),
+                    getFXRate: () => new Error('Not implemented'),
+                    convert: () => new Error('Not implemented'),
+                })
+                    .enableList()
+                    .mount(),
+            ],
+            '/(.*)',
         );
     }
 

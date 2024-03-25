@@ -1849,6 +1849,11 @@ graphemer@^1.4.0:
   resolved "https://registry.npmmirror.com/graphemer/-/graphemer-1.4.0.tgz#fb2f1d55e0e3a1849aeffc90c4fa0dd53a0e66c6"
   integrity sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==
 
+handlers.js-jsonrpc@^0.0.1-1:
+  version "0.0.1-1"
+  resolved "https://registry.npmjs.org/handlers.js-jsonrpc/-/handlers.js-jsonrpc-0.0.1-1.tgz#2be191beb84702687d0dd39fdbb87aeb50addb3c"
+  integrity sha512-8oncaMAIOPNE09+KX23f8wpS/wiG2Eygt0Jf5WCpw7tyEI4Wzq2tSc+mWRa2bA/KcnlERwi67TCwUa2HoOb6/w==
+
 handlers.js@^0.1.1-1:
   version "0.1.1-2"
   resolved "https://registry.npmmirror.com/handlers.js/-/handlers.js-0.1.1-2.tgz#84dd726dc14c224fff54e4ebc948af3be300afda"
