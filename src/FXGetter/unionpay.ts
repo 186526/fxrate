@@ -12,21 +12,25 @@ const getUnionPayFXRates = async (): Promise<FXRate[]> => {
         new Date().toISOString().split('T')[0].replaceAll('-', ''),
     );
 
-    let res = await axios.get(
-        `https://www.unionpayintl.com/upload/jfimg/${currentDate}.json`,
-        {
+    let res = await axios
+        .get(`https://www.unionpayintl.com/upload/jfimg/${currentDate}.json`, {
             headers: {
                 'User-Agent': 'fxrate axios/latest',
             },
-        },
-    );
+        })
+        .catch(
+            () =>
+                new Object({
+                    status: 404,
+                }),
+        );
 
     while (res.status !== 200) {
         currentDate -= 1;
 
         console.log(
-            currentDate,
-            "'s UnionPay FXRate not found, trying",
+            currentDate + 1,
+            'UnionPay FXRate not found, trying',
             currentDate,
         );
 
