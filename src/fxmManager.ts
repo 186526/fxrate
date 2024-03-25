@@ -127,6 +127,19 @@ class fxmManager extends router {
         [source: string]: (fxmManager?: fxmManager) => Promise<FXRate[]>;
     } = {};
 
+    private JSONRPCRouter = new JSONRPCRouter<any, any, JSONRPCMethods>([], {
+        info: () => useInternalRestAPI('/info', this),
+        getCurrency: () => {
+            throw new Error('Not implemented');
+        },
+        getFXRate: () => {
+            throw new Error('Not implemented');
+        },
+        convert: () => {
+            throw new Error('Not implemented');
+        },
+    });
+
     constructor(sources: { [source: string]: () => Promise<FXRate[]> }) {
         super();
         for (const source in sources) {
@@ -149,19 +162,8 @@ class fxmManager extends router {
             }),
         );
 
-        this.use(
-            [
-                new JSONRPCRouter<any, any, JSONRPCMethods>([], {
-                    info: () => useInternalRestAPI('/info', this),
-                    getCurrency: () => new Error('Not implemented'),
-                    getFXRate: () => new Error('Not implemented'),
-                    convert: () => new Error('Not implemented'),
-                })
-                    .enableList()
-                    .mount(),
-            ],
-            '/(.*)',
-        );
+        this.use([this.JSONRPCRouter.enableList().mount()], '/(.*)');
+        this.log('JSONRPC is loaded.');
     }
 
     public log(str: string) {
