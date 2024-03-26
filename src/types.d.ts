@@ -77,8 +77,8 @@ export interface FXPath {
 }
 
 export enum JSONRPCMethods {
-    info = 'info',
-    getCurrency = 'getCurrency',
+    instanceInfo = 'instanceInfo',
+    listCurrencies = 'listCurrencies',
     getFXRate = 'getFXRate',
-    convert = 'convert',
+    listFXRates = 'listFXRates',
 }

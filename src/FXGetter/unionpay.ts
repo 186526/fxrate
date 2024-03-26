@@ -18,12 +18,9 @@ const getUnionPayFXRates = async (): Promise<FXRate[]> => {
                 'User-Agent': 'fxrate axios/latest',
             },
         })
-        .catch(
-            () =>
-                new Object({
-                    status: 404,
-                }),
-        );
+        .catch(() => {
+            return { status: 404 };
+        });
 
     while (res.status !== 200) {
         currentDate -= 1;
@@ -51,7 +48,7 @@ const getUnionPayFXRates = async (): Promise<FXRate[]> => {
             rateData: number;
         }[];
         curDate: string;
-    } = res.data;
+    } = (res as any).data;
 
     const date = new Date(`${data.curDate} 16:30 UTC+8`);
 

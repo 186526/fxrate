@@ -19,19 +19,25 @@ const useBasic = (response: response<any>): void => {
 };
 
 const useInternalRestAPI = async (url: string, router: router) => {
-    return JSON.parse(
-        (
-            await router._respond(
-                new request(
-                    'GET',
-                    new URL(`http://this.internal${url}`),
-                    new headers({}),
-                    '',
-                    {},
-                ),
-            )
-        ).body,
-    );
+    const restResponse = await router
+        .respond(
+            new request(
+                'GET',
+                new URL(`http://this.internal/${url}`),
+                new headers({}),
+                '',
+                {},
+            ),
+        )
+        .catch((e) => e);
+
+    try {
+        return JSON.parse(restResponse.body);
+    } catch (e) {
+        if (!(restResponse instanceof response))
+            throw new Error(`Please request /${url} to check first.`);
+        return restResponse;
+    }
 };
 
 const sortObject = (obj: unknown): any => {
@@ -128,15 +134,55 @@ class fxmManager extends router {
     } = {};
 
     private JSONRPCRouter = new JSONRPCRouter<any, any, JSONRPCMethods>([], {
-        info: () => useInternalRestAPI('/info', this),
-        getCurrency: () => {
-            throw new Error('Not implemented');
+        instanceInfo: () => useInternalRestAPI('info', this),
+
+        listCurrencies: ({ source }) => {
+            if (!source) throw new Error('source is required.');
+
+            return useInternalRestAPI(`${source}/`, this).then(
+                (k) =>
+                    new Object({
+                        currency: k.currency,
+                        date: k.date,
+                    }),
+            );
         },
-        getFXRate: () => {
-            throw new Error('Not implemented');
+
+        listFXRates: ({
+            source,
+            from,
+            precision = 2,
+            amount = 100,
+            fees = 0,
+            reverse = false,
+        }) => {
+            if (!source) throw new Error('source is required.');
+            if (!from) throw new Error('from is required.');
+
+            return useInternalRestAPI(
+                `${source}/${from}?precision=${precision}&amount=${amount}&fees=${fees}${reverse ? '&reverse' : ''}`,
+                this,
+            );
         },
-        convert: () => {
-            throw new Error('Not implemented');
+        getFXRate: ({
+            source,
+            from,
+            to,
+            type,
+            precision = 2,
+            amount = 100,
+            fees = 0,
+            reverse = false,
+        }) => {
+            if (!source) throw new Error('source is required.');
+            if (!from) throw new Error('from is required.');
+            if (!to) throw new Error('to is required.');
+            if (!type) throw new Error('type is required.');
+
+            return useInternalRestAPI(
+                `${source}/${from}/${to}/${type}/${amount}?precision=${precision}&fees=${fees}${reverse ? '&reverse' : ''}`,
+                this,
+            );
         },
     });
 
