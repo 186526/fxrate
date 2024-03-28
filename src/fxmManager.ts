@@ -288,7 +288,11 @@ class fxmManager extends router {
             request: request<any>,
             response: response<any>,
         ) => {
+            if (request.params.from)
+                request.params.from = request.params.from.toUpperCase();
+
             const { from } = request.params;
+
             const result: {
                 [to in keyof currency]: {
                     [type in string]: string;
@@ -323,6 +327,12 @@ class fxmManager extends router {
             request: request<any>,
             response: response<any>,
         ) => {
+            if (request.params.from)
+                request.params.from = request.params.from.toUpperCase();
+
+            if (request.params.to)
+                request.params.to = request.params.to.toUpperCase();
+
             const { from, to } = request.params;
             const result = await getDetails(
                 from as unknown as currency,
@@ -350,6 +360,12 @@ class fxmManager extends router {
             request: request<any>,
             response: response<any>,
         ) => {
+            if (request.params.from)
+                request.params.from = request.params.from.toUpperCase();
+
+            if (request.params.to)
+                request.params.to = request.params.to.toUpperCase();
+
             const { from, to, type, amount } = request.params;
             const result = await getConvert(
                 from as unknown as currency,
