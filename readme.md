@@ -85,7 +85,7 @@ type result = FXRate;
 export default result[type];
 ```
 
-### JSONRPCv2 API Usage
+### JSONRPC v2 API Usage
 
 Endpoint `(/v1)/jsonrpc/v2`
 
