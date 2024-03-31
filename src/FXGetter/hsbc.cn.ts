@@ -22,11 +22,11 @@ const getHSBCCNFXRates = async (): Promise<FXRate[]> => {
                 to: k.exchangeRateCurrency as currency.unknown,
             },
             rate: {
-                buy: {
+                sell: {
                     cash: parseFloat(k.notesSellingRate),
                     remit: parseFloat(k.transferSellingRate),
                 },
-                sell: {
+                buy: {
                     cash: parseFloat(k.notesBuyingRate),
                     remit: parseFloat(k.transferBuyingRate),
                 },
