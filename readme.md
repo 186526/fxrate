@@ -151,6 +151,7 @@ Some APIs require configuration tokens to work properly.
 | `ENABLE_WISE`         | `1 \| 0` | Enable Wise FX Rates API              |
 | `WISE_TOKEN`          | `string` | configure Wise's API Token            |
 | `WISE_SANDBOX_API`    | `1 \| 0` | Using Wise's sandbox API environment. |
+| `ENABLE_CORS`         | `domain` | configure FXRate's API to allow CORS  |
 
 ```bash
 yarn install

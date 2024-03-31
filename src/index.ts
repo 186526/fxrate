@@ -5,6 +5,7 @@ import rootRouter, { handler } from 'handlers.js';
 import packageJson from '../package.json';
 
 import fxmManager from './fxmManager';
+import { useBasic } from './fxmManager';
 
 import getBOCFXRatesFromBOC from './FXGetter/boc';
 import getICBCFXRates from './FXGetter/icbc';
@@ -57,6 +58,16 @@ if (process.env.ENABLE_WISE == '1') {
 }
 
 (async () => {
+    App.binding(
+        '/(.*)',
+        new handler('ANY', [
+            async (request, response) => {
+                useBasic(response);
+                response.status = 404;
+            },
+        ]),
+    );
+
     App.useMappingAdapter();
     if (process.env.VERCEL != '1')
         App.listen(Number(process?.env?.PORT) || 8080);

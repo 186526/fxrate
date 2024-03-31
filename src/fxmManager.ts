@@ -13,9 +13,25 @@ import process from 'node:process';
 
 import JSONRPCRouter from 'handlers.js-jsonrpc';
 
-const useBasic = (response: response<any>): void => {
+export const useBasic = (response: response<any>): void => {
     response.status = 200;
     response.headers.set('Date', new Date().toUTCString());
+
+    if (process.env.ENABLE_CORS) {
+        response.headers.set(
+            'Access-Control-Allow-Origin',
+            process.env.CORS_ORIGIN || '*',
+        );
+        response.headers.set(
+            'Access-Control-Allow-Methods',
+            'GET, POST, OPTIONS',
+        );
+        response.headers.set('Allow', 'GET, POST, OPTIONS');
+        response.headers.set(
+            'Access-Control-Expose-Headers',
+            'Date, X-License, X-Author, X-Powered-By',
+        );
+    }
 };
 
 const useInternalRestAPI = async (url: string, router: router) => {
