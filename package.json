@@ -37,5 +37,6 @@
         "dev": "dotenvx run -- tsx watch src/index.ts",
         "dev:production": "dotenvx run --env-file=.env.production.local --env-file=.env -- tsx watch src/index.ts",
         "start": "yarn build && node dist/index.cjs"
-    }
+    },
+    "packageManager": "yarn@1.22.22"
 }
