@@ -7,17 +7,20 @@ interface infoResponse {
 }
 
 interface fxRateResponse {
-        cash?: number | string;
-        middle: number | string;
-        remit?: number | string;
-        updated: Date;
-    };
-
-interface fxRateListResponse {
-    [currency: string]: fxRateResponse
+    cash?: number | string;
+    middle: number | string;
+    remit?: number | string;
+    updated: Date;
 }
 
-interface currencyListResponse { currency: string[]; date: Date }
+interface fxRateListResponse {
+    [currency: string]: fxRateResponse;
+}
+
+interface currencyListResponse {
+    currency: string[];
+    date: Date;
+}
 
 type getFXRateResponse = number | string | fxRateResponse;
 
@@ -67,9 +70,7 @@ class FXRates {
         }
     }
 
-    info(
-        callback?: (resp: infoResponse) => any,
-    ) {
+    info(callback?: (resp: infoResponse) => any) {
         return this.addToQueue<infoResponse>('instanceInfo', '', callback);
     }
 
@@ -141,8 +142,6 @@ class FXRates {
             callback,
         );
     }
-
-
 
     batch() {
         this.inBatch = true;

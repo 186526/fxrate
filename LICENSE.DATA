@@ -13,5 +13,10 @@ People's Bank of China <www.pbc.gov.cn> provides a source of foreign exchange ra
 Postal Savings Bank of China Co., Ltd. <www.psbc.com> provides a source of foreign exchange rates.
 
 UnionPay International Co., Ltd. <www.unionpayintl.com> provides a source of foreign exchange rates.
+Visa Inc. <www.visa.com> provides a source of foreign exchange rates.
+Mastercard Incorporated <www.mastercard.com> provides a source of foreign exchange rates.
 
 Wise <www.wise.com> provides a source of foreign exchange rates.
+
+This project uses and not only contains the exchange rate information provided by the above platforms/banks.
+All exchange rate information is provided only by the platform, and the copyright of the data belongs to them.
