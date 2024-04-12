@@ -8,6 +8,8 @@ Yet another foreign exchange rate API project.
 
 Test URL: <https://fxrate.186526.eu.org/>
 
+Web UI: [186526/fxrate-web](https://github.com/186526/fxrate-web) (Still work in progress)
+
 ### Rest API v1 Usage
 
 -   `GET (/v1)/info` - show instance's details.
@@ -161,7 +163,7 @@ yarn start
 ## License
 
 ```markdown
-The Program's code is under MIT LICENSE (SEE LICENSE IN LICENSE.MIT).
+The program's code is under MIT LICENSE (SEE LICENSE IN LICENSE.MIT).
 
 Data copyright belongs to its source (SEE LICENSE IN LICENSE.DATA).
 ```
