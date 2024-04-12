@@ -127,7 +127,7 @@ class FXRates {
         fees = 0,
         reverse = false,
     ) {
-        return this.addToQueue(
+        return this.addToQueue<getFXRateResponse>(
             'getFXRate',
             {
                 source,
@@ -139,7 +139,12 @@ class FXRates {
                 fees,
                 reverse,
             },
-            callback,
+            (resp) => {
+                if (typeof resp == 'object') {
+                    resp.updated = new Date(resp.updated);
+                    callback(resp);
+                } else callback(resp);
+            },
         );
     }
 
