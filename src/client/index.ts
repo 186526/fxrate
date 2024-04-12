@@ -1,3 +1,26 @@
+interface infoResponse {
+    environment: string;
+    sources: string[];
+    version: string;
+    status: 'ok' | string;
+    apiVersion: string;
+}
+
+interface fxRateResponse {
+        cash?: number | string;
+        middle: number | string;
+        remit?: number | string;
+        updated: Date;
+    };
+
+interface fxRateListResponse {
+    [currency: string]: fxRateResponse
+}
+
+interface currencyListResponse { currency: string[]; date: Date }
+
+type getFXRateResponse = number | string | fxRateResponse;
+
 class FXRates {
     public endpoint: URL;
 
@@ -17,11 +40,11 @@ class FXRates {
         this.endpoint = endpoint;
     }
 
-    private addToQueue(
+    private addToQueue<T = any>(
         method: string,
         params: any,
-        callback?: (resp: any) => any,
-    ) {
+        callback?: (resp: T) => any,
+    ): this | Promise<T> {
         const id = this.generateID();
 
         this.requestDetails.push({
@@ -34,7 +57,7 @@ class FXRates {
 
         if (this.inBatch) return this;
         else {
-            const answer = new Promise((resolve) => {
+            const answer = new Promise<T>((resolve) => {
                 this.callbacks[id] = resolve;
             });
 
@@ -45,22 +68,16 @@ class FXRates {
     }
 
     info(
-        callback?: (resp: {
-            environment: string;
-            sources: string[];
-            version: string;
-            status: 'ok' | string;
-            apiVersion: string;
-        }) => any,
+        callback?: (resp: infoResponse) => any,
     ) {
-        return this.addToQueue('instanceInfo', '', callback);
+        return this.addToQueue<infoResponse>('instanceInfo', '', callback);
     }
 
     listCurrencies(
         source: string,
-        callback?: (resp: { currency: string[]; date: Date }) => any,
+        callback?: (resp: currencyListResponse) => any,
     ) {
-        return this.addToQueue(
+        return this.addToQueue<currencyListResponse>(
             'listCurrencies',
             { source },
             ({ currency, date }) => {
@@ -75,20 +92,13 @@ class FXRates {
     listFXRates(
         source: string,
         from: string,
-        callback?: (resp: {
-            [currency: string]: {
-                cash?: number | string;
-                middle: number | string;
-                remit?: number | string;
-                updated: Date;
-            };
-        }) => any,
+        callback?: (resp: fxRateListResponse) => any,
         precision = 2,
         amount = 100,
         fees = 0,
         reverse = false,
     ) {
-        return this.addToQueue(
+        return this.addToQueue<fxRateListResponse>(
             'listFXRates',
             { source, from, precision, amount, fees, reverse },
             (resp) => {
@@ -109,8 +119,8 @@ class FXRates {
         source: string,
         from: string,
         to: string,
-        type: 'cash' | 'remit' | 'middle',
-        callback: (rates: number | string) => any,
+        callback: (rates: getFXRateResponse) => any,
+        type: 'cash' | 'remit' | 'middle' | 'all' = 'all',
         precision = 2,
         amount = 100,
         fees = 0,
@@ -131,6 +141,8 @@ class FXRates {
             callback,
         );
     }
+
+
 
     batch() {
         this.inBatch = true;
@@ -175,7 +187,7 @@ class FXRates {
             body.forEach(handler);
         } else handler(body);
 
-        return 0;
+        return;
     }
 }
 

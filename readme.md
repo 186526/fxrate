@@ -132,7 +132,7 @@ Endpoint `(/v1)/jsonrpc/v2`
         source: string;
         from: currency;
         to: currency;
-        type: 'remit' | 'cash' | 'middle';
+        type: 'remit' | 'cash' | 'middle' | 'all';
         precision: number = 2;
         amount: number = 100;
         fees: number = 0;

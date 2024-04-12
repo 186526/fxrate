@@ -180,6 +180,7 @@ class fxmManager extends router {
                 this,
             );
         },
+
         getFXRate: ({
             source,
             from,
@@ -194,9 +195,10 @@ class fxmManager extends router {
             if (!from) throw new Error('from is required.');
             if (!to) throw new Error('to is required.');
             if (!type) throw new Error('type is required.');
+            if (type == 'all') type = '';
 
             return useInternalRestAPI(
-                `${source}/${from}/${to}/${type}/${amount}?precision=${precision}&fees=${fees}${reverse ? '&reverse' : ''}`,
+                `${source}/${from}/${to}/${type}?precision=${precision}&fees=${fees}${reverse ? '&reverse' : ''}&amount=${amount}`,
                 this,
             );
         },
