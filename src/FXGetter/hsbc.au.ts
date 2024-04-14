@@ -12,7 +12,7 @@ const getHSBCAUFXRates = async (): Promise<FXRate[]> => {
         },
     );
 
-    const data = JSON.parse(eval(req.data)).data;
+    const data = JSON.parse([eval][0](req.data)).data;
 
     const date = new Date(req.headers['date']);
 
