@@ -137,7 +137,7 @@ const getDetails = async (
     return result;
 };
 
-class fxmManager extends router {
+class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     private fxms: {
         [source: string]: fxManager;
     } = {};
@@ -149,7 +149,7 @@ class fxmManager extends router {
         [source: string]: (fxmManager?: fxmManager) => Promise<FXRate[]>;
     } = {};
 
-    private JSONRPCRouter = new JSONRPCRouter<any, any, JSONRPCMethods>([], {
+    protected rpcHandlers = {
         instanceInfo: () => useInternalRestAPI('info', this),
 
         listCurrencies: ({ source }) => {
@@ -202,12 +202,12 @@ class fxmManager extends router {
                 this,
             );
         },
-    });
+    };
 
     constructor(sources: { [source: string]: () => Promise<FXRate[]> }) {
         super();
         for (const source in sources) {
-            this.register(source, sources[source]);
+            this.registerGetter(source, sources[source]);
         }
 
         this.binding(
@@ -217,7 +217,7 @@ class fxmManager extends router {
                 rep.body = JSON.stringify({
                     status: 'ok',
                     sources: Object.keys(this.fxms),
-                    version: `${packageJson.name}/${packageJson.version} ${globalThis.GITBUILD || ''} ${globalThis.BUILDTIME || 'devlopment'}`,
+                    version: `${packageJson.name}/${packageJson.version} ${globalThis.GITBUILD || 'git'} ${globalThis.BUILDTIME || 'devlopment'}`,
                     apiVersion: 'v1',
                     environment: process.env.NODE_ENV || 'development',
                 });
@@ -226,8 +226,8 @@ class fxmManager extends router {
             }),
         );
 
-        this.use([this.JSONRPCRouter.enableList().mount()], '/(.*)');
-        this.log('JSONRPC is loaded.');
+        this.enableList().mount();
+        this.log('JSONRPC is mounted.');
     }
 
     public log(str: string) {
@@ -259,7 +259,10 @@ class fxmManager extends router {
         return this.fxms[source];
     }
 
-    public register(source: string, getter: () => Promise<FXRate[]>): void {
+    public registerGetter(
+        source: string,
+        getter: () => Promise<FXRate[]>,
+    ): void {
         this.fxms[source] = new fxManager([]);
         this.fxRateGetter[source] = getter;
         this.fxmStatus[source] = 'pending';

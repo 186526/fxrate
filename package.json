@@ -9,7 +9,7 @@
         "dayjs": "^1.11.10",
         "fast-xml-parser": "^4.3.4",
         "handlers.js": "^0.1.1-1",
-        "handlers.js-jsonrpc": "^0.0.1-1",
+        "handlers.js-jsonrpc": "^0.0.2",
         "lru-cache": "^10.2.0",
         "mathjs": "^12.3.2",
         "sync-request": "^6.1.0",

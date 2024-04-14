@@ -174,3 +174,7 @@ out
 .history
 .ionide
 .vercel
+
+dist/*
+!dist/readme.md
+!dist/index.cjs

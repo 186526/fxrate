@@ -20,6 +20,7 @@ import getUnionPayFXRates from './FXGetter/unionpay';
 import getWiseFXRates from './FXGetter/wise';
 import getHSBCHKFXRates from './FXGetter/hsbc.hk';
 import getHSBCCNFXRates from './FXGetter/hsbc.cn';
+import getHSBCAUFXRates from './FXGetter/hsbc.au';
 
 import mastercardFXM from './FXGetter/mastercard';
 import visaFXM from './FXGetter/visa';
@@ -40,6 +41,7 @@ const Manager = new fxmManager({
     unionpay: getUnionPayFXRates,
     'hsbc.hk': getHSBCHKFXRates,
     'hsbc.cn': getHSBCCNFXRates,
+    'hsbc.au': getHSBCAUFXRates,
 });
 
 Manager.registerFXM('mastercard', new mastercardFXM());
@@ -48,7 +50,7 @@ Manager.registerFXM('visa', new visaFXM());
 if (process.env.ENABLE_WISE == '1') {
     if (process.env.WISE_TOKEN == undefined)
         throw new Error('WISE_TOKEN is not set.');
-    Manager.register(
+    Manager.registerGetter(
         'wise',
         getWiseFXRates(
             process.env.WISE_SANDBOX_API == '1',
