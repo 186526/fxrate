@@ -17,6 +17,7 @@ import getPSBCFXRates from './FXGetter/psbc';
 import getCMBFXRates from './FXGetter/cmb';
 import getPBOCFXRates from './FXGetter/pboc';
 import getUnionPayFXRates from './FXGetter/unionpay';
+import getJCBFXRates from './FXGetter/jcb';
 import getWiseFXRates from './FXGetter/wise';
 import getHSBCHKFXRates from './FXGetter/hsbc.hk';
 import getHSBCCNFXRates from './FXGetter/hsbc.cn';
@@ -39,6 +40,7 @@ const Manager = new fxmManager({
     cmb: getCMBFXRates,
     pboc: getPBOCFXRates,
     unionpay: getUnionPayFXRates,
+    jcb: getJCBFXRates,
     'hsbc.hk': getHSBCHKFXRates,
     'hsbc.cn': getHSBCCNFXRates,
     'hsbc.au': getHSBCAUFXRates,
