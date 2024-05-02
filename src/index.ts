@@ -22,6 +22,7 @@ import getWiseFXRates from './FXGetter/wise';
 import getHSBCHKFXRates from './FXGetter/hsbc.hk';
 import getHSBCCNFXRates from './FXGetter/hsbc.cn';
 import getHSBCAUFXRates from './FXGetter/hsbc.au';
+import getCITICCNFXRates from './FXGetter/citic.cn';
 
 import mastercardFXM from './FXGetter/mastercard';
 import visaFXM from './FXGetter/visa';
@@ -44,6 +45,7 @@ const Manager = new fxmManager({
     'hsbc.hk': getHSBCHKFXRates,
     'hsbc.cn': getHSBCCNFXRates,
     'hsbc.au': getHSBCAUFXRates,
+    'citic.cn': getCITICCNFXRates,
 });
 
 Manager.registerFXM('mastercard', new mastercardFXM());
