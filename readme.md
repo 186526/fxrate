@@ -157,6 +157,10 @@ Some APIs require configuration tokens to work properly.
 
 ```bash
 yarn install
+yarn dev
+
+## In production
+
 yarn start
 ```
 
