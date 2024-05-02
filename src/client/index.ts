@@ -32,6 +32,8 @@ class FXRates {
 
     private inBatch = false;
 
+    protected fetch = globalThis.fetch;
+
     private generateID() {
         function _p8(s?: boolean) {
             const p = (Math.random().toString(16) + '000000000').substr(2, 8);
@@ -172,7 +174,7 @@ class FXRates {
                 }),
         );
 
-        const resp = await fetch(this.endpoint, {
+        const resp = await this.fetch(this.endpoint, {
             method: 'POST',
             body: JSON.stringify(responseBody),
         });
