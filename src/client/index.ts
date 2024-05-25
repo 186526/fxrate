@@ -32,7 +32,7 @@ class FXRates {
 
     private inBatch = false;
 
-    protected fetch = globalThis.fetch;
+    protected fetch = globalThis.fetch.bind(globalThis);
 
     private generateID() {
         function _p8(s?: boolean) {
