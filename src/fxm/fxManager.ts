@@ -24,7 +24,8 @@ export default class fxManager {
     public get fxRateList() {
         return this._fxRateList;
     }
-    public set fxRateList(value: any) {
+
+    public set fxRateList(value) {
         this._fxRateList = value;
     }
 
@@ -64,7 +65,11 @@ export default class fxManager {
     public update(FXRate: FXRate): void {
         const { currency, unit } = FXRate;
         let { rate } = FXRate;
-        const { from, to } = currency;
+
+        let { from, to } = currency;
+
+        if (from == ('RMB' as currency.RMB)) from = 'CNY' as currency.CNY;
+        if (to == ('RMB' as currency.RMB)) to = 'CNY' as currency.CNY;
 
         if (this.fxRateList[from] && this.fxRateList[from][to]) {
             if (this.fxRateList[from][to].updated > FXRate.updated) return;

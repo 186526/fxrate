@@ -47,6 +47,7 @@ export enum currency {
     MNT = 'MNT',
     LAK = 'LAK',
     IRR = 'IRR',
+    RMB = CNY,
     unknown,
 }
 

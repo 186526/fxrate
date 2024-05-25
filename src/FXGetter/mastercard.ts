@@ -1,7 +1,7 @@
 import fxManager from 'src/fxm/fxManager';
 import syncRequest from 'sync-request';
 import axios from 'axios';
-import { Fraction, fraction } from 'mathjs';
+import { fraction } from 'mathjs';
 
 import { LRUCache } from 'lru-cache';
 import { currency } from 'src/types';
@@ -168,16 +168,7 @@ export default class mastercardFXM extends fxManager {
     ableToGetAllFXRate: boolean = false;
 
     public get fxRateList() {
-        const fxRateList: {
-            [currency in keyof currency]: {
-                [currency in keyof currency]: {
-                    cash: Fraction;
-                    remit: Fraction;
-                    middle: Fraction;
-                    updated: Date;
-                };
-            };
-        } = {} as any;
+        const fxRateList: fxManager['_fxRateList'] = {} as any;
 
         currenciesList.forEach((from) => {
             fxRateList[from] = {} as any;
