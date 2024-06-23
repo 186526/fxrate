@@ -41,7 +41,7 @@ export class RSSHandler extends router {
             await useInternalRestAPI(`info`, this.fxmManager)
         ).sources.filter((source) => !excludeSource.includes(source));
 
-        let answer = [];
+        const answer = [];
 
         await Promise.all(
             sources.map(async (source) => {
@@ -102,7 +102,7 @@ export class RSSHandler extends router {
             const prices = await this.requestPrice(from, to);
 
             prices.forEach((price) => {
-                let description = `现汇买入: ${price.buy.remit} 现钞买入: ${price.buy.cash} 买入中间价: ${price.buy.middle} 买入更新时间: ${price.buy.updated}
+                const description = `现汇买入: ${price.buy.remit} 现钞买入: ${price.buy.cash} 买入中间价: ${price.buy.middle} 买入更新时间: ${price.buy.updated}
     现汇卖出: ${price.sell.remit} 现钞卖出: ${price.sell.cash} 卖出中间价: ${price.sell.middle} 卖出更新时间: ${price.sell.updated}
     `;
 
@@ -118,6 +118,8 @@ export class RSSHandler extends router {
             });
 
             response.body = feed.atom1();
+            response.headers.set('Content-Type', 'application/xml');
+            response.status = 200;
 
             return response;
         };
