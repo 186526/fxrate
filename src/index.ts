@@ -27,6 +27,7 @@ import getSPDBFXRates from './FXGetter/spdb';
 
 import mastercardFXM from './FXGetter/mastercard';
 import visaFXM from './FXGetter/visa';
+import { RSSHandler } from './handler/rss';
 
 const App = new rootRouter();
 
@@ -109,6 +110,9 @@ if (process.env.ENABLE_WISE == '1') {
 
     App.use([Manager], '/(.*)');
     App.use([Manager], '/v1/(.*)');
+
+    const rssFeeder = new RSSHandler(Manager);
+    App.use([rssFeeder], '/rss/(.*)');
 })();
 
 export default async (req: http.IncomingMessage, res: http.ServerResponse) => {

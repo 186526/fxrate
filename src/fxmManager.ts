@@ -34,7 +34,7 @@ export const useBasic = (response: response<any>): void => {
     }
 };
 
-const useInternalRestAPI = async (url: string, router: router) => {
+export const useInternalRestAPI = async (url: string, router: router) => {
     const restResponse = await router
         .respond(
             new request(
