@@ -47,12 +47,12 @@ export class RSSHandler extends router {
             sources.map(async (source) => {
                 try {
                     const buyPrices = await useInternalRestAPI(
-                        `${source}/${to}/${from}/?precision=2&fees=0&amount=100`,
+                        `${source}/${to}/${from}/?precision=4&fees=0&amount=100`,
                         this.fxmManager,
                     );
 
                     const sellPrices = await useInternalRestAPI(
-                        `${source}/${from}/${to}/?precision=2&fees=0&amount=100&reverse`,
+                        `${source}/${from}/${to}/?precision=4&fees=0&amount=100&reverse`,
                         this.fxmManager,
                     );
 
@@ -118,8 +118,6 @@ export class RSSHandler extends router {
             });
 
             response.body = feed.atom1();
-            response.headers.set('Content-Type', 'application/xml');
-            response.status = 200;
 
             return response;
         };
