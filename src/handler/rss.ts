@@ -118,6 +118,8 @@ export class RSSHandler extends router {
             });
 
             response.body = feed.atom1();
+            response.headers.set('Content-Type', 'application/xml');
+            response.status = 200;
 
             return response;
         };

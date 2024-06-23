@@ -21,12 +21,14 @@ const getSPDBFXRates = async (): Promise<FXRate[]> => {
     return $('.table04 > tbody > tr')
         .toArray()
         .map((el) => {
+            const toCurrency = $($(el).children()[0])
+                .text()
+                .split(' ')[1]
+                .replace('\n', '') as currency;
+
             const result: FXRate = {
                 currency: {
-                    from: $($(el).children()[0])
-                        .text()
-                        .split(' ')[1]
-                        .replace('\n', '') as currency,
+                    from: toCurrency,
                     to: 'CNY' as currency.CNY,
                 },
 
@@ -42,7 +44,7 @@ const getSPDBFXRates = async (): Promise<FXRate[]> => {
                     middle: parseFloat($($(el).children()[1]).text()),
                 },
 
-                unit: 100,
+                unit: toCurrency == 'JPY' ? 100000 : 100,
                 updated: updatedTime,
             };
             return result;
