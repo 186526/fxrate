@@ -2,7 +2,7 @@ import axios from 'axios';
 
 import { FXRate, currency } from 'src/types';
 
-function parseYYYYMMDDHHmmss(dateStr) {
+export function parseYYYYMMDDHHmmss(dateStr) {
     const year = dateStr.substring(0, 4);
     const month = dateStr.substring(4, 6) - 1;
     const day = dateStr.substring(6, 8);

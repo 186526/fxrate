@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { FXRate, currency } from 'src/types';
+import { parseYYYYMMDDHHmmss } from './ncb.cn';
 
 import https from 'https';
 
@@ -26,7 +27,8 @@ const getPSBCFXRates = async () => {
         res.data.replaceAll('empty(', '').replaceAll(')', ''),
     ).resultList;
 
-    return data
+    const answer = data
+        .filter((k) => k.flag == 2)
         .map((fx) => {
             return {
                 currency: {
@@ -45,23 +47,14 @@ const getPSBCFXRates = async () => {
                     middle: fx.mid_prc,
                 },
                 unit: 100,
-                updated: new Date(
-                    ((date: number, time: number) => {
-                        const dateStringArray = date.toString().split('');
-                        const timeStringArray = time
-                            .toString()
-                            .padStart(6, '0')
-                            .split('');
-                        dateStringArray.splice(4, 0, '-');
-                        dateStringArray.splice(7, 0, '-');
-                        timeStringArray.splice(2, 0, ':');
-                        timeStringArray.splice(5, 0, ':');
-                        return `${dateStringArray.join('')} ${timeStringArray.join('')} UTC+8`;
-                    })(fx.effect_date, fx.effect_time),
+                updated: parseYYYYMMDDHHmmss(
+                    `${fx.effect_date}${fx.effect_time}`,
                 ),
             } as FXRate;
         })
         .sort();
+
+    return answer;
 };
 
 export default getPSBCFXRates;
