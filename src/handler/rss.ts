@@ -102,11 +102,10 @@ export class RSSHandler extends router {
             const prices = await this.requestPrice(from, to);
 
             prices.forEach((price) => {
-                const description = `现汇买入: ${price.buy.remit} 现钞买入: ${price.buy.cash} 买入中间价: ${price.buy.middle} 买入更新时间: ${price.buy.updated}\n现汇卖出: ${price.sell.remit} 现钞卖出: ${price.sell.cash} 卖出中间价: ${price.sell.middle} 卖出更新时间: ${price.sell.updated}
-    `;
+                const description = `现汇买入: ${price.buy.remit} 现钞买入: ${price.buy.cash} 买入中间价: ${price.buy.middle} 买入更新时间: ${price.buy.updated}\n现汇卖出: ${price.sell.remit} 现钞卖出: ${price.sell.cash} 卖出中间价: ${price.sell.middle} 卖出更新时间: ${price.sell.updated}`;
 
                 feed.addItem({
-                    title: `${sourceNamesInZH[price.source] ?? price.source} ${from} <=> ${to}`,
+                    title: `${sourceNamesInZH[price.source] ?? price.source}`,
                     link: `https://github.com/186526/fxrate`,
                     description: description,
                     content: description,
