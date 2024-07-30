@@ -15,8 +15,8 @@
         "moduleResolution": "node",
         "resolveJsonModule": true
     },
-    "exclude": ["dist", "test", "**/*spec.ts"],
-    "include": ["src/**/*.ts"],
+    "exclude": ["dist"],
+    "include": ["tests/**/*.ts", "src/**/*.ts"],
     "ts-node": {
         "esm": true
     }

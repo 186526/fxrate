@@ -31,9 +31,9 @@ import mastercardFXM from './FXGetter/mastercard';
 import visaFXM from './FXGetter/visa';
 import { RSSHandler } from './handler/rss';
 
-const App = new rootRouter();
+export const App = new rootRouter();
 
-const Manager = new fxmManager({
+export const Manager = new fxmManager({
     boc: getBOCFXRatesFromBOC,
     icbc: getICBCFXRates,
     cib: getCIBFXRates,
@@ -70,7 +70,7 @@ if (process.env.ENABLE_WISE == '1') {
     );
 }
 
-(async () => {
+export const Instance = (async () => {
     App.binding(
         '/(.*)',
         new handler('ANY', [

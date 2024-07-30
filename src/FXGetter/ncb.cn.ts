@@ -65,7 +65,9 @@ const getNCBCNFXRates = async (): Promise<FXRate[]> => {
                 middle: fx.cstExgMdlPrc,
             },
             unit: currencyName === 'JPY' ? 100 : 1,
-            updated: parseYYYYMMDDHHmmss(`${fx.mktQtnDt}${fx.mktQtnTm}`),
+            updated: parseYYYYMMDDHHmmss(
+                `${fx.mktQtnDt}${fx.mktQtnTm.padStart(6, '0')}`,
+            ),
         });
     });
 
