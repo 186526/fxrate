@@ -141,6 +141,7 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     private fxms: {
         [source: string]: fxManager;
     } = {};
+
     private fxmStatus: {
         [source: string]: 'ready' | 'pending';
     } = {};

@@ -52,7 +52,7 @@ export default class fxManager {
     ableToGetAllFXRate: boolean = true;
 
     constructor(FXRates: FXRate[]) {
-        FXRates.forEach((fxRate) => {
+        FXRates.sort().forEach((fxRate) => {
             try {
                 this.update(fxRate);
             } catch (e) {

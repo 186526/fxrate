@@ -48,6 +48,9 @@ export enum currency {
     LAK = 'LAK',
     IRR = 'IRR',
     RMB = CNY,
+    CNH = 'CNH', // CNY (overseas)
+    AUX = 'AUX', // Gold 995
+    AUY = 'AUY', // Gold 999
     unknown,
 }
 

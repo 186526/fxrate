@@ -14,7 +14,7 @@ const getHSBCHKFXRates = async (): Promise<FXRate[]> => {
 
     const data = req.data.detailRates;
 
-    return data.map((k) => {
+    const answer: FXRate[] = data.map((k) => {
         const answer: FXRate = {
             currency: {
                 from: k.ccy as currency.unknown,
@@ -35,6 +35,16 @@ const getHSBCHKFXRates = async (): Promise<FXRate[]> => {
 
         return answer;
     });
+
+    answer.push(
+        ((answer) => {
+            const tmp = answer.find((k) => k.currency.from === 'CNY');
+            tmp.currency.from = 'CNH' as currency.CNH;
+            return tmp;
+        })(answer),
+    );
+
+    return answer;
 };
 
 export default getHSBCHKFXRates;

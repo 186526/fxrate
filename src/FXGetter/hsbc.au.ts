@@ -16,7 +16,7 @@ const getHSBCAUFXRates = async (): Promise<FXRate[]> => {
 
     const date = new Date(req.headers['date']);
 
-    return data.fxList.map((k) => {
+    const answer = data.fxList.map((k) => {
         return {
             currency: {
                 from: 'AUD' as currency.AUD,
@@ -36,6 +36,16 @@ const getHSBCAUFXRates = async (): Promise<FXRate[]> => {
             updated: date,
         } as FXRate;
     });
+
+    answer.push(
+        ((answer) => {
+            const tmp = answer.find((k) => k.currency.from === 'CNY');
+            tmp.currency.from = 'CNH' as currency.CNH;
+            return tmp;
+        })(answer),
+    );
+
+    return answer;
 };
 
 export default getHSBCAUFXRates;

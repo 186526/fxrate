@@ -4,7 +4,7 @@ import { router, handler } from 'handlers.js';
 import { request, response } from 'handlers.js';
 import { Feed } from 'feed';
 
-const sourceNamesInZH = {
+export const sourceNamesInZH = {
     pboc: '中国人民银行',
     unionpay: '银联',
     mastercard: 'MasterCard',
@@ -18,13 +18,15 @@ const sourceNamesInZH = {
     ccb: '中国建设银行',
     psbc: '邮政储蓄银行',
     bocom: '交通银行',
-    cibHuanyu: '兴业寰宇',
+    cibHuanyu: '兴业银行寰宇人生',
     cib: '兴业银行',
     'hsbc.cn': '汇丰中国',
     'hsbc.hk': '汇丰香港',
     'hsbc.au': '汇丰澳洲',
-    'citic.cn': '信银中国',
+    'citic.cn': '中信银行',
     spdb: '浦发银行',
+    'ncb.cn': '南洋商业银行（中国）',
+    xib: '厦门国际银行',
 };
 
 export class RSSHandler extends router {
