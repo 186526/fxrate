@@ -109,13 +109,13 @@ const getUnionPayFXRates = async (): Promise<FXRate[]> => {
                 unit: 1,
             };
             if (answerMap[from][to].forward) {
-                k.rate.buy = {
+                k.rate.sell = {
                     remit: answerMap[from][to].forward,
                     cash: answerMap[from][to].forward,
                 };
             }
             if (answerMap[from][to].reverse) {
-                k.rate.sell = {
+                k.rate.buy = {
                     remit: answerMap[from][to].reverse,
                     cash: answerMap[from][to].reverse,
                 };
