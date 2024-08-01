@@ -114,9 +114,8 @@ export const makeInstance = async (App: rootRouter, Manager: fxmManager) => {
 };
 
 if (
-    esMain(import.meta) ||
     process.env.VERCEL == '1' ||
-    (typeof require !== 'undefined' && require.main === module)
+    ((_) => globalThis.esBuilt ?? esMain(_))(import.meta)
 ) {
     (async () => {
         globalThis.App = await makeInstance(new rootRouter(), Manager);
