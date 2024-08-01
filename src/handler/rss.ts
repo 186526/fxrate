@@ -1,10 +1,10 @@
-import type fxmManager from 'src/fxmManager';
-import { useInternalRestAPI } from 'src/fxmManager';
+import type fxmManager from '../fxmManager';
+import { useInternalRestAPI } from '../fxmManager';
 import { router, handler } from 'handlers.js';
 import { request, response } from 'handlers.js';
 import { Feed } from 'feed';
 
-import { sourceNamesInZH } from 'src/constant';
+import { sourceNamesInZH } from '../constant';
 
 export class RSSHandler extends router {
     private fxmManager: fxmManager;
@@ -43,6 +43,7 @@ export class RSSHandler extends router {
                 } catch (e) {
                     console.error(
                         `not suppported: ${source} with ${from} to ${to}`,
+                        e,
                     );
                 }
                 return '';
@@ -88,9 +89,7 @@ export class RSSHandler extends router {
                     link: `https://github.com/186526/fxrate`,
                     description: description,
                     content: description,
-                    date:
-                        new Date(price.buy.updated) ??
-                        new Date(price.sell.updated),
+                    date: new Date(price.buy.updated ?? price.sell.updated),
                 });
             });
 

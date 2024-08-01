@@ -1,0 +1,10 @@
+#!/bin/sh
+
+yarn lint
+yarn format
+yarn test
+yarn build
+
+git add -A
+
+exit 0

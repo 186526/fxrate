@@ -1,14 +1,9 @@
-/* eslint-disable @typescript-eslint/indent */
-/* eslint-disable indent */
-
-import { router, response, request, handler } from 'handlers.js';
-import { headers } from 'handlers.js/dist/src/interface';
+import { router, response, request, handler, interfaces } from 'handlers.js';
 import fxManager from './fxm/fxManager';
 import { FXRate, JSONRPCMethods, currency } from './types';
 
 import { round, multiply, Fraction } from 'mathjs';
 
-import packageJson from '../package.json';
 import process from 'node:process';
 
 import JSONRPCRouter from 'handlers.js-jsonrpc';
@@ -40,7 +35,7 @@ export const useInternalRestAPI = async (url: string, router: router) => {
             new request(
                 'GET',
                 new URL(`http://this.internal/${url}`),
-                new headers({}),
+                new interfaces.headers({}),
                 '',
                 {},
             ),
@@ -49,9 +44,8 @@ export const useInternalRestAPI = async (url: string, router: router) => {
 
     try {
         return JSON.parse(restResponse.body);
-    } catch (e) {
-        if (!(restResponse instanceof response))
-            throw new Error(`Please request /${url} to check first.`);
+    } catch (_e) {
+        if (!(restResponse instanceof response)) throw new Error(restResponse);
         return restResponse;
     }
 };
@@ -130,7 +124,7 @@ const getDetails = async (
     for (const type of ['cash', 'remit', 'middle']) {
         try {
             result[type] = await getConvert(from, to, type, fxManager, request);
-        } catch (e) {
+        } catch (_e) {
             result[type] = false;
         }
     }
@@ -149,6 +143,8 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     private fxRateGetter: {
         [source: string]: (fxmManager?: fxmManager) => Promise<FXRate[]>;
     } = {};
+
+    public intervalIDs: NodeJS.Timeout[] = [];
 
     protected rpcHandlers = {
         instanceInfo: () => useInternalRestAPI('info', this),
@@ -218,7 +214,7 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                 rep.body = JSON.stringify({
                     status: 'ok',
                     sources: Object.keys(this.fxms),
-                    version: `${packageJson.name}/${packageJson.version} ${globalThis.GITBUILD || 'git'} ${globalThis.BUILDTIME || 'devlopment'}`,
+                    version: `fxrate@${globalThis.GITBUILD || 'git'} ${globalThis.BUILDTIME || 'devlopment'}`,
                     apiVersion: 'v1',
                     environment: process.env.NODE_ENV || 'development',
                 });
@@ -232,6 +228,7 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     }
 
     public log(str: string) {
+        if (process.env.LOG_LEVEL === 'error') return;
         setTimeout(() => {
             console.log(`[${new Date().toUTCString()}] [fxmManager] ${str}`);
         }, 0);
@@ -269,7 +266,9 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         this.fxmStatus[source] = 'pending';
         this.mountFXMRouter(source);
         this.log(`Registered ${source}.`);
-        setInterval(() => this.updateFXManager(source), 1000 * 60 * 30);
+        this.intervalIDs.push(
+            setInterval(() => this.updateFXManager(source), 1000 * 60 * 30),
+        );
     }
 
     public registerFXM(source: string, fxManager: fxManager): void {
@@ -436,6 +435,12 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         );
 
         return fxmRouter;
+    }
+
+    public stopAllInterval(): void {
+        for (const id of this.intervalIDs) {
+            clearInterval(id);
+        }
     }
 }
 

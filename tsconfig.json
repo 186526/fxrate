@@ -15,9 +15,13 @@
         "moduleResolution": "node",
         "resolveJsonModule": true
     },
-    "exclude": ["dist"],
-    "include": ["tests/**/*.ts", "src/**/*.ts"],
+    "exclude": ["dist", "node_modules"],
+    "include": ["src/**/*", "tests/**/*"],
     "ts-node": {
         "esm": true
+    },
+    "tsc-alias": {
+        "resolveFullPaths": true,
+        "verbose": true
     }
 }

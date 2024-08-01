@@ -1,8 +1,9 @@
 import process from 'node:process';
 import http from 'node:http';
 
+import esMain from 'es-main';
+
 import rootRouter, { handler } from 'handlers.js';
-import packageJson from '../package.json';
 
 import fxmManager from './fxmManager';
 import { useBasic } from './fxmManager';
@@ -31,9 +32,7 @@ import mastercardFXM from './FXGetter/mastercard';
 import visaFXM from './FXGetter/visa';
 import { RSSHandler } from './handler/rss';
 
-export const App = new rootRouter();
-
-export const Manager = new fxmManager({
+const Manager = new fxmManager({
     boc: getBOCFXRatesFromBOC,
     icbc: getICBCFXRates,
     cib: getCIBFXRates,
@@ -70,11 +69,11 @@ if (process.env.ENABLE_WISE == '1') {
     );
 }
 
-export const Instance = (async () => {
+export const makeInstance = async (App: rootRouter, Manager: fxmManager) => {
     App.binding(
         '/(.*)',
         new handler('ANY', [
-            async (request, response) => {
+            async (_request, response) => {
                 useBasic(response);
                 response.status = 404;
             },
@@ -82,12 +81,6 @@ export const Instance = (async () => {
     );
 
     App.useMappingAdapter();
-    if (process.env.VERCEL != '1')
-        App.listen(Number(process?.env?.PORT) || 8080);
-
-    console.log(
-        `[${new Date().toUTCString()}] Server is started at ${Number(process?.env?.PORT) || 8080} with NODE_ENV ${process.env.NODE_ENV || 'development'}.`,
-    );
 
     App.binding(
         '/',
@@ -98,12 +91,11 @@ export const Instance = (async () => {
         '/(.*)',
         new handler('ANY', [
             async (request, response) => {
-                console.log(
-                    `[${new Date().toUTCString()}] ${request.ip} ${request.method} ${request.originURL}`,
+                Manager.log(
+                    `${request.ip} ${request.method} ${request.originURL}`,
                 );
 
-                response.headers.set('X-Powered-By', packageJson.name);
-                response.headers.set('X-Author', packageJson.author);
+                response.headers.set('X-Powered-By', `fxrate/latest`);
                 response.headers.set(
                     'X-License',
                     'MIT, Data copyright belongs to its source. More details at <https://github.com/186526/fxrate>.',
@@ -117,10 +109,31 @@ export const Instance = (async () => {
 
     const rssFeeder = new RSSHandler(Manager);
     App.use([rssFeeder], '/rss/(.*)');
-})();
+
+    return App;
+};
+
+if (
+    esMain(import.meta) ||
+    process.env.VERCEL == '1' ||
+    (typeof require !== 'undefined' && require.main === module)
+) {
+    (async () => {
+        globalThis.App = await makeInstance(new rootRouter(), Manager);
+
+        if (process.env.VERCEL != '1')
+            globalThis.App.listen(Number(process?.env?.PORT) || 8080);
+
+        console.log(
+            `[${new Date().toUTCString()}] Server is started at ${Number(process?.env?.PORT) || 8080} with NODE_ENV ${process.env.NODE_ENV || 'development'}.`,
+        );
+    })();
+}
 
 export default async (req: http.IncomingMessage, res: http.ServerResponse) => {
-    const request = await App.adapater.handleRequest(req);
-    const response = await App.adapater.router.respond(request);
-    App.adapater.handleResponse(response, res);
+    const request = await globalThis.App.adapater.handleRequest(req);
+    const response = await globalThis.App.adapater.router.respond(request);
+    globalThis.App.adapater.handleResponse(response, res);
 };
+
+export { Manager };

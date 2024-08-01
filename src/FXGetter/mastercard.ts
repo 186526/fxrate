@@ -1,4 +1,4 @@
-import fxManager from 'src/fxm/fxManager';
+import fxManager from '../fxm/fxManager';
 import syncRequest from 'sync-request';
 import axios from 'axios';
 import { fraction } from 'mathjs';
