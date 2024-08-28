@@ -5,7 +5,16 @@ import cheerio from 'cheerio';
 import crypto from 'crypto';
 import https from 'https';
 
-import { round, fraction, divide, subtract, add, Fraction } from 'mathjs';
+import {
+    round,
+    fraction,
+    divide,
+    subtract,
+    add,
+    max,
+    min,
+    Fraction,
+} from 'mathjs';
 
 /**
  * Handle this problem with Node 18
@@ -108,14 +117,6 @@ const getCIBHuanyuFXRates = async (): Promise<FXRate[]> => {
     return origin
         .map((rate) => {
             const originRate = JSON.parse(JSON.stringify(rate.rate));
-            rate.rate.buy.cash = promotePrice(
-                originRate.buy.cash as number,
-                originRate.sell.cash as number,
-            );
-            rate.rate.sell.cash = promotePrice(
-                originRate.sell.cash as number,
-                originRate.buy.cash as number,
-            );
             rate.rate.buy.remit = promotePrice(
                 originRate.buy.remit as number,
                 originRate.sell.remit as number,
@@ -124,6 +125,26 @@ const getCIBHuanyuFXRates = async (): Promise<FXRate[]> => {
                 originRate.sell.remit as number,
                 originRate.buy.remit as number,
             );
+            // free cash to remit conversion
+            rate.rate.buy.cash = max(
+                originRate.buy.cash as number,
+                rate.rate.buy.remit,
+            ) as number;
+            // use huanyu rate to buy remit online
+            rate.rate.sell.cash = min(
+                originRate.sell.cash as number,
+                rate.rate.sell.remit,
+            ) as number;
+
+            rate.rate.middle = divide(
+                add(
+                    rate.rate.buy.remit,
+                    rate.rate.sell.remit,
+                    rate.rate.buy.cash,
+                    rate.rate.sell.cash,
+                ),
+                4,
+            ) as number;
 
             return rate;
         })
