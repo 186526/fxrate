@@ -136,6 +136,16 @@ const getCIBHuanyuFXRates = async (): Promise<FXRate[]> => {
                 rate.rate.sell.remit,
             ) as number;
 
+            rate.rate.middle = divide(
+                add(
+                    rate.rate.buy.remit,
+                    rate.rate.sell.remit,
+                    rate.rate.buy.cash,
+                    rate.rate.sell.cash,
+                ),
+                4,
+            ) as number;
+
             return rate;
         })
         .sort();
