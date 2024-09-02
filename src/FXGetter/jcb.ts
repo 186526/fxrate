@@ -5,7 +5,8 @@ import cheerio from 'cheerio';
 const getJCBJPYBasedFXRates = async (): Promise<FXRate[]> => {
     const res = await axios.get('https://www.jcb.jp/rate/jpy.html', {
         headers: {
-            'User-Agent': 'fxrate axios/latest',
+            'User-Agent':
+                process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
         },
     });
 

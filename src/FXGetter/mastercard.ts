@@ -242,7 +242,9 @@ export default class mastercardFXM extends fxManager {
             `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`,
             {
                 headers: {
-                    'User-Agent': 'fxrate axios/latest',
+                    'User-Agent':
+                        process.env['HEADER_USER_AGENT'] ??
+                        'fxrate axios/latest',
                 },
             },
         );

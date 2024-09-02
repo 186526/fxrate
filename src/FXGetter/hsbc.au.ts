@@ -7,7 +7,8 @@ const getHSBCAUFXRates = async (): Promise<FXRate[]> => {
         `https://mkdlc.ebanking.hsbc.com.hk/hsbcfxwidget/data/getFXList?callback=JSON.stringify&token=0vg8cORxRLBsrWg9C9UboMT%2BkN2Ykze6vFnRV1nA8DE%3D`,
         {
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
             },
         },
     );

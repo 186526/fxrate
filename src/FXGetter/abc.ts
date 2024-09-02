@@ -50,7 +50,8 @@ const getABCFXRates = async (): Promise<FXRate[]> => {
         {
             ...allowLegacyRenegotiationforNodeJsOptions,
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
             },
         },
     );

@@ -7,7 +7,8 @@ const getHSBCCNFXRates = async (): Promise<FXRate[]> => {
         'https://www.services.cn-banking.hsbc.com.cn/mobile/channel/digital-proxy/cnyTransfer/ratesInfo/remittanceRate?locale=en_CN',
         {
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
                 'Content-Type': 'application/json',
             },
         },

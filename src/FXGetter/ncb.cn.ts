@@ -21,7 +21,8 @@ const getNCBCNFXRates = async (): Promise<FXRate[]> => {
         { ccyPair: '', bsnsTp: '1' },
         {
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
             },
         },
     );

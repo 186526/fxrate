@@ -9,7 +9,8 @@ const getSPDBFXRates = async (): Promise<FXRate[]> => {
         'https://www.spdb.com.cn/was5/web/search?channelid=256931',
         {
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
             },
         },
     );

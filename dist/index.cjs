@@ -902,22 +902,22 @@ var require_typed_function = __commonJS({
           return err;
         }
         function getLowestTypeIndex(param) {
-          let min2 = typeList.length + 1;
+          let min3 = typeList.length + 1;
           for (let i = 0; i < param.types.length; i++) {
             if (isExactType(param.types[i])) {
-              min2 = Math.min(min2, param.types[i].typeIndex);
+              min3 = Math.min(min3, param.types[i].typeIndex);
             }
           }
-          return min2;
+          return min3;
         }
         function getLowestConversionIndex(param) {
-          let min2 = nConversions + 1;
+          let min3 = nConversions + 1;
           for (let i = 0; i < param.types.length; i++) {
             if (!isExactType(param.types[i])) {
-              min2 = Math.min(min2, param.types[i].conversionIndex);
+              min3 = Math.min(min3, param.types[i].conversionIndex);
             }
           }
-          return min2;
+          return min3;
         }
         function compareParams(param1, param2) {
           if (param1.hasAny) {
@@ -14177,9 +14177,9 @@ var require_supports_color = __commonJS({
       if (haveStream && !streamIsTTY && forceColor === void 0) {
         return 0;
       }
-      const min2 = forceColor || 0;
+      const min3 = forceColor || 0;
       if (env.TERM === "dumb") {
-        return min2;
+        return min3;
       }
       if (process.platform === "win32") {
         const osRelease = os.release().split(".");
@@ -14192,7 +14192,7 @@ var require_supports_color = __commonJS({
         if (["TRAVIS", "CIRCLECI", "APPVEYOR", "GITLAB_CI", "GITHUB_ACTIONS", "BUILDKITE"].some((sign3) => sign3 in env) || env.CI_NAME === "codeship") {
           return 1;
         }
-        return min2;
+        return min3;
       }
       if ("TEAMCITY_VERSION" in env) {
         return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
@@ -14218,7 +14218,7 @@ var require_supports_color = __commonJS({
       if ("COLORTERM" in env) {
         return 1;
       }
-      return min2;
+      return min3;
     }
     function getSupportLevel(stream4) {
       const level = supportsColor(stream4, stream4 && stream4.isTTY);
@@ -22744,14 +22744,14 @@ P.absoluteValue = P.abs = function() {
 P.ceil = function() {
   return finalise(new this.constructor(this), this.e + 1, 2);
 };
-P.clampedTo = P.clamp = function(min2, max2) {
+P.clampedTo = P.clamp = function(min3, max3) {
   var k, x = this, Ctor = x.constructor;
-  min2 = new Ctor(min2);
-  max2 = new Ctor(max2);
-  if (!min2.s || !max2.s) return new Ctor(NaN);
-  if (min2.gt(max2)) throw Error(invalidArgument + max2);
-  k = x.cmp(min2);
-  return k < 0 ? min2 : x.cmp(max2) > 0 ? max2 : new Ctor(x);
+  min3 = new Ctor(min3);
+  max3 = new Ctor(max3);
+  if (!min3.s || !max3.s) return new Ctor(NaN);
+  if (min3.gt(max3)) throw Error(invalidArgument + max3);
+  k = x.cmp(min3);
+  return k < 0 ? min3 : x.cmp(max3) > 0 ? max3 : new Ctor(x);
 };
 P.comparedTo = P.cmp = function(y) {
   var i, j, xdL, ydL, x = this, xd = x.d, yd = (y = new x.constructor(y)).d, xs = x.s, ys = y.s;
@@ -23635,8 +23635,8 @@ function digitsToString(d) {
   for (; w % 10 === 0; ) w /= 10;
   return str + w;
 }
-function checkInt32(i, min2, max2) {
-  if (i !== ~~i || i < min2 || i > max2) {
+function checkInt32(i, min3, max3) {
+  if (i !== ~~i || i < min3 || i > max3) {
     throw Error(invalidArgument + i);
   }
 }
@@ -24468,8 +24468,8 @@ function cbrt3(x) {
 function ceil(x) {
   return finalise(x = new this(x), x.e + 1, 2);
 }
-function clamp(x, min2, max2) {
-  return new this(x).clamp(min2, max2);
+function clamp(x, min3, max3) {
+  return new this(x).clamp(min3, max3);
 }
 function config3(obj) {
   if (!obj || typeof obj !== "object") throw Error(decimalError + "Object expected");
@@ -25473,17 +25473,17 @@ DimensionError.prototype.name = "DimensionError";
 DimensionError.prototype.isDimensionError = true;
 
 // node_modules/mathjs/lib/esm/error/IndexError.js
-function IndexError(index2, min2, max2) {
+function IndexError(index2, min3, max3) {
   if (!(this instanceof IndexError)) {
     throw new SyntaxError("Constructor must be called with the new operator");
   }
   this.index = index2;
   if (arguments.length < 3) {
     this.min = 0;
-    this.max = min2;
+    this.max = min3;
   } else {
-    this.min = min2;
-    this.max = max2;
+    this.min = min3;
+    this.max = max3;
   }
   if (this.min !== void 0 && this.index < this.min) {
     this.message = "Index out of range (" + this.index + " < " + this.min + ")";
@@ -26151,11 +26151,11 @@ var createDenseMatrixClass = /* @__PURE__ */ factory(name7, dependencies8, (_ref
       if (size2.length !== matrix2._size.length) {
         throw new DimensionError(size2.length, matrix2._size.length);
       }
-      var min2 = index2.min();
-      var max2 = index2.max();
+      var min3 = index2.min();
+      var max3 = index2.max();
       for (var i = 0, ii = matrix2._size.length; i < ii; i++) {
-        validateIndex(min2[i], matrix2._size[i]);
-        validateIndex(max2[i], matrix2._size[i]);
+        validateIndex(min3[i], matrix2._size[i]);
+        validateIndex(max3[i], matrix2._size[i]);
       }
       return new DenseMatrix2(_getSubmatrix(matrix2._data, index2, size2.length, 0), matrix2._datatype);
     }
@@ -27328,8 +27328,8 @@ function nearlyEqual2(x, y, epsilon) {
     if (diff.isZero()) {
       return true;
     } else {
-      var max2 = x.constructor.max(x.abs(), y.abs());
-      return diff.lte(max2.times(epsilon));
+      var max3 = x.constructor.max(x.abs(), y.abs());
+      return diff.lte(max3.times(epsilon));
     }
   }
   return false;
@@ -27543,11 +27543,11 @@ var createSparseMatrixClass = /* @__PURE__ */ factory(name18, dependencies19, (_
       throw new DimensionError(size2.length, matrix2._size.length);
     }
     var i, ii, k, kk;
-    var min2 = idx.min();
-    var max2 = idx.max();
+    var min3 = idx.min();
+    var max3 = idx.max();
     for (i = 0, ii = matrix2._size.length; i < ii; i++) {
-      validateIndex(min2[i], matrix2._size[i]);
-      validateIndex(max2[i], matrix2._size[i]);
+      validateIndex(min3[i], matrix2._size[i]);
+      validateIndex(max3[i], matrix2._size[i]);
     }
     var mvalues = matrix2._values;
     var mindex = matrix2._index;
@@ -30260,15 +30260,15 @@ var createMatAlgo10xSids = /* @__PURE__ */ factory(name55, dependencies55, (_ref
 });
 
 // node_modules/mathjs/lib/esm/error/ArgumentsError.js
-function ArgumentsError(fn, count, min2, max2) {
+function ArgumentsError(fn, count, min3, max3) {
   if (!(this instanceof ArgumentsError)) {
     throw new SyntaxError("Constructor must be called with the new operator");
   }
   this.fn = fn;
   this.count = count;
-  this.min = min2;
-  this.max = max2;
-  this.message = "Wrong number of arguments in function " + fn + " (" + count + " provided, " + min2 + (max2 !== void 0 && max2 !== null ? "-" + max2 : "") + " expected)";
+  this.min = min3;
+  this.max = max3;
+  this.message = "Wrong number of arguments in function " + fn + " (" + count + " provided, " + min3 + (max3 !== void 0 && max3 !== null ? "-" + max3 : "") + " expected)";
   this.stack = new Error().stack;
 }
 ArgumentsError.prototype = new Error();
@@ -31402,7 +31402,7 @@ var createInvmod = /* @__PURE__ */ factory(name69, dependencies69, (_ref) => {
     BigNumber: BigNumber2,
     xgcd,
     equal,
-    smaller,
+    smaller: smaller2,
     mod: mod2,
     add: add5,
     isInteger: isInteger3
@@ -31420,7 +31420,7 @@ var createInvmod = /* @__PURE__ */ factory(name69, dependencies69, (_ref) => {
     var [gcd, inv2] = res;
     if (!equal(gcd, BigNumber2(1))) return NaN;
     inv2 = mod2(inv2, b);
-    if (smaller(inv2, BigNumber2(0))) inv2 = add5(inv2, b);
+    if (smaller2(inv2, BigNumber2(0))) inv2 = add5(inv2, b);
     return inv2;
   }
 });
@@ -32882,9 +32882,9 @@ var createRange = /* @__PURE__ */ factory(name98, dependencies98, (_ref) => {
     config: config4,
     matrix: matrix2,
     bignumber: bignumber2,
-    smaller,
+    smaller: smaller2,
     smallerEq,
-    larger,
+    larger: larger2,
     largerEq,
     add: add5,
     isPositive
@@ -32949,7 +32949,7 @@ var createRange = /* @__PURE__ */ factory(name98, dependencies98, (_ref) => {
   }
   function _range(start, end2, step, includeEnd) {
     var array = [];
-    var ongoing = isPositive(step) ? includeEnd ? smallerEq : smaller : includeEnd ? largerEq : larger;
+    var ongoing = isPositive(step) ? includeEnd ? smallerEq : smaller2 : includeEnd ? largerEq : larger2;
     var x = start;
     while (ongoing(x, end2)) {
       array.push(x);
@@ -33787,13 +33787,13 @@ var createSolveODE = /* @__PURE__ */ factory(name112, dependencies112, (_ref) =>
     subtract: subtract2,
     multiply: multiply3,
     divide: divide4,
-    max: max2,
+    max: max3,
     map: map3,
     abs: abs3,
     isPositive,
     isNegative,
-    larger,
-    smaller,
+    larger: larger2,
+    smaller: smaller2,
     matrix: matrix2,
     bignumber: bignumber2,
     unaryMinus: unaryMinus2
@@ -33806,7 +33806,7 @@ var createSolveODE = /* @__PURE__ */ factory(name112, dependencies112, (_ref) =>
       }
       var t0 = tspan[0];
       var tf = tspan[1];
-      var isForwards = larger(tf, t0);
+      var isForwards = larger2(tf, t0);
       var firstStep = options.firstStep;
       if (firstStep !== void 0 && !isPositive(firstStep)) {
         throw new Error('"firstStep" must be positive');
@@ -33845,23 +33845,23 @@ var createSolveODE = /* @__PURE__ */ factory(name112, dependencies112, (_ref) =>
         for (var i = 1; i < c.length; ++i) {
           k.push(f(add5(t[n], multiply3(c[i], h)), add5(y[n], multiply3(h, a[i], k))));
         }
-        var TE = max2(abs3(map3(multiply3(deltaB, k), (X) => isUnit(X) ? X.value : X)));
+        var TE = max3(abs3(map3(multiply3(deltaB, k), (X) => isUnit(X) ? X.value : X)));
         if (TE < tol && tol / TE > 1 / 4) {
           t.push(add5(t[n], h));
           y.push(add5(y[n], multiply3(h, b, k)));
           n++;
         }
         var delta = 0.84 * (tol / TE) ** (1 / 5);
-        if (smaller(delta, minDelta)) {
+        if (smaller2(delta, minDelta)) {
           delta = minDelta;
-        } else if (larger(delta, maxDelta)) {
+        } else if (larger2(delta, maxDelta)) {
           delta = maxDelta;
         }
         delta = hasBigNumbers ? bignumber2(delta) : delta;
         h = multiply3(h, delta);
-        if (maxStep && larger(abs3(h), maxStep)) {
+        if (maxStep && larger2(abs3(h), maxStep)) {
           h = isForwards ? maxStep : unaryMinus2(maxStep);
-        } else if (minStep && smaller(abs3(h), minStep)) {
+        } else if (minStep && smaller2(abs3(h), minStep)) {
           h = isForwards ? minStep : unaryMinus2(minStep);
         }
         iter++;
@@ -33918,10 +33918,10 @@ var createSolveODE = /* @__PURE__ */ factory(name112, dependencies112, (_ref) =>
     }
   }
   function _createOngoing(isForwards) {
-    return isForwards ? smaller : larger;
+    return isForwards ? smaller2 : larger2;
   }
   function _createTrimStep(isForwards) {
-    var outOfBounds = isForwards ? larger : smaller;
+    var outOfBounds = isForwards ? larger2 : smaller2;
     return function(t, tf, h) {
       var next2 = add5(t, h);
       return outOfBounds(next2, tf) ? subtract2(tf, t) : h;
@@ -34152,7 +34152,7 @@ var createMode = /* @__PURE__ */ factory(name115, dependencies115, (_ref) => {
     }
     var count = {};
     var mode = [];
-    var max2 = 0;
+    var max3 = 0;
     for (var i = 0; i < values.length; i++) {
       var value = values[i];
       if (isNumeric(value) && isNaN2(value)) {
@@ -34162,10 +34162,10 @@ var createMode = /* @__PURE__ */ factory(name115, dependencies115, (_ref) => {
         count[value] = 0;
       }
       count[value]++;
-      if (count[value] === max2) {
+      if (count[value] === max3) {
         mode.push(value);
-      } else if (count[value] > max2) {
-        max2 = count[value];
+      } else if (count[value] > max3) {
+        max3 = count[value];
         mode = [value];
       }
     }
@@ -34436,10 +34436,10 @@ var createIsPrime = /* @__PURE__ */ factory(name123, dependencies123, (_ref) => 
       if (n.lt("3317044064679887385961981")) {
         bases = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41].filter((x2) => x2 < n);
       } else {
-        var max2 = Math.min(n.toNumber() - 2, Math.floor(2 * Math.pow(n.toFixed(0).length * Math.log(10), 2)));
+        var max3 = Math.min(n.toNumber() - 2, Math.floor(2 * Math.pow(n.toFixed(0).length * Math.log(10), 2)));
         bases = [];
-        for (var _i = 2; _i <= max2; _i += 1) {
-          bases.push(max2);
+        for (var _i = 2; _i <= max3; _i += 1) {
+          bases.push(max3);
         }
       }
       for (var _i2 = 0; _i2 < bases.length; _i2 += 1) {
@@ -36760,7 +36760,7 @@ var createMax = /* @__PURE__ */ factory(name155, dependencies155, (_ref) => {
     typed: typed3,
     config: config4,
     numeric: numeric3,
-    larger
+    larger: larger2
   } = _ref;
   return typed3(name155, {
     // max([a, b, c, d, ...])
@@ -36779,7 +36779,7 @@ var createMax = /* @__PURE__ */ factory(name155, dependencies155, (_ref) => {
   });
   function _largest(x, y) {
     try {
-      return larger(x, y) ? x : y;
+      return larger2(x, y) ? x : y;
     } catch (err) {
       throw improveErrorMessage(err, "max", y);
     }
@@ -36790,7 +36790,7 @@ var createMax = /* @__PURE__ */ factory(name155, dependencies155, (_ref) => {
       try {
         if (isNaN(value) && typeof value === "number") {
           res = NaN;
-        } else if (res === void 0 || larger(value, res)) {
+        } else if (res === void 0 || larger2(value, res)) {
           res = value;
         }
       } catch (err) {
@@ -36815,7 +36815,7 @@ var createMin = /* @__PURE__ */ factory(name156, dependencies156, (_ref) => {
     typed: typed3,
     config: config4,
     numeric: numeric3,
-    smaller
+    smaller: smaller2
   } = _ref;
   return typed3(name156, {
     // min([a, b, c, d, ...])
@@ -36834,31 +36834,31 @@ var createMin = /* @__PURE__ */ factory(name156, dependencies156, (_ref) => {
   });
   function _smallest(x, y) {
     try {
-      return smaller(x, y) ? x : y;
+      return smaller2(x, y) ? x : y;
     } catch (err) {
       throw improveErrorMessage(err, "min", y);
     }
   }
   function _min(array) {
-    var min2;
+    var min3;
     deepForEach(array, function(value) {
       try {
         if (isNaN(value) && typeof value === "number") {
-          min2 = NaN;
-        } else if (min2 === void 0 || smaller(value, min2)) {
-          min2 = value;
+          min3 = NaN;
+        } else if (min3 === void 0 || smaller2(value, min3)) {
+          min3 = value;
         }
       } catch (err) {
         throw improveErrorMessage(err, "min", value);
       }
     });
-    if (min2 === void 0) {
+    if (min3 === void 0) {
       throw new Error("Cannot calculate min of an empty array");
     }
-    if (typeof min2 === "string") {
-      min2 = numeric3(min2, config4.number);
+    if (typeof min3 === "string") {
+      min3 = numeric3(min3, config4.number);
     }
-    return min2;
+    return min3;
   }
 });
 
@@ -36867,7 +36867,7 @@ var name157 = "ImmutableDenseMatrix";
 var dependencies157 = ["smaller", "DenseMatrix"];
 var createImmutableDenseMatrixClass = /* @__PURE__ */ factory(name157, dependencies157, (_ref) => {
   var {
-    smaller,
+    smaller: smaller2,
     DenseMatrix: DenseMatrix2
   } = _ref;
   function ImmutableDenseMatrix(data2, datatype) {
@@ -36957,7 +36957,7 @@ var createImmutableDenseMatrixClass = /* @__PURE__ */ factory(name157, dependenc
     if (this._min === null) {
       var m = null;
       this.forEach(function(v) {
-        if (m === null || smaller(v, m)) {
+        if (m === null || smaller2(v, m)) {
           m = v;
         }
       });
@@ -36969,7 +36969,7 @@ var createImmutableDenseMatrixClass = /* @__PURE__ */ factory(name157, dependenc
     if (this._max === null) {
       var m = null;
       this.forEach(function(v) {
-        if (m === null || smaller(m, v)) {
+        if (m === null || smaller2(m, v)) {
           m = v;
         }
       });
@@ -37141,8 +37141,8 @@ var name159 = "FibonacciHeap";
 var dependencies159 = ["smaller", "larger"];
 var createFibonacciHeapClass = /* @__PURE__ */ factory(name159, dependencies159, (_ref) => {
   var {
-    smaller,
-    larger
+    smaller: smaller2,
+    larger: larger2
   } = _ref;
   var oneOverLogPhi = 1 / Math.log((1 + Math.sqrt(5)) / 2);
   function FibonacciHeap() {
@@ -37166,7 +37166,7 @@ var createFibonacciHeapClass = /* @__PURE__ */ factory(name159, dependencies159,
       node.right = minimum.right;
       minimum.right = node;
       node.right.left = node;
-      if (smaller(key, minimum.key)) {
+      if (smaller2(key, minimum.key)) {
         this._minimum = node;
       }
     } else {
@@ -37226,11 +37226,11 @@ var createFibonacciHeapClass = /* @__PURE__ */ factory(name159, dependencies159,
   function _decreaseKey(minimum, node, key) {
     node.key = key;
     var parent2 = node.parent;
-    if (parent2 && smaller(node.key, parent2.key)) {
+    if (parent2 && smaller2(node.key, parent2.key)) {
       _cut(minimum, node, parent2);
       _cascadingCut(minimum, parent2);
     }
-    if (smaller(node.key, minimum.key)) {
+    if (smaller2(node.key, minimum.key)) {
       minimum = node;
     }
     return minimum;
@@ -37303,7 +37303,7 @@ var createFibonacciHeapClass = /* @__PURE__ */ factory(name159, dependencies159,
         if (!y) {
           break;
         }
-        if (larger(x.key, y.key)) {
+        if (larger2(x.key, y.key)) {
           var temp = y;
           y = x;
           x = temp;
@@ -37329,7 +37329,7 @@ var createFibonacciHeapClass = /* @__PURE__ */ factory(name159, dependencies159,
         y.right = minimum.right;
         minimum.right = y;
         y.right.left = y;
-        if (smaller(y.key, minimum.key)) {
+        if (smaller2(y.key, minimum.key)) {
           minimum = y;
         }
       } else {
@@ -41876,7 +41876,7 @@ var createHypot = /* @__PURE__ */ factory(name201, dependencies201, (_ref) => {
     divideScalar: divideScalar2,
     multiplyScalar: multiplyScalar2,
     sqrt: sqrt2,
-    smaller,
+    smaller: smaller2,
     isPositive
   } = _ref;
   return typed3(name201, {
@@ -41892,7 +41892,7 @@ var createHypot = /* @__PURE__ */ factory(name201, dependencies201, (_ref) => {
         throw new TypeError("Unexpected type of argument to hypot");
       }
       var value = abs3(args[i]);
-      if (smaller(largest, value)) {
+      if (smaller2(largest, value)) {
         result = multiplyScalar2(result, multiplyScalar2(divideScalar2(largest, value), divideScalar2(largest, value)));
         result = addScalar2(result, 1);
         largest = value;
@@ -41917,8 +41917,8 @@ var createNorm = /* @__PURE__ */ factory(name202, dependencies202, (_ref) => {
     sqrt: sqrt2,
     multiply: multiply3,
     equalScalar: equalScalar2,
-    larger,
-    smaller,
+    larger: larger2,
+    smaller: smaller2,
     matrix: matrix2,
     ctranspose,
     eigs
@@ -41951,7 +41951,7 @@ var createNorm = /* @__PURE__ */ factory(name202, dependencies202, (_ref) => {
     var pinf = 0;
     x.forEach(function(value) {
       var v = abs3(value);
-      if (larger(v, pinf)) {
+      if (larger2(v, pinf)) {
         pinf = v;
       }
     }, true);
@@ -41961,7 +41961,7 @@ var createNorm = /* @__PURE__ */ factory(name202, dependencies202, (_ref) => {
     var ninf;
     x.forEach(function(value) {
       var v = abs3(value);
-      if (!ninf || smaller(v, ninf)) {
+      if (!ninf || smaller2(v, ninf)) {
         ninf = v;
       }
     }, true);
@@ -42002,7 +42002,7 @@ var createNorm = /* @__PURE__ */ factory(name202, dependencies202, (_ref) => {
     x.forEach(function(value, index2) {
       var j = index2[1];
       var cj = add5(c[j] || 0, abs3(value));
-      if (larger(cj, maxc)) {
+      if (larger2(cj, maxc)) {
         maxc = cj;
       }
       c[j] = cj;
@@ -42026,7 +42026,7 @@ var createNorm = /* @__PURE__ */ factory(name202, dependencies202, (_ref) => {
     x.forEach(function(value, index2) {
       var i = index2[0];
       var ri = add5(r[i] || 0, abs3(value));
-      if (larger(ri, maxr)) {
+      if (larger2(ri, maxr)) {
         maxr = ri;
       }
       r[i] = ri;
@@ -47973,7 +47973,7 @@ var createLup = /* @__PURE__ */ factory(name227, dependencies227, (_ref) => {
     divideScalar: divideScalar2,
     multiplyScalar: multiplyScalar2,
     subtractScalar: subtractScalar2,
-    larger,
+    larger: larger2,
     equalScalar: equalScalar2,
     unaryMinus: unaryMinus2,
     DenseMatrix: DenseMatrix2,
@@ -48014,9 +48014,9 @@ var createLup = /* @__PURE__ */ factory(name227, dependencies227, (_ref) => {
     for (j = 0; j < columns; j++) {
       if (j > 0) {
         for (i = 0; i < rows; i++) {
-          var min2 = Math.min(i, j);
+          var min3 = Math.min(i, j);
           var s = 0;
-          for (k = 0; k < min2; k++) {
+          for (k = 0; k < min3; k++) {
             s = addScalar2(s, multiplyScalar2(data2[i][k], data2[k][j]));
           }
           data2[i][j] = subtractScalar2(data2[i][j], s);
@@ -48028,7 +48028,7 @@ var createLup = /* @__PURE__ */ factory(name227, dependencies227, (_ref) => {
       for (i = j; i < rows; i++) {
         var v = data2[i][j];
         var absv = abs3(v);
-        if (larger(absv, pabsv)) {
+        if (larger2(absv, pabsv)) {
           pi2 = i;
           pabsv = absv;
           vjj = v;
@@ -48160,7 +48160,7 @@ var createLup = /* @__PURE__ */ factory(name227, dependencies227, (_ref) => {
       var pabsv = abs3(vjj);
       spa.forEach(j + 1, rows - 1, function(x, v) {
         var absv = abs3(v);
-        if (larger(absv, pabsv)) {
+        if (larger2(absv, pabsv)) {
           pi2 = x;
           pabsv = absv;
           vjj = v;
@@ -49183,7 +49183,7 @@ var createCsLu = /* @__PURE__ */ factory(name233, dependencies233, (_ref) => {
     divideScalar: divideScalar2,
     multiply: multiply3,
     subtract: subtract2,
-    larger,
+    larger: larger2,
     largerEq,
     SparseMatrix: SparseMatrix2
   } = _ref;
@@ -49246,7 +49246,7 @@ var createCsLu = /* @__PURE__ */ factory(name233, dependencies233, (_ref) => {
         i = xi[p];
         if (pinv[i] < 0) {
           var xabs = abs3(x[i]);
-          if (larger(xabs, a)) {
+          if (larger2(xabs, a)) {
             a = xabs;
             ipiv = i;
           }
@@ -49305,7 +49305,7 @@ var createSlu = /* @__PURE__ */ factory(name234, dependencies234, (_ref) => {
     transpose,
     divideScalar: divideScalar2,
     subtract: subtract2,
-    larger,
+    larger: larger2,
     largerEq,
     SparseMatrix: SparseMatrix2
   } = _ref;
@@ -49319,7 +49319,7 @@ var createSlu = /* @__PURE__ */ factory(name234, dependencies234, (_ref) => {
     divideScalar: divideScalar2,
     multiply: multiply3,
     subtract: subtract2,
-    larger,
+    larger: larger2,
     largerEq,
     SparseMatrix: SparseMatrix2
   });
@@ -53026,8 +53026,8 @@ function createComplexEigs(_ref) {
     usolveAll,
     equal,
     complex,
-    larger,
-    smaller,
+    larger: larger2,
+    smaller: smaller2,
     matrixFromColumns,
     dot: dot2
   } = _ref;
@@ -53078,15 +53078,15 @@ function createComplexEigs(_ref) {
           var c = colNorm;
           var rowDivRadix = divideScalar2(rowNorm, radix);
           var rowMulRadix = multiplyScalar2(rowNorm, radix);
-          while (smaller(c, rowDivRadix)) {
+          while (smaller2(c, rowDivRadix)) {
             c = multiplyScalar2(c, radixSq);
             f = multiplyScalar2(f, radix);
           }
-          while (larger(c, rowMulRadix)) {
+          while (larger2(c, rowMulRadix)) {
             c = divideScalar2(c, radixSq);
             f = divideScalar2(f, radix);
           }
-          var condition = smaller(divideScalar2(addScalar2(c, rowNorm), f), multiplyScalar2(addScalar2(colNorm, rowNorm), 0.95));
+          var condition = smaller2(divideScalar2(addScalar2(c, rowNorm), f), multiplyScalar2(addScalar2(colNorm, rowNorm), 0.95));
           if (condition) {
             last2 = false;
             var g = divideScalar2(1, f);
@@ -53115,15 +53115,15 @@ function createComplexEigs(_ref) {
     }
     for (var i = 0; i < N - 2; i++) {
       var maxIndex = 0;
-      var max2 = zero;
+      var max3 = zero;
       for (var j = i + 1; j < N; j++) {
         var el = arr[j][i];
-        if (smaller(abs3(max2), abs3(el))) {
-          max2 = el;
+        if (smaller2(abs3(max3), abs3(el))) {
+          max3 = el;
           maxIndex = j;
         }
       }
-      if (smaller(abs3(max2), prec)) {
+      if (smaller2(abs3(max3), prec)) {
         continue;
       }
       if (maxIndex !== i + 1) {
@@ -53142,7 +53142,7 @@ function createComplexEigs(_ref) {
         }
       }
       for (var _j3 = i + 2; _j3 < N; _j3++) {
-        var n = divideScalar2(arr[_j3][i], max2);
+        var n = divideScalar2(arr[_j3][i], max3);
         if (n === 0) {
           continue;
         }
@@ -53192,7 +53192,7 @@ function createComplexEigs(_ref) {
       if (findVectors) {
         Qpartial = multiply3(Qpartial, Q2);
       }
-      if (n === 1 || smaller(abs3(arr[n - 1][n - 2]), prec)) {
+      if (n === 1 || smaller2(abs3(arr[n - 1][n - 2]), prec)) {
         lastConvergenceBefore = 0;
         lambdas.push(arr[n - 1][n - 1]);
         if (findVectors) {
@@ -53208,7 +53208,7 @@ function createComplexEigs(_ref) {
         for (var _i2 = 0; _i2 < n; _i2++) {
           arr[_i2].pop();
         }
-      } else if (n === 2 || smaller(abs3(arr[n - 2][n - 3]), prec)) {
+      } else if (n === 2 || smaller2(abs3(arr[n - 2][n - 3]), prec)) {
         lastConvergenceBefore = 0;
         var ll = eigenvalues2x2(arr[n - 2][n - 2], arr[n - 2][n - 1], arr[n - 1][n - 2], arr[n - 1][n - 1]);
         lambdas.push(...ll);
@@ -53303,15 +53303,15 @@ function createComplexEigs(_ref) {
     var cplx = type === "Complex";
     var zero = big ? bignumber2(0) : cplx ? complex(0) : 0;
     var one = big ? bignumber2(1) : cplx ? complex(1) : 1;
-    if (smaller(abs3(c), prec)) {
+    if (smaller2(abs3(c), prec)) {
       return [[one, zero], [zero, one]];
     }
-    if (larger(abs3(subtract2(l1, l2)), prec)) {
+    if (larger2(abs3(subtract2(l1, l2)), prec)) {
       return [[subtract2(l1, d), subtract2(l2, d)], [c, c]];
     }
     var na = subtract2(a, l1);
     var nd = subtract2(d, l1);
-    if (smaller(abs3(b), prec) && smaller(abs3(nd), prec)) {
+    if (smaller2(abs3(b), prec) && smaller2(abs3(nd), prec)) {
       return [[na, one], [c, zero]];
     } else {
       return [[b, zero], [nd, one]];
@@ -53363,7 +53363,7 @@ function createComplexEigs(_ref) {
       } catch (_unused) {
         continue;
       }
-      if (larger(norm(b), largeNum)) {
+      if (larger2(norm(b), largeNum)) {
         break;
       }
     }
@@ -53373,7 +53373,7 @@ function createComplexEigs(_ref) {
     i = 0;
     while (true) {
       var c = usolve(A, b);
-      if (smaller(norm(orthogonalComplement(b, [c])), prec)) {
+      if (smaller2(norm(orthogonalComplement(b, [c])), prec)) {
         break;
       }
       if (++i >= 10) {
@@ -53694,7 +53694,7 @@ var createEigs = /* @__PURE__ */ factory(name244, dependencies244, (_ref) => {
     bignumber: bignumber2,
     multiply: multiply3,
     add: add5,
-    larger,
+    larger: larger2,
     column,
     flatten: flatten3,
     number: number2,
@@ -53708,7 +53708,7 @@ var createEigs = /* @__PURE__ */ factory(name244, dependencies244, (_ref) => {
     usolveAll,
     im,
     re,
-    smaller,
+    smaller: smaller2,
     matrixFromColumns,
     dot: dot2
   } = _ref;
@@ -53750,8 +53750,8 @@ var createEigs = /* @__PURE__ */ factory(name244, dependencies244, (_ref) => {
     usolveAll,
     equal,
     complex,
-    larger,
-    smaller,
+    larger: larger2,
+    smaller: smaller2,
     matrixFromColumns,
     dot: dot2
   });
@@ -53845,7 +53845,7 @@ var createEigs = /* @__PURE__ */ factory(name244, dependencies244, (_ref) => {
   function isSymmetric(arr, N, prec) {
     for (var i = 0; i < N; i++) {
       for (var j = i; j < N; j++) {
-        if (larger(bignumber2(abs3(subtract2(arr[i][j], arr[j][i]))), prec)) {
+        if (larger2(bignumber2(abs3(subtract2(arr[i][j], arr[j][i]))), prec)) {
           return false;
         }
       }
@@ -53855,7 +53855,7 @@ var createEigs = /* @__PURE__ */ factory(name244, dependencies244, (_ref) => {
   function isReal(arr, N, prec) {
     for (var i = 0; i < N; i++) {
       for (var j = 0; j < N; j++) {
-        if (larger(bignumber2(abs3(im(arr[i][j]))), prec)) {
+        if (larger2(bignumber2(abs3(im(arr[i][j]))), prec)) {
           return false;
         }
       }
@@ -54024,7 +54024,7 @@ var createSqrtm = /* @__PURE__ */ factory(name246, dependencies246, (_ref) => {
     subtract: subtract2,
     inv: inv2,
     size: size2,
-    max: max2,
+    max: max3,
     identity: identity2
   } = _ref;
   var _maxIterations = 1e3;
@@ -54038,7 +54038,7 @@ var createSqrtm = /* @__PURE__ */ factory(name246, dependencies246, (_ref) => {
       var Yk = Y;
       Y = multiply3(0.5, add5(Yk, inv2(Z)));
       Z = multiply3(0.5, add5(Z, inv2(Yk)));
-      error2 = max2(abs3(subtract2(Y, Yk)));
+      error2 = max3(abs3(subtract2(Y, Yk)));
       if (error2 > _tolerance && ++iterations > _maxIterations) {
         throw new Error("computing square root of matrix: iterative method could not converge");
       }
@@ -54533,7 +54533,7 @@ var createIntersect = /* @__PURE__ */ factory(name252, dependencies252, (_ref) =
     multiplyScalar: multiplyScalar2,
     divideScalar: divideScalar2,
     subtract: subtract2,
-    smaller,
+    smaller: smaller2,
     equalScalar: equalScalar2,
     flatten: flatten3,
     isZero: isZero2,
@@ -54626,7 +54626,7 @@ var createIntersect = /* @__PURE__ */ factory(name252, dependencies252, (_ref) =
     var d2 = subtract2(o2, p2b);
     var det2 = subtract2(multiplyScalar2(d1[0], d2[1]), multiplyScalar2(d2[0], d1[1]));
     if (isZero2(det2)) return null;
-    if (smaller(abs3(det2), config4.epsilon)) {
+    if (smaller2(abs3(det2), config4.epsilon)) {
       return null;
     }
     var d20o11 = multiplyScalar2(d2[0], o1[1]);
@@ -55058,9 +55058,9 @@ var createQuantileSeq = /* @__PURE__ */ factory(name259, dependencies259, (_ref)
     partitionSelect,
     compare,
     isInteger: isInteger3,
-    smaller,
+    smaller: smaller2,
     smallerEq,
-    larger
+    larger: larger2
   } = _ref;
   var apply = createApply({
     typed: typed3,
@@ -55082,22 +55082,22 @@ var createQuantileSeq = /* @__PURE__ */ factory(name259, dependencies259, (_ref)
   function _quantileSeqProbNumber(data2, probOrN, sorted) {
     var probArr;
     var dataArr = data2.valueOf();
-    if (smaller(probOrN, 0)) {
+    if (smaller2(probOrN, 0)) {
       throw new Error("N/prob must be non-negative");
     }
     if (smallerEq(probOrN, 1)) {
       return isNumber(probOrN) ? _quantileSeq(dataArr, probOrN, sorted) : bignumber2(_quantileSeq(dataArr, probOrN, sorted));
     }
-    if (larger(probOrN, 1)) {
+    if (larger2(probOrN, 1)) {
       if (!isInteger3(probOrN)) {
         throw new Error("N must be a positive integer");
       }
-      if (larger(probOrN, 4294967295)) {
+      if (larger2(probOrN, 4294967295)) {
         throw new Error("N must be less than or equal to 2^32-1, as that is the maximum length of an Array");
       }
       var nPlusOne = add5(probOrN, 1);
       probArr = [];
-      for (var i = 0; smaller(i, probOrN); i++) {
+      for (var i = 0; smaller2(i, probOrN); i++) {
         var prob = divide4(i + 1, nPlusOne);
         probArr.push(_quantileSeq(dataArr, prob, sorted));
       }
@@ -55786,18 +55786,18 @@ var createRandom = /* @__PURE__ */ factory(name271, dependencies271, (_ref) => {
   }
   return typed3(name271, {
     "": () => _random(0, 1),
-    number: (max2) => _random(0, max2),
-    "number, number": (min2, max2) => _random(min2, max2),
+    number: (max3) => _random(0, max3),
+    "number, number": (min3, max3) => _random(min3, max3),
     "Array | Matrix": (size2) => _randomMatrix(size2, 0, 1),
-    "Array | Matrix, number": (size2, max2) => _randomMatrix(size2, 0, max2),
-    "Array | Matrix, number, number": (size2, min2, max2) => _randomMatrix(size2, min2, max2)
+    "Array | Matrix, number": (size2, max3) => _randomMatrix(size2, 0, max3),
+    "Array | Matrix, number, number": (size2, min3, max3) => _randomMatrix(size2, min3, max3)
   });
-  function _randomMatrix(size2, min2, max2) {
-    var res = randomMatrix(size2.valueOf(), () => _random(min2, max2));
+  function _randomMatrix(size2, min3, max3) {
+    var res = randomMatrix(size2.valueOf(), () => _random(min3, max3));
     return isMatrix(size2) ? size2.create(res) : res;
   }
-  function _random(min2, max2) {
-    return min2 + rng() * (max2 - min2);
+  function _random(min3, max3) {
+    return min3 + rng() * (max3 - min3);
   }
 });
 
@@ -55820,18 +55820,18 @@ var createRandomInt = /* @__PURE__ */ factory(name272, dependencies272, (_ref) =
   }
   return typed3(name272, {
     "": () => _randomInt(0, 1),
-    number: (max2) => _randomInt(0, max2),
-    "number, number": (min2, max2) => _randomInt(min2, max2),
+    number: (max3) => _randomInt(0, max3),
+    "number, number": (min3, max3) => _randomInt(min3, max3),
     "Array | Matrix": (size2) => _randomIntMatrix(size2, 0, 1),
-    "Array | Matrix, number": (size2, max2) => _randomIntMatrix(size2, 0, max2),
-    "Array | Matrix, number, number": (size2, min2, max2) => _randomIntMatrix(size2, min2, max2)
+    "Array | Matrix, number": (size2, max3) => _randomIntMatrix(size2, 0, max3),
+    "Array | Matrix, number, number": (size2, min3, max3) => _randomIntMatrix(size2, min3, max3)
   });
-  function _randomIntMatrix(size2, min2, max2) {
-    var res = randomMatrix(size2.valueOf(), () => _randomInt(min2, max2));
+  function _randomIntMatrix(size2, min3, max3) {
+    var res = randomMatrix(size2.valueOf(), () => _randomInt(min3, max3));
     return isMatrix(size2) ? size2.create(res) : res;
   }
-  function _randomInt(min2, max2) {
-    return Math.floor(min2 + rng() * (max2 - min2));
+  function _randomInt(min3, max3) {
+    return Math.floor(min3 + rng() * (max3 - min3));
   }
 });
 
@@ -55852,7 +55852,7 @@ var createStirlingS2 = /* @__PURE__ */ factory(name273, dependencies273, (_ref) 
     isInteger: isInteger3,
     number: number2,
     bignumber: bignumber2,
-    larger
+    larger: larger2
   } = _ref;
   var smallCache = [];
   var bigCache = [];
@@ -55860,7 +55860,7 @@ var createStirlingS2 = /* @__PURE__ */ factory(name273, dependencies273, (_ref) 
     "number | BigNumber, number | BigNumber": function numberBigNumberNumberBigNumber(n, k) {
       if (!isInteger3(n) || isNegative(n) || !isInteger3(k) || isNegative(k)) {
         throw new TypeError("Non-negative integer value expected in function stirlingS2");
-      } else if (larger(k, n)) {
+      } else if (larger2(k, n)) {
         throw new TypeError("k must be less than or equal to n in function stirlingS2");
       }
       var big = !(isNumber(n) && isNumber(k));
@@ -55950,13 +55950,13 @@ var createComposition = /* @__PURE__ */ factory(name276, dependencies276, (_ref)
     isPositive,
     isNegative,
     isInteger: isInteger3,
-    larger
+    larger: larger2
   } = _ref;
   return typed3(name276, {
     "number | BigNumber, number | BigNumber": function numberBigNumberNumberBigNumber(n, k) {
       if (!isInteger3(n) || !isPositive(n) || !isInteger3(k) || !isPositive(k)) {
         throw new TypeError("Positive integer value expected in function composition");
-      } else if (larger(k, n)) {
+      } else if (larger2(k, n)) {
         throw new TypeError("k must be less than or equal to n in function composition");
       }
       return combinations(addScalar2(n, -1), addScalar2(k, -1));
@@ -59563,19 +59563,19 @@ var createMaxTransform = /* @__PURE__ */ factory(name296, dependencies296, (_ref
     typed: typed3,
     config: config4,
     numeric: numeric3,
-    larger
+    larger: larger2
   } = _ref;
-  var max2 = createMax({
+  var max3 = createMax({
     typed: typed3,
     config: config4,
     numeric: numeric3,
-    larger
+    larger: larger2
   });
   return typed3("max", {
     "...any": function any(args) {
       args = lastDimToZeroBase(args);
       try {
-        return max2.apply(null, args);
+        return max3.apply(null, args);
       } catch (err) {
         throw errorTransform(err);
       }
@@ -59621,19 +59621,19 @@ var createMinTransform = /* @__PURE__ */ factory(name298, dependencies298, (_ref
     typed: typed3,
     config: config4,
     numeric: numeric3,
-    smaller
+    smaller: smaller2
   } = _ref;
-  var min2 = createMin({
+  var min3 = createMin({
     typed: typed3,
     config: config4,
     numeric: numeric3,
-    smaller
+    smaller: smaller2
   });
   return typed3("min", {
     "...any": function any(args) {
       args = lastDimToZeroBase(args);
       try {
-        return min2.apply(null, args);
+        return min3.apply(null, args);
       } catch (err) {
         throw errorTransform(err);
       }
@@ -59652,9 +59652,9 @@ var createRangeTransform = /* @__PURE__ */ factory(name299, dependencies299, (_r
     config: config4,
     matrix: matrix2,
     bignumber: bignumber2,
-    smaller,
+    smaller: smaller2,
     smallerEq,
-    larger,
+    larger: larger2,
     largerEq,
     add: add5,
     isPositive
@@ -59664,9 +59664,9 @@ var createRangeTransform = /* @__PURE__ */ factory(name299, dependencies299, (_r
     config: config4,
     matrix: matrix2,
     bignumber: bignumber2,
-    smaller,
+    smaller: smaller2,
     smallerEq,
-    larger,
+    larger: larger2,
     largerEq,
     add: add5,
     isPositive
@@ -59888,9 +59888,9 @@ var createQuantileSeqTransform = /* @__PURE__ */ factory(name306, dependencies30
     partitionSelect,
     compare,
     isInteger: isInteger3,
-    smaller,
+    smaller: smaller2,
     smallerEq,
-    larger
+    larger: larger2
   } = _ref;
   var quantileSeq = createQuantileSeq({
     typed: typed3,
@@ -59902,9 +59902,9 @@ var createQuantileSeqTransform = /* @__PURE__ */ factory(name306, dependencies30
     partitionSelect,
     compare,
     isInteger: isInteger3,
-    smaller,
+    smaller: smaller2,
     smallerEq,
-    larger
+    larger: larger2
   });
   return typed3("quantileSeq", {
     "Array | Matrix, number | BigNumber": quantileSeq,
@@ -60288,6 +60288,13 @@ var round2 = /* @__PURE__ */ createRound({
   typed: typed2,
   zeros: zeros2
 });
+var smaller = /* @__PURE__ */ createSmaller({
+  DenseMatrix,
+  concat: concat2,
+  config,
+  matrix,
+  typed: typed2
+});
 var subtract = /* @__PURE__ */ createSubtract({
   DenseMatrix,
   concat: concat2,
@@ -60313,6 +60320,19 @@ var dot = /* @__PURE__ */ createDot({
   size,
   typed: typed2
 });
+var larger = /* @__PURE__ */ createLarger({
+  DenseMatrix,
+  concat: concat2,
+  config,
+  matrix,
+  typed: typed2
+});
+var min2 = /* @__PURE__ */ createMin({
+  config,
+  numeric: numeric2,
+  smaller,
+  typed: typed2
+});
 var multiply = /* @__PURE__ */ createMultiply({
   addScalar,
   dot,
@@ -60329,6 +60349,12 @@ var det = /* @__PURE__ */ createDet({
   subtractScalar,
   typed: typed2,
   unaryMinus
+});
+var max2 = /* @__PURE__ */ createMax({
+  config,
+  larger,
+  numeric: numeric2,
+  typed: typed2
 });
 var inv = /* @__PURE__ */ createInv({
   abs: abs2,
@@ -61326,7 +61352,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"af3d6a2"} ${"2024-08-02T05:45:52+08:00"}`,
+          version: `fxrate@${"5035b6b"} ${"2024-09-02T23:12:49+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -62805,14 +62831,14 @@ function throttle(fn, freq) {
 var throttle_default = throttle;
 
 // node_modules/axios/lib/helpers/speedometer.js
-function speedometer(samplesCount, min2) {
+function speedometer(samplesCount, min3) {
   samplesCount = samplesCount || 10;
   const bytes = new Array(samplesCount);
   const timestamps = new Array(samplesCount);
   let head = 0;
   let tail = 0;
   let firstSampleTS;
-  min2 = min2 !== void 0 ? min2 : 1e3;
+  min3 = min3 !== void 0 ? min3 : 1e3;
   return function push(chunkLength) {
     const now = Date.now();
     const startedAt = timestamps[tail];
@@ -62831,7 +62857,7 @@ function speedometer(samplesCount, min2) {
     if (head === tail) {
       tail = (tail + 1) % samplesCount;
     }
-    if (now - firstSampleTS < min2) {
+    if (now - firstSampleTS < min3) {
       return;
     }
     const passed = startedAt && now - startedAt;
@@ -78292,7 +78318,7 @@ var getBOCFXRatesFromBOC = async () => {
         `https://www.boc.cn/sourcedb/whpj/${index2}`,
         {
           headers: {
-            "User-Agent": "fxrate axios/latest"
+            "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
           }
         }
       );
@@ -78343,7 +78369,7 @@ var getICBCFXRates = async () => {
     "http://papi.icbc.com.cn/exchanges/ns/getLatest",
     {
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -78391,7 +78417,7 @@ var getCIBFXRates = async () => {
     {
       ...allowLegacyRenegotiationforNodeJsOptions,
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -78400,7 +78426,7 @@ var getCIBFXRates = async () => {
     {
       ...allowLegacyRenegotiationforNodeJsOptions,
       headers: {
-        "User-Agent": "fxrate axios/latest",
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest",
         Cookie: resHTML.headers["set-cookie"].map((cookie) => cookie.split(";")[0]).join("; ")
       }
     }
@@ -78447,14 +78473,6 @@ var getCIBHuanyuFXRates = async () => {
   const origin2 = await getCIBFXRates();
   return origin2.map((rate) => {
     const originRate = JSON.parse(JSON.stringify(rate.rate));
-    rate.rate.buy.cash = promotePrice(
-      originRate.buy.cash,
-      originRate.sell.cash
-    );
-    rate.rate.sell.cash = promotePrice(
-      originRate.sell.cash,
-      originRate.buy.cash
-    );
     rate.rate.buy.remit = promotePrice(
       originRate.buy.remit,
       originRate.sell.remit
@@ -78462,6 +78480,23 @@ var getCIBHuanyuFXRates = async () => {
     rate.rate.sell.remit = promotePrice(
       originRate.sell.remit,
       originRate.buy.remit
+    );
+    rate.rate.buy.cash = max2(
+      originRate.buy.cash,
+      rate.rate.buy.remit
+    );
+    rate.rate.sell.cash = min2(
+      originRate.sell.cash,
+      rate.rate.sell.remit
+    );
+    rate.rate.middle = divide2(
+      add2(
+        rate.rate.buy.remit,
+        rate.rate.sell.remit,
+        rate.rate.buy.cash,
+        rate.rate.sell.cash
+      ),
+      4
     );
     return rate;
   }).sort();
@@ -78498,7 +78533,7 @@ var getCCBFXRates = async () => {
     "http://www.ccb.com/cn/home/news/jshckpj_new.xml",
     {
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -78580,7 +78615,7 @@ var getABCFXRates = async () => {
     {
       ...allowLegacyRenegotiationforNodeJsOptions2,
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -78625,7 +78660,7 @@ var getBOCOMFXRates = async () => {
     {
       ...allowLegacyRenegotiationforNodeJsOptions3,
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -78688,7 +78723,7 @@ var getNCBCNFXRates = async () => {
     { ccyPair: "", bsnsTp: "1" },
     {
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -78738,7 +78773,7 @@ var getPSBCFXRates = async () => {
     {
       ...allowPSBCCertificateforNodeJsOptions,
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -78776,7 +78811,7 @@ var psbc_default = getPSBCFXRates;
 var getCMBFXRates = async () => {
   const req = await axios_default.get("https://fx.cmbchina.com/api/v1/fx/rate", {
     headers: {
-      "User-Agent": "fxrate axios/latest"
+      "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
     }
   });
   const data2 = req.data.body;
@@ -78856,7 +78891,7 @@ var getPBOCFXRates = async () => {
     "http://www.safe.gov.cn/AppStructured/hlw/RMBQuery.do",
     {
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -78909,7 +78944,7 @@ var getUnionPayFXRates = async () => {
   );
   let res = await axios_default.get(`https://www.unionpayintl.com/upload/jfimg/${currentDate}.json`, {
     headers: {
-      "User-Agent": "fxrate axios/latest"
+      "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
     }
   }).catch(() => {
     return { status: 404 };
@@ -78925,7 +78960,7 @@ var getUnionPayFXRates = async () => {
       `https://www.unionpayintl.com/upload/jfimg/${currentDate}.json`,
       {
         headers: {
-          "User-Agent": "fxrate axios/latest"
+          "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
         }
       }
     );
@@ -78995,7 +79030,7 @@ var unionpay_default = getUnionPayFXRates;
 var getJCBJPYBasedFXRates = async () => {
   const res = await axios_default.get("https://www.jcb.jp/rate/jpy.html", {
     headers: {
-      "User-Agent": "fxrate axios/latest"
+      "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
     }
   });
   const $2 = esm_default2.load(res.data);
@@ -79067,7 +79102,7 @@ var getHSBCHKFXRates = async () => {
     `https://rbwm-api.hsbc.com.hk/digital-pws-tools-investments-eapi-prod-proxy/v1/investments/exchange-rate?locale=en_HK`,
     {
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -79108,7 +79143,7 @@ var getHSBCCNFXRates = async () => {
     "https://www.services.cn-banking.hsbc.com.cn/mobile/channel/digital-proxy/cnyTransfer/ratesInfo/remittanceRate?locale=en_CN",
     {
       headers: {
-        "User-Agent": "fxrate axios/latest",
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest",
         "Content-Type": "application/json"
       }
     }
@@ -79143,7 +79178,7 @@ var getHSBCAUFXRates = async () => {
     `https://mkdlc.ebanking.hsbc.com.hk/hsbcfxwidget/data/getFXList?callback=JSON.stringify&token=0vg8cORxRLBsrWg9C9UboMT%2BkN2Ykze6vFnRV1nA8DE%3D`,
     {
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -79206,7 +79241,7 @@ var getCITICCNFXRates = async () => {
     `https://etrade.citicbank.com/portalweb/cms/getForeignExchRate.htm?callback=JSON.stringify`,
     {
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -79248,7 +79283,7 @@ var getSPDBFXRates = async () => {
     "https://www.spdb.com.cn/was5/web/search?channelid=256931",
     {
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       }
     }
   );
@@ -79307,7 +79342,7 @@ var getXIBFXRates = async () => {
     },
     {
       headers: {
-        "User-Agent": "fxrate axios/latest"
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
       },
       ...allowLegacyRenegotiationforNodeJsOptions4
     }
@@ -79387,7 +79422,7 @@ if (typeof AC === "undefined") {
 var shouldWarn = (code) => !warned.has(code);
 var TYPE = Symbol("type");
 var isPosInt = (n) => n && n === Math.floor(n) && n > 0 && isFinite(n);
-var getUintArray = (max2) => !isPosInt(max2) ? null : max2 <= Math.pow(2, 8) ? Uint8Array : max2 <= Math.pow(2, 16) ? Uint16Array : max2 <= Math.pow(2, 32) ? Uint32Array : max2 <= Number.MAX_SAFE_INTEGER ? ZeroArray : null;
+var getUintArray = (max3) => !isPosInt(max3) ? null : max3 <= Math.pow(2, 8) ? Uint8Array : max3 <= Math.pow(2, 16) ? Uint16Array : max3 <= Math.pow(2, 32) ? Uint32Array : max3 <= Number.MAX_SAFE_INTEGER ? ZeroArray : null;
 var ZeroArray = class extends Array {
   constructor(size2) {
     super(size2);
@@ -79399,20 +79434,20 @@ var Stack = class _Stack {
   length;
   // private constructor
   static #constructing = false;
-  static create(max2) {
-    const HeapCls = getUintArray(max2);
+  static create(max3) {
+    const HeapCls = getUintArray(max3);
     if (!HeapCls)
       return [];
     _Stack.#constructing = true;
-    const s = new _Stack(max2, HeapCls);
+    const s = new _Stack(max3, HeapCls);
     _Stack.#constructing = false;
     return s;
   }
-  constructor(max2, HeapCls) {
+  constructor(max3, HeapCls) {
     if (!_Stack.#constructing) {
       throw new TypeError("instantiate Stack using Stack.create(n)");
     }
-    this.heap = new HeapCls(max2);
+    this.heap = new HeapCls(max3);
     this.length = 0;
   }
   push(n) {
@@ -79591,15 +79626,15 @@ var LRUCache = class _LRUCache {
     return this.#disposeAfter;
   }
   constructor(options) {
-    const { max: max2 = 0, ttl, ttlResolution = 1, ttlAutopurge, updateAgeOnGet, updateAgeOnHas, allowStale, dispose, disposeAfter, noDisposeOnSet, noUpdateTTL, maxSize = 0, maxEntrySize = 0, sizeCalculation, fetchMethod, memoMethod, noDeleteOnFetchRejection, noDeleteOnStaleGet, allowStaleOnFetchRejection, allowStaleOnFetchAbort, ignoreFetchAbort } = options;
-    if (max2 !== 0 && !isPosInt(max2)) {
+    const { max: max3 = 0, ttl, ttlResolution = 1, ttlAutopurge, updateAgeOnGet, updateAgeOnHas, allowStale, dispose, disposeAfter, noDisposeOnSet, noUpdateTTL, maxSize = 0, maxEntrySize = 0, sizeCalculation, fetchMethod, memoMethod, noDeleteOnFetchRejection, noDeleteOnStaleGet, allowStaleOnFetchRejection, allowStaleOnFetchAbort, ignoreFetchAbort } = options;
+    if (max3 !== 0 && !isPosInt(max3)) {
       throw new TypeError("max option must be a nonnegative integer");
     }
-    const UintArray = max2 ? getUintArray(max2) : Array;
+    const UintArray = max3 ? getUintArray(max3) : Array;
     if (!UintArray) {
-      throw new Error("invalid max value: " + max2);
+      throw new Error("invalid max value: " + max3);
     }
-    this.#max = max2;
+    this.#max = max3;
     this.#maxSize = maxSize;
     this.maxEntrySize = maxEntrySize || this.#maxSize;
     this.sizeCalculation = sizeCalculation;
@@ -79621,13 +79656,13 @@ var LRUCache = class _LRUCache {
     this.#fetchMethod = fetchMethod;
     this.#hasFetchMethod = !!fetchMethod;
     this.#keyMap = /* @__PURE__ */ new Map();
-    this.#keyList = new Array(max2).fill(void 0);
-    this.#valList = new Array(max2).fill(void 0);
-    this.#next = new UintArray(max2);
-    this.#prev = new UintArray(max2);
+    this.#keyList = new Array(max3).fill(void 0);
+    this.#valList = new Array(max3).fill(void 0);
+    this.#next = new UintArray(max3);
+    this.#prev = new UintArray(max3);
     this.#head = 0;
     this.#tail = 0;
-    this.#free = Stack.create(max2);
+    this.#free = Stack.create(max3);
     this.#size = 0;
     this.#calculatedSize = 0;
     if (typeof dispose === "function") {
@@ -80931,7 +80966,7 @@ var mastercardFXM = class extends fxManager {
       `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`,
       {
         headers: {
-          "User-Agent": "fxrate axios/latest"
+          "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
         }
       }
     );

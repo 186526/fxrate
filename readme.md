@@ -148,12 +148,13 @@ Endpoint `(/v1)/jsonrpc/v2`
 
 Some APIs require configuration tokens to work properly.
 
-| environment variables | value    | details                               |
-| --------------------- | -------- | ------------------------------------- |
-| `ENABLE_WISE`         | `1 \| 0` | Enable Wise FX Rates API              |
-| `WISE_TOKEN`          | `string` | configure Wise's API Token            |
-| `WISE_SANDBOX_API`    | `1 \| 0` | Using Wise's sandbox API environment. |
-| `ENABLE_CORS`         | `domain` | configure FXRate's API to allow CORS  |
+| environment variables | value             | details                                                     | defaults              |
+| --------------------- | ----------------- | ----------------------------------------------------------- | --------------------- |
+| `ENABLE_WISE`         | `1 \| 0`          | Enable Wise FX Rates API                                    | `0`                   |
+| `WISE_TOKEN`          | `string`          | configure Wise's API Token                                  | `null`                |
+| `WISE_SANDBOX_API`    | `1 \| 0`          | Using Wise's sandbox API environment.                       | `0`                   |
+| `ENABLE_CORS`         | `domain`          | configure FXRate's API to allow CORS                        | `null`                |
+| `HEADER_USER_AGENT`   | `userAgentString` | configure spider to use which user agent to fetch from site | `fxrate axios/latest` |
 
 ```bash
 yarn install

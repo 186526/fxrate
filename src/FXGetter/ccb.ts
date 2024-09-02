@@ -32,7 +32,8 @@ const getCCBFXRates = async (): Promise<FXRate[]> => {
         'http://www.ccb.com/cn/home/news/jshckpj_new.xml',
         {
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
             },
         },
     );

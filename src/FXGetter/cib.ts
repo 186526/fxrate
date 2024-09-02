@@ -34,7 +34,8 @@ const getCIBFXRates = async (): Promise<FXRate[]> => {
         {
             ...allowLegacyRenegotiationforNodeJsOptions,
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
             },
         },
     );
@@ -44,7 +45,8 @@ const getCIBFXRates = async (): Promise<FXRate[]> => {
         {
             ...allowLegacyRenegotiationforNodeJsOptions,
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
                 Cookie: resHTML.headers['set-cookie']
                     .map((cookie) => cookie.split(';')[0])
                     .join('; '),

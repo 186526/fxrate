@@ -46,7 +46,8 @@ const getCITICCNFXRates = async (): Promise<FXRate[]> => {
         `https://etrade.citicbank.com/portalweb/cms/getForeignExchRate.htm?callback=JSON.stringify`,
         {
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
             },
         },
     );

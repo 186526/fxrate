@@ -53,7 +53,8 @@ const getPBOCFXRates = async (): Promise<FXRate[]> => {
         'http://www.safe.gov.cn/AppStructured/hlw/RMBQuery.do',
         {
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
             },
         },
     );

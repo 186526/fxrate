@@ -31,7 +31,8 @@ const getXIBFXRates = async (): Promise<FXRate[]> => {
         },
         {
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
             },
             ...allowLegacyRenegotiationforNodeJsOptions,
         },

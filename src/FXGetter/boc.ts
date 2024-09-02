@@ -41,7 +41,8 @@ const getBOCFXRatesFromRSSHub = async (
     // Thanks to https://rsshub.app/ for providing the RSS feed of BOC's FX rates
     const res = await axios.get(RSSHubEndpoint, {
         headers: {
-            'User-Agent': 'fxrate axios/latest',
+            'User-Agent':
+                process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
         },
     });
 
@@ -99,7 +100,9 @@ const getBOCFXRatesFromBOC = async (): Promise<FXRate[]> => {
                 `https://www.boc.cn/sourcedb/whpj/${index}`,
                 {
                     headers: {
-                        'User-Agent': 'fxrate axios/latest',
+                        'User-Agent':
+                            process.env['HEADER_USER_AGENT'] ??
+                            'fxrate axios/latest',
                     },
                 },
             );

@@ -4,7 +4,8 @@ import { FXRate, currency } from 'src/types';
 const getCMBFXRates = async (): Promise<FXRate[]> => {
     const req = await axios.get('https://fx.cmbchina.com/api/v1/fx/rate', {
         headers: {
-            'User-Agent': 'fxrate axios/latest',
+            'User-Agent':
+                process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
         },
     });
 

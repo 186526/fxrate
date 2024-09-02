@@ -15,7 +15,8 @@ const getUnionPayFXRates = async (): Promise<FXRate[]> => {
     let res = await axios
         .get(`https://www.unionpayintl.com/upload/jfimg/${currentDate}.json`, {
             headers: {
-                'User-Agent': 'fxrate axios/latest',
+                'User-Agent':
+                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
             },
         })
         .catch(() => {
@@ -35,7 +36,9 @@ const getUnionPayFXRates = async (): Promise<FXRate[]> => {
             `https://www.unionpayintl.com/upload/jfimg/${currentDate}.json`,
             {
                 headers: {
-                    'User-Agent': 'fxrate axios/latest',
+                    'User-Agent':
+                        process.env['HEADER_USER_AGENT'] ??
+                        'fxrate axios/latest',
                 },
             },
         );
