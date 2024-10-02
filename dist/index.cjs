@@ -61294,7 +61294,7 @@ var fxmManager = class extends JSONRPCRouter {
     this.fxms = {};
     this.fxmStatus = {};
     this.fxRateGetter = {};
-    this.intervalIDs = [];
+    this.intervalIDs = {};
     this.rpcHandlers = {
       instanceInfo: () => useInternalRestAPI("info", this),
       listCurrencies: ({ source }) => {
@@ -61352,7 +61352,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"ba8f9f4"} ${"2024-10-02T18:16:32+08:00"}`,
+          version: `fxrate@${"443ba8a"} ${"2024-10-02T19:04:48+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -61380,6 +61380,7 @@ var fxmManager = class extends JSONRPCRouter {
     const fxRates = await this.fxRateGetter[source](this);
     fxRates.forEach((f) => this.fxms[source].update(f));
     this.fxmStatus[source] = "ready";
+    this.intervalIDs[source].refreshDate = /* @__PURE__ */ new Date();
     this.log(`${source} is updated, now is ready.`);
     return;
   }
@@ -61395,9 +61396,14 @@ var fxmManager = class extends JSONRPCRouter {
     this.fxmStatus[source] = "pending";
     this.mountFXMRouter(source);
     this.log(`Registered ${source}.`);
-    this.intervalIDs.push(
-      setInterval(() => this.updateFXManager(source), 1e3 * 60 * 30)
-    );
+    const refreshDate = /* @__PURE__ */ new Date();
+    this.intervalIDs[source] = {
+      timeout: setInterval(
+        () => this.updateFXManager(source),
+        1e3 * 60 * 30
+      ),
+      refreshDate
+    };
   }
   registerFXM(source, fxManager2) {
     this.fxms[source] = fxManager2;
@@ -61411,6 +61417,16 @@ var fxmManager = class extends JSONRPCRouter {
   }
   getFXMRouter(source) {
     const fxmRouter = new router();
+    const useCache = (response3) => {
+      response3.headers.set(
+        "Cache-Control",
+        `public, max-age=${30 * 60 - Math.round(
+          Math.abs(
+            (this.intervalIDs[source].refreshDate.getTime() - (/* @__PURE__ */ new Date()).getTime()) / 1e3
+          ) % 1800
+        )}`
+      );
+    };
     const handlerSourceInfo = async (request3, response3) => {
       if (request3.params[0] && request3.params[0] != source) {
         return response3;
@@ -61424,6 +61440,7 @@ var fxmManager = class extends JSONRPCRouter {
         date: (/* @__PURE__ */ new Date()).toUTCString()
       });
       useJson(response3, request3);
+      useCache(response3);
       throw response3;
     };
     const handlerCurrencyAllFXRates = async (request3, response3) => {
@@ -61450,6 +61467,7 @@ var fxmManager = class extends JSONRPCRouter {
       }
       response3.body = JSON.stringify(result);
       useJson(response3, request3);
+      useCache(response3);
       return response3;
     };
     const handlerCurrencyConvert = async (request3, response3) => {
@@ -61473,6 +61491,7 @@ var fxmManager = class extends JSONRPCRouter {
           to
         )).toUTCString()
       );
+      useCache(response3);
       return response3;
     };
     const handlerCurrencyConvertAmount = async (request3, response3) => {
@@ -61498,6 +61517,7 @@ var fxmManager = class extends JSONRPCRouter {
           to
         )).toUTCString()
       );
+      useCache(response3);
       return response3;
     };
     fxmRouter.binding("/", new handler("GET", [handlerSourceInfo]));
@@ -61521,7 +61541,7 @@ var fxmManager = class extends JSONRPCRouter {
   }
   stopAllInterval() {
     for (const id of this.intervalIDs) {
-      clearInterval(id);
+      clearInterval(id.timeout);
     }
   }
 };

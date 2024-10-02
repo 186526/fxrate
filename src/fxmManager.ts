@@ -144,7 +144,8 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         [source: string]: (fxmManager?: fxmManager) => Promise<FXRate[]>;
     } = {};
 
-    public intervalIDs: NodeJS.Timeout[] = [];
+    public intervalIDs: [key: { timeout: NodeJS.Timeout; refreshDate: Date }] =
+        {} as any;
 
     protected rpcHandlers = {
         instanceInfo: () => useInternalRestAPI('info', this),
@@ -246,6 +247,7 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         const fxRates = await this.fxRateGetter[source](this);
         fxRates.forEach((f) => this.fxms[source].update(f));
         this.fxmStatus[source] = 'ready';
+        this.intervalIDs[source].refreshDate = new Date();
         this.log(`${source} is updated, now is ready.`);
         return;
     }
@@ -266,9 +268,16 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         this.fxmStatus[source] = 'pending';
         this.mountFXMRouter(source);
         this.log(`Registered ${source}.`);
-        this.intervalIDs.push(
-            setInterval(() => this.updateFXManager(source), 1000 * 60 * 30),
-        );
+
+        const refreshDate = new Date();
+
+        this.intervalIDs[source] = {
+            timeout: setInterval(
+                () => this.updateFXManager(source),
+                1000 * 60 * 30,
+            ),
+            refreshDate: refreshDate,
+        };
     }
 
     public registerFXM(source: string, fxManager: fxManager): void {
@@ -286,6 +295,22 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     private getFXMRouter(source: string): router {
         const fxmRouter = new router();
 
+        const useCache = (response: response<any>) => {
+            response.headers.set(
+                'Cache-Control',
+                `public, max-age=${
+                    30 * 60 -
+                    Math.round(
+                        Math.abs(
+                            (this.intervalIDs[source].refreshDate.getTime() -
+                                new Date().getTime()) /
+                                1000,
+                        ) % 1800,
+                    )
+                }`,
+            );
+        };
+
         const handlerSourceInfo = async (
             request: request<any>,
             response: response<any>,
@@ -302,6 +327,7 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                 date: new Date().toUTCString(),
             });
             useJson(response, request);
+            useCache(response);
             throw response;
         };
 
@@ -341,6 +367,7 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             }
             response.body = JSON.stringify(result);
             useJson(response, request);
+            useCache(response);
             return response;
         };
 
@@ -374,6 +401,8 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                     )
                 ).toUTCString(),
             );
+            useCache(response);
+
             return response;
         };
 
@@ -409,6 +438,8 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                     )
                 ).toUTCString(),
             );
+            useCache(response);
+
             return response;
         };
 
@@ -439,7 +470,7 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
 
     public stopAllInterval(): void {
         for (const id of this.intervalIDs) {
-            clearInterval(id);
+            clearInterval(id.timeout);
         }
     }
 }
