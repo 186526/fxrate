@@ -61352,7 +61352,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"5035b6b"} ${"2024-09-02T23:12:49+08:00"}`,
+          version: `fxrate@${"ba8f9f4"} ${"2024-10-02T18:16:32+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -79259,10 +79259,10 @@ var getCITICCNFXRates = async () => {
       rate: {
         buy: {
           remit: parseFloat(k.cstexcBuyPrice),
-          cash: parseFloat(k.cstpurBuyPrice)
+          cash: parseFloat(k.cstexcBuyPrice)
         },
         sell: {
-          cash: parseFloat(k.cstpurSellPrice),
+          cash: parseFloat(k.cstexcSellPrice),
           remit: parseFloat(k.cstexcSellPrice)
         },
         middle: parseFloat(k.midPrice)
@@ -79372,6 +79372,41 @@ var getXIBFXRates = async () => {
   return FXRates;
 };
 var xib_default = getXIBFXRates;
+
+// src/FXGetter/pab.ts
+var getPABFXRates = async () => {
+  const req = await axios_default.get(
+    "https://bank.pingan.com.cn/rmb/account/cmp/cust/acct/forex/exchange/qryFoexPriceExchangeList.do?pageIndex=1&pageSize=100&realFlag=1&currencyCode=&exchangeDate=&languageCode=zh_CN&access_source=PC",
+    {
+      headers: {
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
+      }
+    }
+  );
+  const data2 = req.data;
+  return data2.data.exchangeList.map((rate) => {
+    return {
+      currency: {
+        from: rate.currType,
+        to: "CNY"
+      },
+      rate: {
+        buy: {
+          cash: rate.cashBuyPrice,
+          remit: rate.buyPrice
+        },
+        sell: {
+          cash: rate.sellPrice,
+          remit: rate.sellPrice
+        },
+        middle: rate.basePrice
+      },
+      unit: 100,
+      updated: /* @__PURE__ */ new Date(rate.insertTime + " GMT+0800")
+    };
+  }).sort();
+};
+var pab_default = getPABFXRates;
 
 // src/FXGetter/mastercard.ts
 var import_sync_request = __toESM(require("sync-request"), 1);
@@ -81374,7 +81409,8 @@ var Manager = new fxmManager_default({
   "citic.cn": citic_cn_default,
   "ncb.cn": ncb_cn_default,
   spdb: spdb_default,
-  xib: xib_default
+  xib: xib_default,
+  pab: pab_default
 });
 Manager.registerFXM("mastercard", new mastercardFXM());
 Manager.registerFXM("visa", new visaFXM());

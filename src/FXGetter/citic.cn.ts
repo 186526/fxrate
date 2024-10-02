@@ -70,10 +70,10 @@ const getCITICCNFXRates = async (): Promise<FXRate[]> => {
             rate: {
                 buy: {
                     remit: parseFloat(k.cstexcBuyPrice),
-                    cash: parseFloat(k.cstpurBuyPrice),
+                    cash: parseFloat(k.cstexcBuyPrice),
                 },
                 sell: {
-                    cash: parseFloat(k.cstpurSellPrice),
+                    cash: parseFloat(k.cstexcSellPrice),
                     remit: parseFloat(k.cstexcSellPrice),
                 },
                 middle: parseFloat(k.midPrice),

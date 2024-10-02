@@ -27,6 +27,7 @@ import getCITICCNFXRates from './FXGetter/citic.cn';
 import getSPDBFXRates from './FXGetter/spdb';
 import getNCBCNFXRates from './FXGetter/ncb.cn';
 import getXIBFXRates from './FXGetter/xib';
+import getPABFXRates from './FXGetter/pab';
 
 import mastercardFXM from './FXGetter/mastercard';
 import visaFXM from './FXGetter/visa';
@@ -52,6 +53,7 @@ const Manager = new fxmManager({
     'ncb.cn': getNCBCNFXRates,
     spdb: getSPDBFXRates,
     xib: getXIBFXRates,
+    pab: getPABFXRates,
 });
 
 Manager.registerFXM('mastercard', new mastercardFXM());
