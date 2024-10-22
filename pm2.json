@@ -1,0 +1,11 @@
+{
+    "name": "fxrate",
+    "script": "dist/index.cjs",
+    "instances": "2",
+    "env": {
+        "NODE_ENV": "development"
+    },
+    "env_production": {
+        "NODE_ENV": "production"
+    }
+}
