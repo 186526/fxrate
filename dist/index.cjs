@@ -61356,7 +61356,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"eda47ee"} ${"2024-10-22T15:49:12+08:00"}`,
+          version: `fxrate@${"6b26ed2"} ${"2024-10-22T16:09:17+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -81339,7 +81339,8 @@ var sourceNamesInZH = {
   "citic.cn": "\u4E2D\u4FE1\u94F6\u884C",
   spdb: "\u6D66\u53D1\u94F6\u884C",
   "ncb.cn": "\u5357\u6D0B\u5546\u4E1A\u94F6\u884C\uFF08\u4E2D\u56FD\uFF09",
-  xib: "\u53A6\u95E8\u56FD\u9645\u94F6\u884C"
+  xib: "\u53A6\u95E8\u56FD\u9645\u94F6\u884C",
+  pab: "\u5E73\u5B89\u94F6\u884C"
 };
 
 // src/handler/rss.ts

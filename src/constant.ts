@@ -21,4 +21,5 @@ export const sourceNamesInZH = {
     spdb: '浦发银行',
     'ncb.cn': '南洋商业银行（中国）',
     xib: '厦门国际银行',
+    pab: '平安银行',
 };
