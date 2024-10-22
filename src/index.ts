@@ -59,13 +59,16 @@ const Manager = new fxmManager({
 Manager.registerFXM('mastercard', new mastercardFXM());
 Manager.registerFXM('visa', new visaFXM());
 
-if (process.env.ENABLE_WISE == '1') {
-    if (process.env.WISE_TOKEN == undefined)
-        throw new Error('WISE_TOKEN is not set.');
+if (process.env.ENABLE_WISE != '0') {
+    if (process.env.WISE_TOKEN == undefined) {
+        console.error('WISE_TOKEN is not set. Use Wise Token from web.');
+        process.env.WISE_USE_TOKEN_FROM_WEB = '1';
+    }
     Manager.registerGetter(
         'wise',
         getWiseFXRates(
             process.env.WISE_SANDBOX_API == '1',
+            process.env.WISE_USE_TOKEN_FROM_WEB != '0',
             process.env.WISE_TOKEN,
         ),
     );

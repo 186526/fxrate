@@ -61356,7 +61356,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"1d83b91"} ${"2024-10-22T15:38:11+08:00"}`,
+          version: `fxrate@${"eda47ee"} ${"2024-10-22T15:49:12+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -79090,19 +79090,20 @@ var getJCBFXRates = async () => {
 var jcb_default = getJCBFXRates;
 
 // src/FXGetter/wise.ts
-var getWiseFXRates = (isInSandbox = true, WiseToken) => {
+var getWiseFXRates = (isInSandbox = false, useTokenInWeb = true, WiseToken) => {
   let endPoint = "https://api.wise.com/v1/rates";
   if (isInSandbox) {
     endPoint = "https://api.sandbox.transferwise.tech/v1/rates";
   }
   return async (fxmManager2) => {
+    console.log(isInSandbox, useTokenInWeb, WiseToken);
     if (fxmManager2 && isInSandbox)
       fxmManager2.log("Getting Wise FX Rates in sandbox mode.");
     else if (fxmManager2)
       fxmManager2.log("Getting Wise FX Rates in production mode.");
     const response3 = await axios_default.get(endPoint, {
       headers: {
-        Authorization: `Bearer ${WiseToken}`
+        Authorization: !useTokenInWeb ? `Bearer ${WiseToken}` : "Basic OGNhN2FlMjUtOTNjNS00MmFlLThhYjQtMzlkZTFlOTQzZDEwOjliN2UzNmZkLWRjYjgtNDEwZS1hYzc3LTQ5NGRmYmEyZGJjZA=="
       }
     });
     const rates = [];
@@ -81443,13 +81444,16 @@ var Manager = new fxmManager_default({
 });
 Manager.registerFXM("mastercard", new mastercardFXM());
 Manager.registerFXM("visa", new visaFXM());
-if (import_node_process2.default.env.ENABLE_WISE == "1") {
-  if (import_node_process2.default.env.WISE_TOKEN == void 0)
-    throw new Error("WISE_TOKEN is not set.");
+if (import_node_process2.default.env.ENABLE_WISE != "0") {
+  if (import_node_process2.default.env.WISE_TOKEN == void 0) {
+    console.error("WISE_TOKEN is not set. Use Wise Token from web.");
+    import_node_process2.default.env.WISE_USE_TOKEN_FROM_WEB = "1";
+  }
   Manager.registerGetter(
     "wise",
     wise_default(
       import_node_process2.default.env.WISE_SANDBOX_API == "1",
+      import_node_process2.default.env.WISE_USE_TOKEN_FROM_WEB != "0",
       import_node_process2.default.env.WISE_TOKEN
     )
   );

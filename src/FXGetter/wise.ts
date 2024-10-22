@@ -4,7 +4,8 @@ import { FXRate, currency } from 'src/types';
 import fxmManager from '../fxmManager';
 
 const getWiseFXRates = (
-    isInSandbox: boolean = true,
+    isInSandbox: boolean = false,
+    useTokenInWeb: boolean = true,
     WiseToken: string,
 ): ((fxmManager?: fxmManager) => Promise<FXRate[]>) => {
     let endPoint = 'https://api.wise.com/v1/rates';
@@ -13,6 +14,7 @@ const getWiseFXRates = (
     }
 
     return async (fxmManager?: fxmManager): Promise<FXRate[]> => {
+        console.log(isInSandbox, useTokenInWeb, WiseToken);
         if (fxmManager && isInSandbox)
             fxmManager.log('Getting Wise FX Rates in sandbox mode.');
         else if (fxmManager)
@@ -20,7 +22,9 @@ const getWiseFXRates = (
 
         const response = await axios.get(endPoint, {
             headers: {
-                Authorization: `Bearer ${WiseToken}`,
+                Authorization: !useTokenInWeb
+                    ? `Bearer ${WiseToken}`
+                    : 'Basic OGNhN2FlMjUtOTNjNS00MmFlLThhYjQtMzlkZTFlOTQzZDEwOjliN2UzNmZkLWRjYjgtNDEwZS1hYzc3LTQ5NGRmYmEyZGJjZA==',
             },
         });
 
