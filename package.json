@@ -52,6 +52,5 @@
         "start": "yarn build && node dist/index.cjs",
         "test": "NODE_OPTIONS=--experimental-vm-modules jest",
         "test:coverage": "yarn test --collectCoverage"
-    },
-    "packageManager": "yarn@1.22.22"
+    }
 }
