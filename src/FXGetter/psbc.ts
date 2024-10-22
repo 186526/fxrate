@@ -3,12 +3,15 @@ import { FXRate, currency } from 'src/types';
 import { parseYYYYMMDDHHmmss } from './ncb.cn';
 
 import https from 'https';
+import crypto from 'crypto';
 
 const allowPSBCCertificateforNodeJsOptions = {
     httpsAgent: new https.Agent({
         // dont vertify sb PSBC SSL Certificate (becuz they don't send full certificate chain now!!!)
         // 💩 PSBC
         rejectUnauthorized: false,
+        // allow sb PSBC to use legacy renegotiation
+        secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
     }),
 };
 

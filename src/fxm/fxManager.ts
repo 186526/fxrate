@@ -71,6 +71,12 @@ export default class fxManager {
         if (from == ('RMB' as currency.RMB)) from = 'CNY' as currency.CNY;
         if (to == ('RMB' as currency.RMB)) to = 'CNY' as currency.CNY;
 
+        if (from == ('CNH' as currency.CNH) && !('CNY' in this.fxRateList))
+            from = 'CNY' as currency.CNY;
+
+        if (to == ('CNH' as currency.CNH) && !('CNY' in this.fxRateList))
+            to = 'CNY' as currency.CNY;
+
         if (this.fxRateList[from] && this.fxRateList[from][to]) {
             if (this.fxRateList[from][to].updated > FXRate.updated) return;
         }

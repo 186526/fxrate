@@ -60751,6 +60751,10 @@ var fxManager = class {
     let { from, to } = currency;
     if (from == "RMB") from = "CNY";
     if (to == "RMB") to = "CNY";
+    if (from == "CNH" && !("CNY" in this.fxRateList))
+      from = "CNY";
+    if (to == "CNH" && !("CNY" in this.fxRateList))
+      to = "CNY";
     if (this.fxRateList[from] && this.fxRateList[from][to]) {
       if (this.fxRateList[from][to].updated > FXRate.updated) return;
     }
@@ -61352,7 +61356,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"443ba8a"} ${"2024-10-02T19:04:48+08:00"}`,
+          version: `fxrate@${"1d83b91"} ${"2024-10-22T15:38:11+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -61422,7 +61426,9 @@ var fxmManager = class extends JSONRPCRouter {
         "Cache-Control",
         `public, max-age=${30 * 60 - Math.round(
           Math.abs(
-            (this.intervalIDs[source].refreshDate.getTime() - (/* @__PURE__ */ new Date()).getTime()) / 1e3
+            ((this.intervalIDs[source] ?? {
+              refreshDate: /* @__PURE__ */ new Date()
+            }).refreshDate.getTime() - (/* @__PURE__ */ new Date()).getTime()) / 1e3
           ) % 1800
         )}`
       );
@@ -78780,11 +78786,14 @@ var ncb_cn_default = getNCBCNFXRates;
 
 // src/FXGetter/psbc.ts
 var import_https5 = __toESM(require("https"), 1);
+var import_crypto4 = __toESM(require("crypto"), 1);
 var allowPSBCCertificateforNodeJsOptions = {
   httpsAgent: new import_https5.default.Agent({
     // dont vertify sb PSBC SSL Certificate (becuz they don't send full certificate chain now!!!)
     // 💩 PSBC
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
+    // allow sb PSBC to use legacy renegotiation
+    secureOptions: import_crypto4.default.constants.SSL_OP_LEGACY_SERVER_CONNECT
   })
 };
 var getPSBCFXRates = async () => {
@@ -79336,13 +79345,13 @@ var getSPDBFXRates = async () => {
 var spdb_default = getSPDBFXRates;
 
 // src/FXGetter/xib.ts
-var import_crypto4 = __toESM(require("crypto"), 1);
+var import_crypto5 = __toESM(require("crypto"), 1);
 var import_https6 = __toESM(require("https"), 1);
 var allowLegacyRenegotiationforNodeJsOptions4 = {
   httpsAgent: new import_https6.default.Agent({
     // allow sb ABC to use legacy renegotiation
     // 💩 ABC
-    secureOptions: import_crypto4.default.constants.SSL_OP_LEGACY_SERVER_CONNECT
+    secureOptions: import_crypto5.default.constants.SSL_OP_LEGACY_SERVER_CONNECT
   })
 };
 var getXIBFXRates = async () => {

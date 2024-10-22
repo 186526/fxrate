@@ -302,7 +302,11 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                     30 * 60 -
                     Math.round(
                         Math.abs(
-                            (this.intervalIDs[source].refreshDate.getTime() -
+                            ((
+                                this.intervalIDs[source] ?? {
+                                    refreshDate: new Date(),
+                                }
+                            ).refreshDate.getTime() -
                                 new Date().getTime()) /
                                 1000,
                         ) % 1800,
