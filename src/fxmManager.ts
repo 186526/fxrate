@@ -144,8 +144,9 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         [source: string]: (fxmManager?: fxmManager) => Promise<FXRate[]>;
     } = {};
 
-    public intervalIDs: [key: { timeout: NodeJS.Timeout; refreshDate: Date }] =
-        {} as any;
+    public intervalIDs: {
+        key: { timeout: NodeJS.Timeout; refreshDate: Date };
+    } = {} as any;
 
     protected rpcHandlers = {
         instanceInfo: () => useInternalRestAPI('info', this),
@@ -473,8 +474,8 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     }
 
     public stopAllInterval(): void {
-        for (const id of this.intervalIDs) {
-            clearInterval(id.timeout);
+        for (const id in this.intervalIDs) {
+            clearInterval(this.intervalIDs[id].timeout);
         }
     }
 }

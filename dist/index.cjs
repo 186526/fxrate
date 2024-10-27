@@ -61356,7 +61356,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"748207b"} ${"2024-10-27T16:06:34+08:00"}`,
+          version: `fxrate@${"0ab4a2e"} ${"2024-10-27T16:23:43+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -61546,8 +61546,8 @@ var fxmManager = class extends JSONRPCRouter {
     return fxmRouter;
   }
   stopAllInterval() {
-    for (const id of this.intervalIDs) {
-      clearInterval(id.timeout);
+    for (const id in this.intervalIDs) {
+      clearInterval(this.intervalIDs[id].timeout);
     }
   }
 };

@@ -2,7 +2,7 @@
 
 yarn lint
 yarn format
-# yarn test
+yarn test
 yarn build
 
 git add -A
