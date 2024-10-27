@@ -842,8 +842,8 @@ var require_typed_function = __commonJS({
             const nextMatchingDefs = [];
             matchingSignatures.forEach((signature) => {
               const param = getParamAtIndex(signature.params, index2);
-              const test = compileTest2(param);
-              if ((index2 < signature.params.length || hasRestParam(signature.params)) && test(args[index2])) {
+              const test2 = compileTest2(param);
+              if ((index2 < signature.params.length || hasRestParam(signature.params)) && test2(args[index2])) {
                 nextMatchingDefs.push(signature);
               }
             });
@@ -1408,9 +1408,9 @@ var require_typed_function = __commonJS({
         function slice2(arr, start, end2) {
           return Array.prototype.slice.call(arr, start, end2);
         }
-        function findInArray(arr, test) {
+        function findInArray(arr, test2) {
           for (let i = 0; i < arr.length; i++) {
-            if (test(arr[i])) {
+            if (test2(arr[i])) {
               return arr[i];
             }
           }
@@ -32468,12 +32468,12 @@ var createFilter = /* @__PURE__ */ factory(name89, dependencies89, (_ref) => {
   } = _ref;
   return typed3("filter", {
     "Array, function": _filterCallback,
-    "Matrix, function": function MatrixFunction(x, test) {
-      return x.create(_filterCallback(x.toArray(), test));
+    "Matrix, function": function MatrixFunction(x, test2) {
+      return x.create(_filterCallback(x.toArray(), test2));
     },
     "Array, RegExp": filterRegExp,
-    "Matrix, RegExp": function MatrixRegExp(x, test) {
-      return x.create(filterRegExp(x.toArray(), test));
+    "Matrix, RegExp": function MatrixRegExp(x, test2) {
+      return x.create(filterRegExp(x.toArray(), test2));
     }
   });
 });
@@ -59392,12 +59392,12 @@ var createFilterTransform = /* @__PURE__ */ factory(name292, dependencies292, (_
   filterTransform.rawArgs = true;
   var filter6 = typed3("filter", {
     "Array, function": _filter,
-    "Matrix, function": function MatrixFunction(x, test) {
-      return x.create(_filter(x.toArray(), test));
+    "Matrix, function": function MatrixFunction(x, test2) {
+      return x.create(_filter(x.toArray(), test2));
     },
     "Array, RegExp": filterRegExp,
-    "Matrix, RegExp": function MatrixRegExp(x, test) {
-      return x.create(filterRegExp(x.toArray(), test));
+    "Matrix, RegExp": function MatrixRegExp(x, test2) {
+      return x.create(filterRegExp(x.toArray(), test2));
     }
   });
   return filterTransform;
@@ -61356,7 +61356,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"0ab4a2e"} ${"2024-10-27T16:23:43+08:00"}`,
+          version: `fxrate@${"7fdface"} ${"2024-10-27T16:51:09+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -61858,6 +61858,26 @@ var toJSONObject = (obj) => {
 };
 var isAsyncFn = kindOfTest("AsyncFunction");
 var isThenable = (thing) => thing && (isObject2(thing) || isFunction2(thing)) && isFunction2(thing.then) && isFunction2(thing.catch);
+var _setImmediate = ((setImmediateSupported, postMessageSupported) => {
+  if (setImmediateSupported) {
+    return setImmediate;
+  }
+  return postMessageSupported ? ((token, callbacks) => {
+    _global.addEventListener("message", ({ source, data: data2 }) => {
+      if (source === _global && data2 === token) {
+        callbacks.length && callbacks.shift()();
+      }
+    }, false);
+    return (cb) => {
+      callbacks.push(cb);
+      _global.postMessage(token, "*");
+    };
+  })(`axios@${Math.random()}`, []) : (cb) => setTimeout(cb);
+})(
+  typeof setImmediate === "function",
+  isFunction2(_global.postMessage)
+);
+var asap = typeof queueMicrotask !== "undefined" ? queueMicrotask.bind(_global) : typeof process !== "undefined" && process.nextTick || _setImmediate;
 var utils_default = {
   isArray: isArray2,
   isArrayBuffer,
@@ -61914,7 +61934,9 @@ var utils_default = {
   isSpecCompliantForm,
   toJSONObject,
   isAsyncFn,
-  isThenable
+  isThenable,
+  setImmediate: _setImmediate,
+  asap
 };
 
 // node_modules/axios/lib/core/AxiosError.js
@@ -62786,7 +62808,7 @@ var import_follow_redirects = __toESM(require_follow_redirects(), 1);
 var import_zlib = __toESM(require("zlib"), 1);
 
 // node_modules/axios/lib/env/data.js
-var VERSION = "1.7.2";
+var VERSION = "1.7.4";
 
 // node_modules/axios/lib/helpers/parseProtocol.js
 function parseProtocol(url2) {
@@ -62828,71 +62850,6 @@ var import_stream4 = __toESM(require("stream"), 1);
 
 // node_modules/axios/lib/helpers/AxiosTransformStream.js
 var import_stream = __toESM(require("stream"), 1);
-
-// node_modules/axios/lib/helpers/throttle.js
-function throttle(fn, freq) {
-  let timestamp = 0;
-  const threshold = 1e3 / freq;
-  let timer = null;
-  return function throttled() {
-    const force = this === true;
-    const now = Date.now();
-    if (force || now - timestamp > threshold) {
-      if (timer) {
-        clearTimeout(timer);
-        timer = null;
-      }
-      timestamp = now;
-      return fn.apply(null, arguments);
-    }
-    if (!timer) {
-      timer = setTimeout(() => {
-        timer = null;
-        timestamp = Date.now();
-        return fn.apply(null, arguments);
-      }, threshold - (now - timestamp));
-    }
-  };
-}
-var throttle_default = throttle;
-
-// node_modules/axios/lib/helpers/speedometer.js
-function speedometer(samplesCount, min3) {
-  samplesCount = samplesCount || 10;
-  const bytes = new Array(samplesCount);
-  const timestamps = new Array(samplesCount);
-  let head = 0;
-  let tail = 0;
-  let firstSampleTS;
-  min3 = min3 !== void 0 ? min3 : 1e3;
-  return function push(chunkLength) {
-    const now = Date.now();
-    const startedAt = timestamps[tail];
-    if (!firstSampleTS) {
-      firstSampleTS = now;
-    }
-    bytes[head] = chunkLength;
-    timestamps[head] = now;
-    let i = tail;
-    let bytesCount = 0;
-    while (i !== head) {
-      bytesCount += bytes[i++];
-      i = i % samplesCount;
-    }
-    head = (head + 1) % samplesCount;
-    if (head === tail) {
-      tail = (tail + 1) % samplesCount;
-    }
-    if (now - firstSampleTS < min3) {
-      return;
-    }
-    const passed = startedAt && now - startedAt;
-    return passed ? Math.round(bytesCount * 1e3 / passed) : void 0;
-  };
-}
-var speedometer_default = speedometer;
-
-// node_modules/axios/lib/helpers/AxiosTransformStream.js
 var kInternals = Symbol("internals");
 var AxiosTransformStream = class extends import_stream.default.Transform {
   constructor(options) {
@@ -62909,11 +62866,8 @@ var AxiosTransformStream = class extends import_stream.default.Transform {
     super({
       readableHighWaterMark: options.chunkSize
     });
-    const self2 = this;
     const internals = this[kInternals] = {
-      length: options.length,
       timeWindow: options.timeWindow,
-      ticksRate: options.ticksRate,
       chunkSize: options.chunkSize,
       maxRate: options.maxRate,
       minChunkSize: options.minChunkSize,
@@ -62924,7 +62878,6 @@ var AxiosTransformStream = class extends import_stream.default.Transform {
       bytes: 0,
       onReadCallback: null
     };
-    const _speedometer = speedometer_default(internals.ticksRate * options.samplesCount, internals.timeWindow);
     this.on("newListener", (event) => {
       if (event === "progress") {
         if (!internals.isCaptured) {
@@ -62932,31 +62885,6 @@ var AxiosTransformStream = class extends import_stream.default.Transform {
         }
       }
     });
-    let bytesNotified = 0;
-    internals.updateProgress = throttle_default(function throttledHandler() {
-      const totalBytes = internals.length;
-      const bytesTransferred = internals.bytesSeen;
-      const progressBytes = bytesTransferred - bytesNotified;
-      if (!progressBytes || self2.destroyed) return;
-      const rate = _speedometer(progressBytes);
-      bytesNotified = bytesTransferred;
-      process.nextTick(() => {
-        self2.emit("progress", {
-          loaded: bytesTransferred,
-          total: totalBytes,
-          progress: totalBytes ? bytesTransferred / totalBytes : void 0,
-          bytes: progressBytes,
-          rate: rate ? rate : void 0,
-          estimated: rate && totalBytes && bytesTransferred <= totalBytes ? (totalBytes - bytesTransferred) / rate : void 0,
-          lengthComputable: totalBytes != null
-        });
-      });
-    }, internals.ticksRate);
-    const onFinish = () => {
-      internals.updateProgress.call(true);
-    };
-    this.once("end", onFinish);
-    this.once("error", onFinish);
   }
   _read(size2) {
     const internals = this[kInternals];
@@ -62966,7 +62894,6 @@ var AxiosTransformStream = class extends import_stream.default.Transform {
     return super._read(size2);
   }
   _transform(chunk, encoding, callback) {
-    const self2 = this;
     const internals = this[kInternals];
     const maxRate = internals.maxRate;
     const readableHighWaterMark = this.readableHighWaterMark;
@@ -62974,14 +62901,12 @@ var AxiosTransformStream = class extends import_stream.default.Transform {
     const divider = 1e3 / timeWindow;
     const bytesThreshold = maxRate / divider;
     const minChunkSize = internals.minChunkSize !== false ? Math.max(internals.minChunkSize, bytesThreshold * 0.01) : 0;
-    function pushChunk(_chunk, _callback) {
+    const pushChunk = (_chunk, _callback) => {
       const bytes = Buffer.byteLength(_chunk);
       internals.bytesSeen += bytes;
       internals.bytes += bytes;
-      if (internals.isCaptured) {
-        internals.updateProgress();
-      }
-      if (self2.push(_chunk)) {
+      internals.isCaptured && this.emit("progress", internals.bytesSeen);
+      if (this.push(_chunk)) {
         process.nextTick(_callback);
       } else {
         internals.onReadCallback = () => {
@@ -62989,7 +62914,7 @@ var AxiosTransformStream = class extends import_stream.default.Transform {
           process.nextTick(_callback);
         };
       }
-    }
+    };
     const transformChunk = (_chunk, _callback) => {
       const chunkSize = Buffer.byteLength(_chunk);
       let chunkRemainder = null;
@@ -63034,10 +62959,6 @@ var AxiosTransformStream = class extends import_stream.default.Transform {
         callback(null);
       }
     });
-  }
-  setLength(length) {
-    this[kInternals].length = +length;
-    return this;
   }
 };
 var AxiosTransformStream_default = AxiosTransformStream;
@@ -63180,6 +63101,112 @@ var callbackify = (fn, reducer) => {
 };
 var callbackify_default = callbackify;
 
+// node_modules/axios/lib/helpers/speedometer.js
+function speedometer(samplesCount, min3) {
+  samplesCount = samplesCount || 10;
+  const bytes = new Array(samplesCount);
+  const timestamps = new Array(samplesCount);
+  let head = 0;
+  let tail = 0;
+  let firstSampleTS;
+  min3 = min3 !== void 0 ? min3 : 1e3;
+  return function push(chunkLength) {
+    const now = Date.now();
+    const startedAt = timestamps[tail];
+    if (!firstSampleTS) {
+      firstSampleTS = now;
+    }
+    bytes[head] = chunkLength;
+    timestamps[head] = now;
+    let i = tail;
+    let bytesCount = 0;
+    while (i !== head) {
+      bytesCount += bytes[i++];
+      i = i % samplesCount;
+    }
+    head = (head + 1) % samplesCount;
+    if (head === tail) {
+      tail = (tail + 1) % samplesCount;
+    }
+    if (now - firstSampleTS < min3) {
+      return;
+    }
+    const passed = startedAt && now - startedAt;
+    return passed ? Math.round(bytesCount * 1e3 / passed) : void 0;
+  };
+}
+var speedometer_default = speedometer;
+
+// node_modules/axios/lib/helpers/throttle.js
+function throttle(fn, freq) {
+  let timestamp = 0;
+  let threshold = 1e3 / freq;
+  let lastArgs;
+  let timer;
+  const invoke = (args, now = Date.now()) => {
+    timestamp = now;
+    lastArgs = null;
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    fn.apply(null, args);
+  };
+  const throttled = (...args) => {
+    const now = Date.now();
+    const passed = now - timestamp;
+    if (passed >= threshold) {
+      invoke(args, now);
+    } else {
+      lastArgs = args;
+      if (!timer) {
+        timer = setTimeout(() => {
+          timer = null;
+          invoke(lastArgs);
+        }, threshold - passed);
+      }
+    }
+  };
+  const flush = () => lastArgs && invoke(lastArgs);
+  return [throttled, flush];
+}
+var throttle_default = throttle;
+
+// node_modules/axios/lib/helpers/progressEventReducer.js
+var progressEventReducer = (listener, isDownloadStream, freq = 3) => {
+  let bytesNotified = 0;
+  const _speedometer = speedometer_default(50, 250);
+  return throttle_default((e2) => {
+    const loaded = e2.loaded;
+    const total = e2.lengthComputable ? e2.total : void 0;
+    const progressBytes = loaded - bytesNotified;
+    const rate = _speedometer(progressBytes);
+    const inRange = loaded <= total;
+    bytesNotified = loaded;
+    const data2 = {
+      loaded,
+      total,
+      progress: total ? loaded / total : void 0,
+      bytes: progressBytes,
+      rate: rate ? rate : void 0,
+      estimated: rate && total && inRange ? (total - loaded) / rate : void 0,
+      event: e2,
+      lengthComputable: total != null,
+      [isDownloadStream ? "download" : "upload"]: true
+    };
+    listener(data2);
+  }, freq);
+};
+var progressEventDecorator = (total, throttled) => {
+  const lengthComputable = total != null;
+  return [(loaded) => throttled[0]({
+    lengthComputable,
+    total,
+    loaded
+  }), throttled[1]];
+};
+var asyncDecorator = (fn) => (...args) => utils_default.asap(() => fn(...args));
+
 // node_modules/axios/lib/adapters/http.js
 var zlibOptions = {
   flush: import_zlib.default.constants.Z_SYNC_FLUSH,
@@ -63195,6 +63222,10 @@ var isHttps = /https:?/;
 var supportedProtocols = platform_default.protocols.map((protocol) => {
   return protocol + ":";
 });
+var flushOnFinish = (stream4, [throttled, flush]) => {
+  stream4.on("end", flush).on("error", flush);
+  return throttled;
+};
 function dispatchBeforeRedirect(options, responseDetails) {
   if (options.beforeRedirects.proxy) {
     options.beforeRedirects.proxy(options);
@@ -63315,7 +63346,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
       }
     }
     const fullPath = buildFullPath(config4.baseURL, config4.url);
-    const parsed = new URL(fullPath, "http://localhost");
+    const parsed = new URL(fullPath, utils_default.hasBrowserEnv ? platform_default.origin : void 0);
     const protocol = parsed.protocol || supportedProtocols[0];
     if (protocol === "data:") {
       let convertedData;
@@ -63359,8 +63390,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
     }
     const headers3 = AxiosHeaders_default.from(config4.headers).normalize();
     headers3.set("User-Agent", "axios/" + VERSION, false);
-    const onDownloadProgress = config4.onDownloadProgress;
-    const onUploadProgress = config4.onUploadProgress;
+    const { onUploadProgress, onDownloadProgress } = config4;
     const maxRate = config4.maxRate;
     let maxUploadRate = void 0;
     let maxDownloadRate = void 0;
@@ -63419,14 +63449,15 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
         data2 = import_stream4.default.Readable.from(data2, { objectMode: false });
       }
       data2 = import_stream4.default.pipeline([data2, new AxiosTransformStream_default({
-        length: contentLength,
         maxRate: utils_default.toFiniteNumber(maxUploadRate)
       })], utils_default.noop);
-      onUploadProgress && data2.on("progress", (progress) => {
-        onUploadProgress(Object.assign(progress, {
-          upload: true
-        }));
-      });
+      onUploadProgress && data2.on("progress", flushOnFinish(
+        data2,
+        progressEventDecorator(
+          contentLength,
+          progressEventReducer(asyncDecorator(onUploadProgress), false, 3)
+        )
+      ));
     }
     let auth = void 0;
     if (config4.auth) {
@@ -63506,16 +63537,17 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
       if (req.destroyed) return;
       const streams = [res];
       const responseLength = +res.headers["content-length"];
-      if (onDownloadProgress) {
+      if (onDownloadProgress || maxDownloadRate) {
         const transformStream = new AxiosTransformStream_default({
-          length: utils_default.toFiniteNumber(responseLength),
           maxRate: utils_default.toFiniteNumber(maxDownloadRate)
         });
-        onDownloadProgress && transformStream.on("progress", (progress) => {
-          onDownloadProgress(Object.assign(progress, {
-            download: true
-          }));
-        });
+        onDownloadProgress && transformStream.on("progress", flushOnFinish(
+          transformStream,
+          progressEventDecorator(
+            responseLength,
+            progressEventReducer(asyncDecorator(onDownloadProgress), true, 3)
+          )
+        ));
         streams.push(transformStream);
       }
       let responseStream = res;
@@ -63673,32 +63705,6 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config4) {
       req.end(data2);
     }
   });
-};
-
-// node_modules/axios/lib/helpers/progressEventReducer.js
-var progressEventReducer_default = (listener, isDownloadStream, freq = 3) => {
-  let bytesNotified = 0;
-  const _speedometer = speedometer_default(50, 250);
-  return throttle_default((e2) => {
-    const loaded = e2.loaded;
-    const total = e2.lengthComputable ? e2.total : void 0;
-    const progressBytes = loaded - bytesNotified;
-    const rate = _speedometer(progressBytes);
-    const inRange = loaded <= total;
-    bytesNotified = loaded;
-    const data2 = {
-      loaded,
-      total,
-      progress: total ? loaded / total : void 0,
-      bytes: progressBytes,
-      rate: rate ? rate : void 0,
-      estimated: rate && total && inRange ? (total - loaded) / rate : void 0,
-      event: e2,
-      lengthComputable: total != null
-    };
-    data2[isDownloadStream ? "download" : "upload"] = true;
-    listener(data2);
-  }, freq);
 };
 
 // node_modules/axios/lib/helpers/isURLSameOrigin.js
@@ -63895,15 +63901,15 @@ var xhr_default = isXHRAdapterSupported && function(config4) {
     const _config = resolveConfig_default(config4);
     let requestData = _config.data;
     const requestHeaders = AxiosHeaders_default.from(_config.headers).normalize();
-    let { responseType } = _config;
+    let { responseType, onUploadProgress, onDownloadProgress } = _config;
     let onCanceled;
+    let uploadThrottled, downloadThrottled;
+    let flushUpload, flushDownload;
     function done() {
-      if (_config.cancelToken) {
-        _config.cancelToken.unsubscribe(onCanceled);
-      }
-      if (_config.signal) {
-        _config.signal.removeEventListener("abort", onCanceled);
-      }
+      flushUpload && flushUpload();
+      flushDownload && flushDownload();
+      _config.cancelToken && _config.cancelToken.unsubscribe(onCanceled);
+      _config.signal && _config.signal.removeEventListener("abort", onCanceled);
     }
     let request3 = new XMLHttpRequest();
     request3.open(_config.method.toUpperCase(), _config.url, true);
@@ -63950,11 +63956,11 @@ var xhr_default = isXHRAdapterSupported && function(config4) {
       if (!request3) {
         return;
       }
-      reject(new AxiosError_default("Request aborted", AxiosError_default.ECONNABORTED, _config, request3));
+      reject(new AxiosError_default("Request aborted", AxiosError_default.ECONNABORTED, config4, request3));
       request3 = null;
     };
     request3.onerror = function handleError() {
-      reject(new AxiosError_default("Network Error", AxiosError_default.ERR_NETWORK, _config, request3));
+      reject(new AxiosError_default("Network Error", AxiosError_default.ERR_NETWORK, config4, request3));
       request3 = null;
     };
     request3.ontimeout = function handleTimeout() {
@@ -63966,7 +63972,7 @@ var xhr_default = isXHRAdapterSupported && function(config4) {
       reject(new AxiosError_default(
         timeoutErrorMessage,
         transitional2.clarifyTimeoutError ? AxiosError_default.ETIMEDOUT : AxiosError_default.ECONNABORTED,
-        _config,
+        config4,
         request3
       ));
       request3 = null;
@@ -63983,11 +63989,14 @@ var xhr_default = isXHRAdapterSupported && function(config4) {
     if (responseType && responseType !== "json") {
       request3.responseType = _config.responseType;
     }
-    if (typeof _config.onDownloadProgress === "function") {
-      request3.addEventListener("progress", progressEventReducer_default(_config.onDownloadProgress, true));
+    if (onDownloadProgress) {
+      [downloadThrottled, flushDownload] = progressEventReducer(onDownloadProgress, true);
+      request3.addEventListener("progress", downloadThrottled);
     }
-    if (typeof _config.onUploadProgress === "function" && request3.upload) {
-      request3.upload.addEventListener("progress", progressEventReducer_default(_config.onUploadProgress));
+    if (onUploadProgress && request3.upload) {
+      [uploadThrottled, flushUpload] = progressEventReducer(onUploadProgress);
+      request3.upload.addEventListener("progress", uploadThrottled);
+      request3.upload.addEventListener("loadend", flushUpload);
     }
     if (_config.cancelToken || _config.signal) {
       onCanceled = (cancel) => {
@@ -64070,21 +64079,35 @@ var readBytes = async function* (iterable, chunkSize, encode3) {
 var trackStream = (stream4, chunkSize, onProgress, onFinish, encode3) => {
   const iterator = readBytes(stream4, chunkSize, encode3);
   let bytes = 0;
+  let done;
+  let _onFinish = (e2) => {
+    if (!done) {
+      done = true;
+      onFinish && onFinish(e2);
+    }
+  };
   return new ReadableStream({
-    type: "bytes",
     async pull(controller) {
-      const { done, value } = await iterator.next();
-      if (done) {
-        controller.close();
-        onFinish();
-        return;
+      try {
+        const { done: done2, value } = await iterator.next();
+        if (done2) {
+          _onFinish();
+          controller.close();
+          return;
+        }
+        let len = value.byteLength;
+        if (onProgress) {
+          let loadedBytes = bytes += len;
+          onProgress(loadedBytes);
+        }
+        controller.enqueue(new Uint8Array(value));
+      } catch (err) {
+        _onFinish(err);
+        throw err;
       }
-      let len = value.byteLength;
-      onProgress && onProgress(bytes += len);
-      controller.enqueue(new Uint8Array(value));
     },
     cancel(reason) {
-      onFinish(reason);
+      _onFinish(reason);
       return iterator.return();
     }
   }, {
@@ -64093,18 +64116,17 @@ var trackStream = (stream4, chunkSize, onProgress, onFinish, encode3) => {
 };
 
 // node_modules/axios/lib/adapters/fetch.js
-var fetchProgressDecorator = (total, fn) => {
-  const lengthComputable = total != null;
-  return (loaded) => setTimeout(() => fn({
-    lengthComputable,
-    total,
-    loaded
-  }));
-};
 var isFetchSupported = typeof fetch === "function" && typeof Request === "function" && typeof Response === "function";
 var isReadableStreamSupported = isFetchSupported && typeof ReadableStream === "function";
 var encodeText = isFetchSupported && (typeof TextEncoder === "function" ? /* @__PURE__ */ ((encoder) => (str) => encoder.encode(str))(new TextEncoder()) : async (str) => new Uint8Array(await new Response(str).arrayBuffer()));
-var supportsRequestStream = isReadableStreamSupported && (() => {
+var test = (fn, ...args) => {
+  try {
+    return !!fn(...args);
+  } catch (e2) {
+    return false;
+  }
+};
+var supportsRequestStream = isReadableStreamSupported && test(() => {
   let duplexAccessed = false;
   const hasContentType = new Request(platform_default.origin, {
     body: new ReadableStream(),
@@ -64115,14 +64137,9 @@ var supportsRequestStream = isReadableStreamSupported && (() => {
     }
   }).headers.has("Content-Type");
   return duplexAccessed && !hasContentType;
-})();
+});
 var DEFAULT_CHUNK_SIZE = 64 * 1024;
-var supportsResponseStream = isReadableStreamSupported && !!(() => {
-  try {
-    return utils_default.isReadableStream(new Response("").body);
-  } catch (err) {
-  }
-})();
+var supportsResponseStream = isReadableStreamSupported && test(() => utils_default.isReadableStream(new Response("").body));
 var resolvers = {
   stream: supportsResponseStream && ((res) => res.body)
 };
@@ -64143,7 +64160,7 @@ var getBodyLength = async (body) => {
   if (utils_default.isSpecCompliantForm(body)) {
     return (await new Request(body).arrayBuffer()).byteLength;
   }
-  if (utils_default.isArrayBufferView(body)) {
+  if (utils_default.isArrayBufferView(body) || utils_default.isArrayBuffer(body)) {
     return body.byteLength;
   }
   if (utils_default.isURLSearchParams(body)) {
@@ -64194,14 +64211,15 @@ var fetch_default = isFetchSupported && (async (config4) => {
         headers3.setContentType(contentTypeHeader);
       }
       if (_request.body) {
-        data2 = trackStream(_request.body, DEFAULT_CHUNK_SIZE, fetchProgressDecorator(
+        const [onProgress, flush] = progressEventDecorator(
           requestContentLength,
-          progressEventReducer_default(onUploadProgress)
-        ), null, encodeText);
+          progressEventReducer(asyncDecorator(onUploadProgress))
+        );
+        data2 = trackStream(_request.body, DEFAULT_CHUNK_SIZE, onProgress, flush, encodeText);
       }
     }
     if (!utils_default.isString(withCredentials)) {
-      withCredentials = withCredentials ? "cors" : "omit";
+      withCredentials = withCredentials ? "include" : "omit";
     }
     request3 = new Request(url2, {
       ...fetchOptions,
@@ -64210,7 +64228,7 @@ var fetch_default = isFetchSupported && (async (config4) => {
       headers: headers3.normalize().toJSON(),
       body: data2,
       duplex: "half",
-      withCredentials
+      credentials: withCredentials
     });
     let response3 = await fetch(request3);
     const isStreamResponse = supportsResponseStream && (responseType === "stream" || responseType === "response");
@@ -64220,11 +64238,15 @@ var fetch_default = isFetchSupported && (async (config4) => {
         options[prop2] = response3[prop2];
       });
       const responseContentLength = utils_default.toFiniteNumber(response3.headers.get("content-length"));
+      const [onProgress, flush] = onDownloadProgress && progressEventDecorator(
+        responseContentLength,
+        progressEventReducer(asyncDecorator(onDownloadProgress), true)
+      ) || [];
       response3 = new Response(
-        trackStream(response3.body, DEFAULT_CHUNK_SIZE, onDownloadProgress && fetchProgressDecorator(
-          responseContentLength,
-          progressEventReducer_default(onDownloadProgress, true)
-        ), isStreamResponse && onFinish, encodeText),
+        trackStream(response3.body, DEFAULT_CHUNK_SIZE, onProgress, () => {
+          flush && flush();
+          isStreamResponse && onFinish();
+        }, encodeText),
         options
       );
     }
@@ -66240,10 +66262,10 @@ function prepend(elem, prev2) {
 }
 
 // node_modules/domutils/lib/esm/querying.js
-function filter3(test, node, recurse = true, limit = Infinity) {
-  return find(test, Array.isArray(node) ? node : [node], recurse, limit);
+function filter3(test2, node, recurse = true, limit = Infinity) {
+  return find(test2, Array.isArray(node) ? node : [node], recurse, limit);
 }
-function find(test, nodes, recurse, limit) {
+function find(test2, nodes, recurse, limit) {
   const result = [];
   const nodeStack = [nodes];
   const indexStack = [0];
@@ -66257,7 +66279,7 @@ function find(test, nodes, recurse, limit) {
       continue;
     }
     const elem = nodeStack[0][indexStack[0]++];
-    if (test(elem)) {
+    if (test2(elem)) {
       result.push(elem);
       if (--limit <= 0)
         return result;
@@ -66268,27 +66290,27 @@ function find(test, nodes, recurse, limit) {
     }
   }
 }
-function findOneChild(test, nodes) {
-  return nodes.find(test);
+function findOneChild(test2, nodes) {
+  return nodes.find(test2);
 }
-function findOne(test, nodes, recurse = true) {
+function findOne(test2, nodes, recurse = true) {
   let elem = null;
   for (let i = 0; i < nodes.length && !elem; i++) {
     const node = nodes[i];
     if (!isTag2(node)) {
       continue;
-    } else if (test(node)) {
+    } else if (test2(node)) {
       elem = node;
     } else if (recurse && node.children.length > 0) {
-      elem = findOne(test, node.children, true);
+      elem = findOne(test2, node.children, true);
     }
   }
   return elem;
 }
-function existsOne(test, nodes) {
-  return nodes.some((checked) => isTag2(checked) && (test(checked) || existsOne(test, checked.children)));
+function existsOne(test2, nodes) {
+  return nodes.some((checked) => isTag2(checked) && (test2(checked) || existsOne(test2, checked.children)));
 }
-function findAll(test, nodes) {
+function findAll(test2, nodes) {
   const result = [];
   const nodeStack = [nodes];
   const indexStack = [0];
@@ -66304,7 +66326,7 @@ function findAll(test, nodes) {
     const elem = nodeStack[0][indexStack[0]++];
     if (!isTag2(elem))
       continue;
-    if (test(elem))
+    if (test2(elem))
       result.push(elem);
     if (elem.children.length > 0) {
       indexStack.unshift(0);
@@ -66353,12 +66375,12 @@ function compileTest(options) {
   return funcs.length === 0 ? null : funcs.reduce(combineFuncs);
 }
 function testElement(options, node) {
-  const test = compileTest(options);
-  return test ? test(node) : true;
+  const test2 = compileTest(options);
+  return test2 ? test2(node) : true;
 }
 function getElements(options, nodes, recurse, limit = Infinity) {
-  const test = compileTest(options);
-  return test ? filter3(test, nodes, recurse, limit) : [];
+  const test2 = compileTest(options);
+  return test2 ? filter3(test2, nodes, recurse, limit) : [];
 }
 function getElementById(id, nodes, recurse = true) {
   if (!Array.isArray(nodes))

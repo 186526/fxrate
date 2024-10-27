@@ -179,7 +179,15 @@ class FXRates {
             body: JSON.stringify(responseBody),
         });
 
-        const body = await resp.json();
+        let body: any;
+
+        try {
+            body = await resp.json();
+        } catch (e) {
+            console.error(e);
+            console.error(responseBody);
+            throw new Error('Error parsing response');
+        }
 
         const handler = (k) => {
             if (k.error) {
