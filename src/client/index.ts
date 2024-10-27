@@ -181,10 +181,13 @@ class FXRates {
 
         let body: any;
 
+        const content = await resp.text();
+
         try {
-            body = await resp.json();
+            body = JSON.parse(content);
         } catch (e) {
             console.error(e);
+            console.error(content);
             console.error(responseBody);
             throw new Error('Error parsing response');
         }
