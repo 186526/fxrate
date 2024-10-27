@@ -13291,7 +13291,7 @@ var require_form_data = __commonJS({
     var util2 = require("util");
     var path = require("path");
     var http3 = require("http");
-    var https7 = require("https");
+    var https8 = require("https");
     var parseUrl = require("url").parse;
     var fs = require("fs");
     var Stream = require("stream").Stream;
@@ -13558,7 +13558,7 @@ var require_form_data = __commonJS({
       }
       options.headers = this.getHeaders(params.headers);
       if (options.protocol == "https:") {
-        request3 = https7.request(options);
+        request3 = https8.request(options);
       } else {
         request3 = http3.request(options);
       }
@@ -14443,7 +14443,7 @@ var require_follow_redirects = __commonJS({
     var url2 = require("url");
     var URL2 = url2.URL;
     var http3 = require("http");
-    var https7 = require("https");
+    var https8 = require("https");
     var Writable = require("stream").Writable;
     var assert = require("assert");
     var debug = require_debug();
@@ -14918,7 +14918,7 @@ var require_follow_redirects = __commonJS({
     function isURL(value) {
       return URL2 && value instanceof URL2;
     }
-    module2.exports = wrap2({ http: http3, https: https7 });
+    module2.exports = wrap2({ http: http3, https: https8 });
     module2.exports.wrap = wrap2;
   }
 });
@@ -61356,7 +61356,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"0d49f3c"} ${"2024-10-26T00:50:29+08:00"}`,
+          version: `fxrate@${"748207b"} ${"2024-10-27T16:06:34+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -78354,7 +78354,7 @@ var getBOCFXRatesFromBOC = async () => {
           $2("div.publish table tbody tr").slice(2).toArray().map((el) => {
             const e2 = $2(el);
             const zhName = e2.find("td:nth-child(1)").text();
-            const enName = enNames[zhName] || "";
+            const enName2 = enNames[zhName] || "";
             const date = e2.find("td:nth-child(7)").text();
             const xhmr = e2.find("td:nth-child(2)").text();
             const xcmr = e2.find("td:nth-child(3)").text();
@@ -78362,7 +78362,7 @@ var getBOCFXRatesFromBOC = async () => {
             const xcmc = e2.find("td:nth-child(5)").text();
             const FXRate = {
               currency: {
-                from: enName,
+                from: enName2,
                 to: "CNY"
               },
               rate: {
@@ -79437,6 +79437,76 @@ var getPABFXRates = async () => {
   }).sort();
 };
 var pab_default = getPABFXRates;
+
+// src/FXGetter/ceb.ts
+var import_crypto6 = __toESM(require("crypto"), 1);
+var import_https7 = __toESM(require("https"), 1);
+var allowLegacyRenegotiationforNodeJsOptions5 = {
+  httpsAgent: new import_https7.default.Agent({
+    // allow sb CIB to use legacy renegotiation
+    // 💩 CIB
+    secureOptions: import_crypto6.default.constants.SSL_OP_LEGACY_SERVER_CONNECT
+  })
+};
+var enName = {
+  "\u7F8E\u5143(USD)": "USD",
+  "\u82F1\u9551(GBP)": "GBP",
+  "\u6E2F\u5E01(HKD)": "HKD",
+  "\u745E\u58EB\u6CD5\u90CE(CHF)": "CHF",
+  \u745E\u5178\u514B\u6717: "SEK",
+  \u4E39\u9EA6\u514B\u6717: "DKK",
+  \u632A\u5A01\u514B\u6717: "NOK",
+  "\u65E5\u5143(JPY)": "JPY",
+  "\u52A0\u62FF\u5927\u5143(CAD)": "CAD",
+  "\u6FB3\u5927\u5229\u4E9A\u5143(AUD)": "AUD",
+  "\u65B0\u52A0\u5761\u5143(SGD)": "SGD",
+  "\u6B27\u5143(EUR)": "EUR",
+  "\u6FB3\u95E8\u5143(MOP)": "MOP",
+  "\u6CF0\u56FD\u94E2(THB)": "THB",
+  \u65B0\u53F0\u5E01: "TWD",
+  "\u65B0\u897F\u5170\u5143(NZD)": "NZD",
+  \u97E9\u5143: "KRW"
+};
+var getCEBFXRates = async () => {
+  const res = await axios_default.get(
+    "https://www.cebbank.com/eportal/ui?pageId=477257",
+    {
+      ...allowLegacyRenegotiationforNodeJsOptions5,
+      headers: {
+        "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
+      }
+    }
+  );
+  const $2 = esm_default2.load(res.data);
+  const items = $2(".lczj_box tbody tr").map((i, e2) => {
+    if (i < 2) {
+      return null;
+    }
+    const c = esm_default2.load(e2, { decodeEntities: false });
+    return {
+      currency: {
+        from: enName[c("td:nth-child(1)").text()],
+        to: "CNY"
+      },
+      rate: {
+        sell: {
+          remit: parseFloat(c("td:nth-child(2)").text()),
+          cash: parseFloat(c("td:nth-child(3)").text())
+        },
+        buy: {
+          remit: parseFloat(c("td:nth-child(4)").text()),
+          cash: parseFloat(c("td:nth-child(5)").text())
+        }
+      },
+      unit: 100,
+      updated: /* @__PURE__ */ new Date(
+        $2("#t_id span").text().substring(5) + " UTC+8"
+      )
+    };
+  }).get();
+  return items.filter((i) => i !== null).sort();
+};
+var ceb_default = getCEBFXRates;
 
 // src/FXGetter/mastercard.ts
 var import_sync_request = __toESM(require("sync-request"), 1);
@@ -81340,7 +81410,8 @@ var sourceNamesInZH = {
   spdb: "\u6D66\u53D1\u94F6\u884C",
   "ncb.cn": "\u5357\u6D0B\u5546\u4E1A\u94F6\u884C\uFF08\u4E2D\u56FD\uFF09",
   xib: "\u53A6\u95E8\u56FD\u9645\u94F6\u884C",
-  pab: "\u5E73\u5B89\u94F6\u884C"
+  pab: "\u5E73\u5B89\u94F6\u884C",
+  ceb: "\u4E2D\u56FD\u5149\u5927\u94F6\u884C"
 };
 
 // src/handler/rss.ts
@@ -81441,7 +81512,8 @@ var Manager = new fxmManager_default({
   "ncb.cn": ncb_cn_default,
   spdb: spdb_default,
   xib: xib_default,
-  pab: pab_default
+  pab: pab_default,
+  ceb: ceb_default
 });
 Manager.registerFXM("mastercard", new mastercardFXM());
 Manager.registerFXM("visa", new visaFXM());

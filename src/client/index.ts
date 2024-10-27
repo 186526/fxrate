@@ -190,7 +190,13 @@ class FXRates {
         };
 
         if (body instanceof Array) {
-            body.forEach(handler);
+            body.forEach((k) => {
+                try {
+                    handler(k);
+                } catch (e) {
+                    console.error('Error in batch request:', e);
+                }
+            });
         } else handler(body);
 
         return;
