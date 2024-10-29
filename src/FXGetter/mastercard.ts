@@ -191,7 +191,7 @@ export default class mastercardFXM extends fxManager {
                             if (!cache.has(`${from}${to}`)) {
                                 const request = syncRequest(
                                     'GET',
-                                    `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${to}&crdhldBillCurr=${from}&bankFee=0&transAmt=1`,
+                                    `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`,
                                 );
                                 cache.set(
                                     `${from}${to}`,

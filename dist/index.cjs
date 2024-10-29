@@ -61356,7 +61356,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"330ae09"} ${"2024-10-28T01:15:48+08:00"}`,
+          version: `fxrate@${"e08791a"} ${"2024-10-27T18:17:20+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -81084,7 +81084,7 @@ var mastercardFXM = class extends fxManager {
               if (!cache.has(`${from}${to}`)) {
                 const request3 = (0, import_sync_request.default)(
                   "GET",
-                  `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${to}&crdhldBillCurr=${from}&bankFee=0&transAmt=1`
+                  `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`
                 );
                 cache.set(
                   `${from}${to}`,
