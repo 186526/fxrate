@@ -1,7 +1,7 @@
 import fxManager from '../fxm/fxManager';
 import syncRequest from 'sync-request';
 import axios from 'axios';
-import { fraction } from 'mathjs';
+import { fraction, divide } from 'mathjs';
 
 import { LRUCache } from 'lru-cache';
 import { currency } from 'src/types';
@@ -191,7 +191,7 @@ export default class mastercardFXM extends fxManager {
                             if (!cache.has(`${from}${to}`)) {
                                 const request = syncRequest(
                                     'GET',
-                                    `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`,
+                                    `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${to}&crdhldBillCurr=${from}&bankFee=0&transAmt=1`,
                                 );
                                 cache.set(
                                     `${from}${to}`,
@@ -207,7 +207,10 @@ export default class mastercardFXM extends fxManager {
                                 const data = JSON.parse(
                                     cache.get(`${from}${to}`),
                                 );
-                                return fraction(data.data.conversionRate);
+                                return divide(
+                                    fraction(data.data.transAmt),
+                                    fraction(data.data.conversionRate),
+                                );
                             } else {
                                 const data = JSON.parse(
                                     cache.get(`${from}${to}`),
@@ -239,7 +242,7 @@ export default class mastercardFXM extends fxManager {
         }
 
         const req = await axios.get(
-            `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${from}&crdhldBillCurr=${to}&bankFee=0&transAmt=1`,
+            `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${to}&crdhldBillCurr=${from}&bankFee=0&transAmt=1`,
             {
                 headers: {
                     'User-Agent':
