@@ -17413,6 +17413,84 @@ var require_dayjs_min = __commonJS({
   }
 });
 
+// node_modules/dayjs/plugin/utc.js
+var require_utc = __commonJS({
+  "node_modules/dayjs/plugin/utc.js"(exports2, module2) {
+    !function(t, i) {
+      "object" == typeof exports2 && "undefined" != typeof module2 ? module2.exports = i() : "function" == typeof define && define.amd ? define(i) : (t = "undefined" != typeof globalThis ? globalThis : t || self).dayjs_plugin_utc = i();
+    }(exports2, function() {
+      "use strict";
+      var t = "minute", i = /[+-]\d\d(?::?\d\d)?/g, e2 = /([+-]|\d\d)/g;
+      return function(s, f, n) {
+        var u = f.prototype;
+        n.utc = function(t2) {
+          var i2 = { date: t2, utc: true, args: arguments };
+          return new f(i2);
+        }, u.utc = function(i2) {
+          var e3 = n(this.toDate(), { locale: this.$L, utc: true });
+          return i2 ? e3.add(this.utcOffset(), t) : e3;
+        }, u.local = function() {
+          return n(this.toDate(), { locale: this.$L, utc: false });
+        };
+        var o = u.parse;
+        u.parse = function(t2) {
+          t2.utc && (this.$u = true), this.$utils().u(t2.$offset) || (this.$offset = t2.$offset), o.call(this, t2);
+        };
+        var r = u.init;
+        u.init = function() {
+          if (this.$u) {
+            var t2 = this.$d;
+            this.$y = t2.getUTCFullYear(), this.$M = t2.getUTCMonth(), this.$D = t2.getUTCDate(), this.$W = t2.getUTCDay(), this.$H = t2.getUTCHours(), this.$m = t2.getUTCMinutes(), this.$s = t2.getUTCSeconds(), this.$ms = t2.getUTCMilliseconds();
+          } else r.call(this);
+        };
+        var a = u.utcOffset;
+        u.utcOffset = function(s2, f2) {
+          var n3 = this.$utils().u;
+          if (n3(s2)) return this.$u ? 0 : n3(this.$offset) ? a.call(this) : this.$offset;
+          if ("string" == typeof s2 && (s2 = function(t2) {
+            void 0 === t2 && (t2 = "");
+            var s3 = t2.match(i);
+            if (!s3) return null;
+            var f3 = ("" + s3[0]).match(e2) || ["-", 0, 0], n4 = f3[0], u3 = 60 * +f3[1] + +f3[2];
+            return 0 === u3 ? 0 : "+" === n4 ? u3 : -u3;
+          }(s2), null === s2)) return this;
+          var u2 = Math.abs(s2) <= 16 ? 60 * s2 : s2, o2 = this;
+          if (f2) return o2.$offset = u2, o2.$u = 0 === s2, o2;
+          if (0 !== s2) {
+            var r2 = this.$u ? this.toDate().getTimezoneOffset() : -1 * this.utcOffset();
+            (o2 = this.local().add(u2 + r2, t)).$offset = u2, o2.$x.$localOffset = r2;
+          } else o2 = this.utc();
+          return o2;
+        };
+        var h = u.format;
+        u.format = function(t2) {
+          var i2 = t2 || (this.$u ? "YYYY-MM-DDTHH:mm:ss[Z]" : "");
+          return h.call(this, i2);
+        }, u.valueOf = function() {
+          var t2 = this.$utils().u(this.$offset) ? 0 : this.$offset + (this.$x.$localOffset || this.$d.getTimezoneOffset());
+          return this.$d.valueOf() - 6e4 * t2;
+        }, u.isUTC = function() {
+          return !!this.$u;
+        }, u.toISOString = function() {
+          return this.toDate().toISOString();
+        }, u.toString = function() {
+          return this.toDate().toUTCString();
+        };
+        var l = u.toDate;
+        u.toDate = function(t2) {
+          return "s" === t2 && this.$offset ? n(this.format("YYYY-MM-DD HH:mm:ss:SSS")).toDate() : l.call(this);
+        };
+        var c = u.diff;
+        u.diff = function(t2, i2, e3) {
+          if (t2 && this.$u === t2.$u) return c.call(this, t2, i2, e3);
+          var s2 = this.local(), f2 = n(t2).local();
+          return c.call(s2, f2, i2, e3);
+        };
+      };
+    });
+  }
+});
+
 // node_modules/sax/lib/sax.js
 var require_sax = __commonJS({
   "node_modules/sax/lib/sax.js"(exports2) {
@@ -61356,7 +61434,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"65e7f95"} ${"2024-10-30T00:07:57+08:00"}`,
+          version: `fxrate@${"de3526c"} ${"2024-11-20T10:42:43+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -81142,6 +81220,8 @@ var mastercardFXM = class extends fxManager {
 // src/FXGetter/visa.ts
 var import_sync_request2 = __toESM(require("sync-request"), 1);
 var import_dayjs = __toESM(require_dayjs_min(), 1);
+var import_utc = __toESM(require_utc(), 1);
+import_dayjs.default.extend(import_utc.default);
 var cache2 = new LRUCache({
   max: 500
 });
@@ -81348,11 +81428,11 @@ var visaFXM = class extends fxManager {
               ].includes(prop2.toString())) {
                 return void 0;
               }
-              const dateString = (0, import_dayjs.default)().format("MM/DD/YYYY");
+              const dateString = (0, import_dayjs.default)().utc().format("MM/DD/YYYY");
               if (!cache2.has(`${from}${to}`)) {
                 const request3 = (0, import_sync_request2.default)(
                   "GET",
-                  `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${from}&toCurr=${to}`,
+                  `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${to}&toCurr=${from}`,
                   {
                     headers: headers2
                   }
@@ -81368,7 +81448,8 @@ var visaFXM = class extends fxManager {
                 const data2 = JSON.parse(
                   cache2.get(`${from}${to}`)
                 );
-                return fraction(data2.reverseAmount);
+                console.log(data2);
+                return fraction(data2.originalValues.fxRateVisa);
               } else {
                 const data2 = JSON.parse(
                   cache2.get(`${from}${to}`)
@@ -81394,7 +81475,7 @@ var visaFXM = class extends fxManager {
     }
     const dateString = (0, import_dayjs.default)().format("MM/DD/YYYY");
     const req = await axios_default.get(
-      `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${from}&toCurr=${to}`,
+      `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${to}&toCurr=${from}`,
       {
         headers: headers2
       }

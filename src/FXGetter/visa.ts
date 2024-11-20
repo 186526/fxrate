@@ -9,6 +9,10 @@ import { currency } from 'src/types';
 
 import dayjs from 'dayjs';
 
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+
 const cache = new LRUCache<string, string>({
     max: 500,
 });
@@ -222,12 +226,14 @@ export default class visaFXM extends fxManager {
                                 return undefined;
                             }
 
-                            const dateString = dayjs().format('MM/DD/YYYY');
+                            const dateString = dayjs()
+                                .utc()
+                                .format('MM/DD/YYYY');
 
                             if (!cache.has(`${from}${to}`)) {
                                 const request = syncRequest(
                                     'GET',
-                                    `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${from}&toCurr=${to}`,
+                                    `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${to}&toCurr=${from}`,
                                     {
                                         headers,
                                     },
@@ -246,7 +252,8 @@ export default class visaFXM extends fxManager {
                                 const data = JSON.parse(
                                     cache.get(`${from}${to}`),
                                 );
-                                return fraction(data.reverseAmount);
+                                console.log(data);
+                                return fraction(data.originalValues.fxRateVisa);
                             } else {
                                 const data = JSON.parse(
                                     cache.get(`${from}${to}`),
@@ -283,7 +290,7 @@ export default class visaFXM extends fxManager {
         const dateString = dayjs().format('MM/DD/YYYY');
 
         const req = await axios.get(
-            `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${from}&toCurr=${to}`,
+            `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${to}&toCurr=${from}`,
             {
                 headers,
             },
