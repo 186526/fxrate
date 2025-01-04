@@ -252,7 +252,6 @@ export default class visaFXM extends fxManager {
                                 const data = JSON.parse(
                                     cache.get(`${from}${to}`),
                                 );
-                                console.log(data);
                                 return fraction(data.originalValues.fxRateVisa);
                             } else {
                                 const data = JSON.parse(
@@ -287,7 +286,7 @@ export default class visaFXM extends fxManager {
             return this.fxRateList[from][to];
         }
 
-        const dateString = dayjs().format('MM/DD/YYYY');
+        const dateString = dayjs().utc().format('MM/DD/YYYY');
 
         const req = await axios.get(
             `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${to}&toCurr=${from}`,

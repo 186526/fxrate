@@ -61434,7 +61434,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"ec3a2d3"} ${"2024-11-20T10:52:57+08:00"}`,
+          version: `fxrate@${"a3d5911"} ${"2025-01-05T04:30:38+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -81160,9 +81160,20 @@ var mastercardFXM = class extends fxManager {
                 return void 0;
               }
               if (!cache.has(`${from}${to}`)) {
+                const preRequest = (0, import_sync_request.default)(
+                  "GET",
+                  `https://www.mastercard.us/en-us/personal/get-support/convert-currency.html`
+                );
                 const request3 = (0, import_sync_request.default)(
                   "GET",
-                  `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${to}&crdhldBillCurr=${from}&bankFee=0&transAmt=1`
+                  `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${to}&crdhldBillCurr=${from}&bankFee=0&transAmt=1`,
+                  {
+                    headers: {
+                      Cookie: preRequest.headers["set-cookie"].map(
+                        (cookie) => cookie.split(";")[0]
+                      ).join("; ")
+                    }
+                  }
                 );
                 cache.set(
                   `${from}${to}`,
@@ -81200,11 +81211,19 @@ var mastercardFXM = class extends fxManager {
     if (cache.has(`${from}${to}`)) {
       return this.fxRateList[from][to];
     }
+    const preRequest = await axios_default.get(
+      `https://www.mastercard.us/en-us/personal/get-support/convert-currency.html`
+    );
+    console.log(preRequest.headers);
+    console.log(
+      preRequest.headers["set-cookie"].map((cookie) => cookie.split(";")[0]).join("; ")
+    );
     const req = await axios_default.get(
       `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${to}&crdhldBillCurr=${from}&bankFee=0&transAmt=1`,
       {
         headers: {
-          "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest"
+          "User-Agent": process.env["HEADER_USER_AGENT"] ?? "fxrate axios/latest",
+          Cookie: preRequest.headers["set-cookie"].map((cookie) => cookie.split(";")[0]).join("; ")
         }
       }
     );
@@ -81448,7 +81467,6 @@ var visaFXM = class extends fxManager {
                 const data2 = JSON.parse(
                   cache2.get(`${from}${to}`)
                 );
-                console.log(data2);
                 return fraction(data2.originalValues.fxRateVisa);
               } else {
                 const data2 = JSON.parse(
@@ -81473,7 +81491,7 @@ var visaFXM = class extends fxManager {
     if (cache2.has(`${from}${to}`)) {
       return this.fxRateList[from][to];
     }
-    const dateString = (0, import_dayjs.default)().format("MM/DD/YYYY");
+    const dateString = (0, import_dayjs.default)().utc().format("MM/DD/YYYY");
     const req = await axios_default.get(
       `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${to}&toCurr=${from}`,
       {

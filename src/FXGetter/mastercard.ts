@@ -189,9 +189,26 @@ export default class mastercardFXM extends fxManager {
                             }
 
                             if (!cache.has(`${from}${to}`)) {
+                                const preRequest = syncRequest(
+                                    'GET',
+                                    `https://www.mastercard.us/en-us/personal/get-support/convert-currency.html`,
+                                );
+
                                 const request = syncRequest(
                                     'GET',
                                     `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${to}&crdhldBillCurr=${from}&bankFee=0&transAmt=1`,
+                                    {
+                                        headers: {
+                                            Cookie: preRequest.headers[
+                                                'set-cookie'
+                                            ]
+                                                .map(
+                                                    (cookie) =>
+                                                        cookie.split(';')[0],
+                                                )
+                                                .join('; '),
+                                        },
+                                    },
                                 );
                                 cache.set(
                                     `${from}${to}`,
@@ -241,6 +258,17 @@ export default class mastercardFXM extends fxManager {
             return this.fxRateList[from][to];
         }
 
+        const preRequest = await axios.get(
+            `https://www.mastercard.us/en-us/personal/get-support/convert-currency.html`,
+        );
+
+        console.log(preRequest.headers);
+        console.log(
+            preRequest.headers['set-cookie']
+                .map((cookie) => cookie.split(';')[0])
+                .join('; '),
+        );
+
         const req = await axios.get(
             `https://www.mastercard.us/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${to}&crdhldBillCurr=${from}&bankFee=0&transAmt=1`,
             {
@@ -248,6 +276,9 @@ export default class mastercardFXM extends fxManager {
                     'User-Agent':
                         process.env['HEADER_USER_AGENT'] ??
                         'fxrate axios/latest',
+                    Cookie: preRequest.headers['set-cookie']
+                        .map((cookie) => cookie.split(';')[0])
+                        .join('; '),
                 },
             },
         );
