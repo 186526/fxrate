@@ -3,6 +3,8 @@ name: Create and publish a Docker image
 
 # Configures this workflow to run every time a change is pushed to the branch called `release`.
 on:
+  release:
+    types: [published]
   push:
     branches:
       - release
