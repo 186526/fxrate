@@ -22,7 +22,37 @@ export default class fxManager {
     } = {} as any;
 
     public get fxRateList() {
-        return this._fxRateList;
+        const fxRateList = new Proxy(this._fxRateList, {
+            get: function (target, prop) {
+                let child = target[prop];
+
+                if (prop == 'CNY' && !('CNY' in target)) {
+                    if ('CNH' in target) {
+                        child = target['CNH'];
+                    }
+                }
+
+                if (!child) {
+                    return undefined;
+                }
+
+                return new Proxy(child, {
+                    get: function (target, prop) {
+                        let child = target[prop];
+
+                        if (prop == 'CNY' && !('CNY' in target)) {
+                            if ('CNH' in target) {
+                                child = target['CNH'];
+                            }
+                        }
+
+                        return child;
+                    },
+                });
+            },
+        });
+
+        return fxRateList;
     }
 
     public set fxRateList(value) {
@@ -71,11 +101,12 @@ export default class fxManager {
         if (from == ('RMB' as currency.RMB)) from = 'CNY' as currency.CNY;
         if (to == ('RMB' as currency.RMB)) to = 'CNY' as currency.CNY;
 
-        if (from == ('CNH' as currency.CNH) && !('CNY' in this.fxRateList))
-            from = 'CNY' as currency.CNY;
-
-        if (to == ('CNH' as currency.CNH) && !('CNY' in this.fxRateList))
-            to = 'CNY' as currency.CNY;
+        // if (from == ('CNH' as currency.CNH) || to == ('CNH' as currency.CNH)) {
+        //     const CNYFXrates = Object.assign({}, FXRate);
+        //     CNYFXrates.currency.from =  CNYFXrates.currency.from == 'CNH' ? 'CNY' as currency.CNY : CNYFXrates.currency.from;
+        //     CNYFXrates.currency.to =  CNYFXrates.currency.to == 'CNH' ? 'CNY' as currency.CNY : CNYFXrates.currency.to;
+        //     this.update(CNYFXrates);
+        // }
 
         if (this.fxRateList[from] && this.fxRateList[from][to]) {
             if (this.fxRateList[from][to].updated > FXRate.updated) return;

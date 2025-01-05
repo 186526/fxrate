@@ -51,6 +51,7 @@ export enum currency {
     CNH = 'CNH', // CNY (overseas)
     AUX = 'AUX', // Gold 995
     AUY = 'AUY', // Gold 999
+    BND = 'BND',
     unknown,
 }
 

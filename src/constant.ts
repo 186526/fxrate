@@ -9,6 +9,7 @@ export const sourceNamesInZH = {
     cmb: '招商银行',
     icbc: '中国工商银行',
     boc: '中国银行',
+    bochk: '中银香港',
     ccb: '中国建设银行',
     psbc: '邮政储蓄银行',
     bocom: '交通银行',

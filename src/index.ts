@@ -9,6 +9,7 @@ import fxmManager from './fxmManager';
 import { useBasic } from './fxmManager';
 
 import getBOCFXRatesFromBOC from './FXGetter/boc';
+import getBOCHKFxRates from './FXGetter/bochk';
 import getICBCFXRates from './FXGetter/icbc';
 import getCIBFXRates, { getCIBHuanyuFXRates } from './FXGetter/cib';
 import getCCBFXRates from './FXGetter/ccb';
@@ -36,6 +37,7 @@ import { RSSHandler } from './handler/rss';
 
 const Manager = new fxmManager({
     boc: getBOCFXRatesFromBOC,
+    bochk: getBOCHKFxRates,
     icbc: getICBCFXRates,
     cib: getCIBFXRates,
     cibHuanyu: getCIBHuanyuFXRates,

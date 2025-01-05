@@ -1,6 +1,6 @@
 {
     "name": "fxrate",
-    "version": "0.0.1-1",
+    "version": "0.0.2",
     "license": "SEE LICENSE IN LICENSE",
     "author": "Bo Xu <i@186526.xyz> (https://186526.xyz/)",
     "dependencies": {
@@ -45,7 +45,7 @@
         "postinstall": "husky",
         "format": "prettier --write \"**/*.{ts,json,md}\" ",
         "lint": "eslint \"{src,test}/**/*.ts\" --fix",
-        "build": "yarn clean && esbuild src/index.ts --entry-names=[name] --format=cjs --platform=node --bundle --outdir=dist --external:sync-request --define:\"globalThis.esBuilt=true\" --define:globalThis.GITBUILD=\\\"$(git rev-parse --short HEAD)\\\" --define:globalThis.BUILDTIME=\\\"$(date -Iseconds)\\\" && mv dist/index.js dist/index.cjs",
+        "build": "yarn clean && esbuild src/index.ts --minify --entry-names=[name] --format=cjs --platform=node --bundle --outdir=dist --external:sync-request --define:\"globalThis.esBuilt=true\" --define:globalThis.GITBUILD=\\\"$(git rev-parse --short HEAD)\\\" --define:globalThis.BUILDTIME=\\\"$(date -Iseconds)\\\" && mv dist/index.js dist/index.cjs",
         "clean": "rm -rf dist/[!readme.md]*",
         "dev": "dotenvx run -- tsx watch src/index.ts",
         "dev:production": "dotenvx run --env-file=.env.production.local --env-file=.env -- tsx watch src/index.ts",

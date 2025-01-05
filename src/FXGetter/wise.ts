@@ -39,6 +39,11 @@ const getWiseFXRates = (
         ] = response.data;
 
         for (const rate of data) {
+            rate.source =
+                rate.source === 'CNY' ? ('CNH' as currency.CNH) : rate.source;
+            rate.target =
+                rate.target === 'CNY' ? ('CNH' as currency.CNH) : rate.target;
+
             rates.push({
                 currency: {
                     from: rate.source as currency.unknown,
