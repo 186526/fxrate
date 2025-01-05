@@ -61434,7 +61434,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"825244b"} ${"2025-01-05T15:47:13+08:00"}`,
+          version: `fxrate@${"1ae8e4d"} ${"2025-01-05T15:49:29+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
