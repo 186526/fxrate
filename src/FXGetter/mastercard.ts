@@ -292,6 +292,7 @@ export default class mastercardFXM extends fxManager {
     constructor() {
         super([]);
     }
+
     public update(): void {
         throw new Error('Method is deprecated');
     }

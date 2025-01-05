@@ -304,6 +304,7 @@ export default class visaFXM extends fxManager {
     constructor() {
         super([]);
     }
+
     public update(): void {
         throw new Error('Method is deprecated');
     }

@@ -61434,7 +61434,7 @@ var fxmManager = class extends JSONRPCRouter {
         rep.body = JSON.stringify({
           status: "ok",
           sources: Object.keys(this.fxms),
-          version: `fxrate@${"a3d5911"} ${"2025-01-05T04:30:38+08:00"}`,
+          version: `fxrate@${"825244b"} ${"2025-01-05T15:47:13+08:00"}`,
           apiVersion: "v1",
           environment: import_node_process.default.env.NODE_ENV || "development"
         });
@@ -78834,7 +78834,7 @@ var bocom_default = getBOCOMFXRates;
 // src/FXGetter/ncb.cn.ts
 function parseYYYYMMDDHHmmss(dateStr) {
   const year = dateStr.substring(0, 4);
-  const month = dateStr.substring(4, 6) - 1;
+  const month = dateStr.substring(4, 6);
   const day = dateStr.substring(6, 8);
   const hour = dateStr.substring(8, 10);
   const minute = dateStr.substring(10, 12);
