@@ -21,6 +21,7 @@ export const sourceNamesInZH = {
     'citic.cn': '中信银行',
     spdb: '浦发银行',
     'ncb.cn': '南洋商业银行（中国）',
+    'ncb.hk': '南洋商业银行（香港）',
     xib: '厦门国际银行',
     pab: '平安银行',
     ceb: '中国光大银行',

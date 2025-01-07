@@ -44,6 +44,7 @@ const currenciesList: string[] = [
     'XPF',
     'CLP',
     'CNY',
+    'CNH',
     'COP',
     'KMF',
     'CDF',
@@ -171,8 +172,12 @@ export default class mastercardFXM extends fxManager {
         const fxRateList: fxManager['_fxRateList'] = {} as any;
 
         currenciesList.forEach((from) => {
+            const _from = from == 'CNH' ? 'CNY' : from;
+
             fxRateList[from] = {} as any;
             currenciesList.forEach((to) => {
+                const _to = to == 'CNH' ? 'CNY' : to;
+
                 const currency = new Proxy(
                     {},
                     {
@@ -188,10 +193,10 @@ export default class mastercardFXM extends fxManager {
                                 return undefined;
                             }
 
-                            if (!cache.has(`${from}${to}`)) {
+                            if (!cache.has(`${_from}${_to}`)) {
                                 const request = syncRequest(
                                     'GET',
-                                    `https://www.mastercard.co.uk/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${to}&crdhldBillCurr=${from}&bankFee=0&transAmt=1`,
+                                    `https://www.mastercard.co.uk/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${_to}&crdhldBillCurr=${_from}&bankFee=0&transAmt=1`,
                                     {
                                         headers: {
                                             'user-agent':
@@ -202,7 +207,7 @@ export default class mastercardFXM extends fxManager {
                                     },
                                 );
                                 cache.set(
-                                    `${from}${to}`,
+                                    `${_from}${_to}`,
                                     request.getBody().toString(),
                                 );
                             }
@@ -213,7 +218,7 @@ export default class mastercardFXM extends fxManager {
                                 )
                             ) {
                                 const data = JSON.parse(
-                                    cache.get(`${from}${to}`),
+                                    cache.get(`${_from}${_to}`),
                                 );
                                 return divide(
                                     fraction(data.data.transAmt),
@@ -221,7 +226,7 @@ export default class mastercardFXM extends fxManager {
                                 );
                             } else {
                                 const data = JSON.parse(
-                                    cache.get(`${from}${to}`),
+                                    cache.get(`${_from}${_to}`),
                                 );
                                 return new Date(data.data.fxDate);
                             }
@@ -236,6 +241,9 @@ export default class mastercardFXM extends fxManager {
     }
 
     public async getfxRateList(from: currency, to: currency) {
+        const _from = from == 'CNH' ? 'CNY' : from;
+        const _to = to == 'CNH' ? 'CNY' : to;
+
         if (
             !(
                 currenciesList.includes(from as string) &&
@@ -245,12 +253,12 @@ export default class mastercardFXM extends fxManager {
             throw new Error('Currency not supported');
         }
 
-        if (cache.has(`${from}${to}`)) {
+        if (cache.has(`${_from}${_to}`)) {
             return this.fxRateList[from][to];
         }
 
         const req = await axios.get(
-            `https://www.mastercard.co.uk/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${to}&crdhldBillCurr=${from}&bankFee=0&transAmt=1`,
+            `https://www.mastercard.co.uk/settlement/currencyrate/conversion-rate?fxDate=0000-00-00&transCurr=${_to}&crdhldBillCurr=${_from}&bankFee=0&transAmt=1`,
             {
                 headers: {
                     'User-Agent':
@@ -261,7 +269,7 @@ export default class mastercardFXM extends fxManager {
         );
 
         const data = req.data;
-        cache.set(`${from}${to}`, JSON.stringify(data));
+        cache.set(`${_from}${_to}`, JSON.stringify(data));
 
         return this.fxRateList[from][to];
     }

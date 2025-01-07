@@ -63,6 +63,7 @@ const currenciesList: string[] = [
     'CHF',
     'CLP',
     'CNY',
+    'CNH',
     'COP',
     'CRC',
     'CVE',
@@ -211,6 +212,9 @@ export default class visaFXM extends fxManager {
         currenciesList.forEach((from) => {
             fxRateList[from] = {} as any;
             currenciesList.forEach((to) => {
+                const _from = from == 'CNH' ? 'CNY' : from;
+                const _to = to == 'CNH' ? 'CNY' : to;
+
                 const currency = new Proxy(
                     {},
                     {
@@ -230,16 +234,16 @@ export default class visaFXM extends fxManager {
                                 .utc()
                                 .format('MM/DD/YYYY');
 
-                            if (!cache.has(`${from}${to}`)) {
+                            if (!cache.has(`${_from}${_to}`)) {
                                 const request = syncRequest(
                                     'GET',
-                                    `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${to}&toCurr=${from}`,
+                                    `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${_to}&toCurr=${_from}`,
                                     {
                                         headers,
                                     },
                                 );
                                 cache.set(
-                                    `${from}${to}`,
+                                    `${_from}${_to}`,
                                     request.getBody().toString(),
                                 );
                             }
@@ -250,12 +254,12 @@ export default class visaFXM extends fxManager {
                                 )
                             ) {
                                 const data = JSON.parse(
-                                    cache.get(`${from}${to}`),
+                                    cache.get(`${_from}${_to}`),
                                 );
                                 return fraction(data.originalValues.fxRateVisa);
                             } else {
                                 const data = JSON.parse(
-                                    cache.get(`${from}${to}`),
+                                    cache.get(`${_from}${_to}`),
                                 );
                                 return new Date(
                                     data.originalValues.lastUpdatedVisaRate *
@@ -273,6 +277,9 @@ export default class visaFXM extends fxManager {
     }
 
     public async getfxRateList(from: currency, to: currency) {
+        const _from = from == 'CNH' ? 'CNY' : from;
+        const _to = to == 'CNH' ? 'CNY' : to;
+
         if (
             !(
                 currenciesList.includes(from as string) &&
@@ -282,21 +289,21 @@ export default class visaFXM extends fxManager {
             throw new Error('Currency not supported');
         }
 
-        if (cache.has(`${from}${to}`)) {
+        if (cache.has(`${_from}${_to}`)) {
             return this.fxRateList[from][to];
         }
 
         const dateString = dayjs().utc().format('MM/DD/YYYY');
 
         const req = await axios.get(
-            `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${to}&toCurr=${from}`,
+            `https://usa.visa.com/cmsapi/fx/rates?amount=1&fee=0&utcConvertedDate=${dateString}&exchangedate=${dateString}&fromCurr=${_to}&toCurr=${_from}`,
             {
                 headers,
             },
         );
 
         const data = req.data;
-        cache.set(`${from}${to}`, JSON.stringify(data));
+        cache.set(`${_from}${_to}`, JSON.stringify(data));
 
         return this.fxRateList[from][to];
     }

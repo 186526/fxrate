@@ -27,6 +27,7 @@ import getHSBCAUFXRates from './FXGetter/hsbc.au';
 import getCITICCNFXRates from './FXGetter/citic.cn';
 import getSPDBFXRates from './FXGetter/spdb';
 import getNCBCNFXRates from './FXGetter/ncb.cn';
+import getNCBHKFXRates from './FXGetter/ncb.hk';
 import getXIBFXRates from './FXGetter/xib';
 import getPABFXRates from './FXGetter/pab';
 import getCEBFXRates from './FXGetter/ceb';
@@ -54,6 +55,7 @@ const Manager = new fxmManager({
     'hsbc.au': getHSBCAUFXRates,
     'citic.cn': getCITICCNFXRates,
     'ncb.cn': getNCBCNFXRates,
+    'ncb.hk': getNCBHKFXRates,
     spdb: getSPDBFXRates,
     xib: getXIBFXRates,
     pab: getPABFXRates,
