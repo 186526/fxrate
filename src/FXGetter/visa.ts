@@ -15,6 +15,8 @@ dayjs.extend(utc);
 
 const cache = new LRUCache<string, string>({
     max: 500,
+    ttl: 1000 * 60 * 30,
+    ttlAutopurge: true,
 });
 
 const headers = {
