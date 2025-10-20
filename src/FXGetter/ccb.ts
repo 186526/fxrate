@@ -2,6 +2,21 @@ import { XMLParser } from 'fast-xml-parser';
 import { FXRate, currency } from 'src/types';
 import axios from 'axios';
 
+import crypto from 'crypto';
+import https from 'https';
+
+/**
+ * Handle this problem with Node 18
+ * write EPROTO B8150000:error:0A000152:SSL routines:final_renegotiate:unsafe legacy renegotiation disabled
+ * **/
+const allowLegacyRenegotiationforNodeJsOptions = {
+    httpsAgent: new https.Agent({
+        // allow sb CCB to use legacy renegotiation
+        // 💩 CCB
+        secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
+    }),
+};
+
 const parser = new XMLParser();
 
 const currencyMap = {
@@ -25,12 +40,22 @@ const currencyMap = {
     '458': { name: 'MYR' as currency.MYR },
     '643': { name: 'RUB' as currency.RUB },
     '398': { name: 'KZT' as currency.KZT },
+    '784': { name: 'AED' as currency.AED },
+    '682': { name: 'SAR' as currency.SAR },
+    '348': { name: 'HUF' as currency.HUF },
+    '484': { name: 'MXN' as currency.MXN },
+    '985': { name: 'PLN' as currency.PLN },
+    '949': { name: 'TRY' as currency.TRY },
+    '203': { name: 'CZK' as currency.CZK },
+    '376': { name: 'ILS' as currency.ILS },
+    '496': { name: 'MNT' as currency.MNT },
 };
 
 const getCCBFXRates = async (): Promise<FXRate[]> => {
     const req = await axios.get(
-        'http://www.ccb.com/cn/home/news/jshckpj_new.xml',
+        'https://www.ccb.com/cn/home/news/jshckpj_new.xml',
         {
+            ...allowLegacyRenegotiationforNodeJsOptions,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -40,7 +65,15 @@ const getCCBFXRates = async (): Promise<FXRate[]> => {
     const settlements = parser.parse(req.data)['ReferencePriceSettlements'][
         'ReferencePriceSettlement'
     ];
+
     const result = settlements.map((data: any) => {
+        if (!(data['Ofrd_Ccy_CcyCd'] in currencyMap)) {
+            console.log(
+                `[${new Date().toUTCString()}] [CCB] Unsupported currency code ${data['Ofrd_Ccy_CcyCd']}, skipped.`,
+            );
+            return null;
+        }
+
         return {
             currency: {
                 from: currencyMap[data['Ofrd_Ccy_CcyCd']].name,
