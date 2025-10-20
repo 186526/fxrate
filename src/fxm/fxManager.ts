@@ -93,6 +93,8 @@ export default class fxManager {
     }
 
     public update(FXRate: FXRate): void {
+        if (FXRate === null) return;
+
         const { currency, unit } = FXRate;
         let { rate } = FXRate;
 
@@ -100,13 +102,6 @@ export default class fxManager {
 
         if (from == ('RMB' as currency.RMB)) from = 'CNY' as currency.CNY;
         if (to == ('RMB' as currency.RMB)) to = 'CNY' as currency.CNY;
-
-        // if (from == ('CNH' as currency.CNH) || to == ('CNH' as currency.CNH)) {
-        //     const CNYFXrates = Object.assign({}, FXRate);
-        //     CNYFXrates.currency.from =  CNYFXrates.currency.from == 'CNH' ? 'CNY' as currency.CNY : CNYFXrates.currency.from;
-        //     CNYFXrates.currency.to =  CNYFXrates.currency.to == 'CNH' ? 'CNY' as currency.CNY : CNYFXrates.currency.to;
-        //     this.update(CNYFXrates);
-        // }
 
         if (this.fxRateList[from] && this.fxRateList[from][to]) {
             if (this.fxRateList[from][to].updated > FXRate.updated) return;

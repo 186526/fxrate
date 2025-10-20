@@ -15,37 +15,48 @@ const getHSBCHKFXRates = async (): Promise<FXRate[]> => {
 
     const data = req.data.detailRates;
 
-    const answer: FXRate[] = data.map((k) => {
-        const answer: FXRate = {
-            currency: {
-                from: k.ccy as currency.unknown,
-                to: 'HKD' as currency.HKD,
-            },
-            rate: {
-                buy: {},
-                sell: {},
-            },
-            updated: new Date(k.lastUpdateDate),
-            unit: 1,
-        };
+    const answers: FXRate[] = data
+        .map((k) => {
+            const answer: FXRate = {
+                currency: {
+                    from: k.ccy as currency.unknown,
+                    to: 'HKD' as currency.HKD,
+                },
+                rate: {
+                    buy: {},
+                    sell: {},
+                },
+                updated: new Date(k.lastUpdateDate),
+                unit: 1,
+            };
 
-        if (k.ttBuyRt) answer.rate.buy.remit = parseFloat(k.ttBuyRt);
-        if (k.bankBuyRt) answer.rate.buy.cash = parseFloat(k.bankBuyRt);
-        if (k.ttSelRt) answer.rate.sell.remit = parseFloat(k.ttSelRt);
-        if (k.bankSellRt) answer.rate.sell.cash = parseFloat(k.bankSellRt);
+            if (k.ttBuyRt) answer.rate.buy.remit = parseFloat(k.ttBuyRt);
+            if (k.bankBuyRt) answer.rate.buy.cash = parseFloat(k.bankBuyRt);
+            if (k.ttSelRt) answer.rate.sell.remit = parseFloat(k.ttSelRt);
+            if (k.bankSellRt) answer.rate.sell.cash = parseFloat(k.bankSellRt);
 
-        return answer;
-    });
+            if (answer.currency.from == 'CNY') {
+                const CNHAnswer: FXRate = {
+                    ...answer,
+                    currency: {
+                        ...answer.currency,
+                        from: 'CNH' as currency.CNH,
+                    },
+                    rate: {
+                        buy: { ...answer.rate.buy },
+                        sell: { ...answer.rate.sell },
+                    },
+                };
 
-    answer.push(
-        ((answer) => {
-            const tmp = answer.find((k) => k.currency.from === 'CNY');
-            tmp.currency.from = 'CNH' as currency.CNH;
-            return tmp;
-        })(answer),
-    );
+                console.log(answer, CNHAnswer);
 
-    return answer;
+                return [answer, CNHAnswer];
+            } else return answer;
+        })
+        .flat()
+        .sort();
+
+    return answers;
 };
 
 export default getHSBCHKFXRates;
