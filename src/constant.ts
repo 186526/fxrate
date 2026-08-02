@@ -25,4 +25,5 @@ export const sourceNamesInZH = {
     xib: '厦门国际银行',
     pab: '平安银行',
     ceb: '中国光大银行',
+    ecb: '欧洲央行',
 };

@@ -3,7 +3,8 @@ import { fraction } from 'mathjs';
 
 import { LRUCache } from 'lru-cache';
 import { currency } from 'src/types.d';
-import { existsSync } from 'node:fs';
+
+import { fetchTextViaChromium } from './chromiumFetcher';
 
 const cache = new LRUCache<string, string>({
     max: 500,
@@ -193,70 +194,6 @@ type VisaPayload = {
     };
 };
 
-// headless chromium 直连（Cloudflare 拦非浏览器客户端时启用）。
-// 动态 import：没有安装 playwright-core / chromium 的环境（如 Vercel serverless）降级走 fetch。
-type ChromiumPage = {
-    goto: (
-        url: string,
-        opts: object,
-    ) => Promise<{ status: () => number } | null>;
-    evaluate: <T>(fn: () => T) => Promise<T>;
-};
-type ChromiumBrowser = {
-    newContext: (opts: object) => Promise<{
-        newPage: () => Promise<ChromiumPage>;
-    }>;
-    close: () => Promise<void>;
-};
-let chromiumLauncher:
-    | (() => Promise<{ launch: (opts: object) => Promise<ChromiumBrowser> }>)
-    | null = null;
-let chromiumInitError: Error | null = null;
-async function getChromium() {
-    if (chromiumInitError) throw chromiumInitError;
-    if (!chromiumLauncher) {
-        try {
-            const mod = await import('playwright-core');
-            chromiumLauncher = () =>
-                Promise.resolve({
-                    launch: async (opts: object) => {
-                        const browser = await (
-                            mod as unknown as {
-                                chromium: {
-                                    launch: (
-                                        o: object,
-                                    ) => Promise<ChromiumBrowser>;
-                                };
-                            }
-                        ).chromium.launch(opts);
-                        return browser;
-                    },
-                });
-        } catch (e) {
-            chromiumInitError = new Error(
-                `playwright-core not available: ${(e as Error).message}`,
-            );
-            throw chromiumInitError;
-        }
-    }
-    return chromiumLauncher();
-}
-
-// 常见 chromium 可执行文件路径（本地 / Docker 部署）。
-function chromiumExecutable(): string | undefined {
-    if (process.env.CHROMIUM_PATH) return process.env.CHROMIUM_PATH;
-    const candidates = [
-        '/usr/bin/chromium',
-        '/usr/bin/chromium-browser',
-        '/usr/bin/google-chrome',
-        '/home/real186/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome',
-    ];
-    for (const p of candidates) {
-        if (existsSync(p)) return p;
-    }
-    return undefined;
-}
-
 function formatApiDate(d: Date): string {
     const m = String(d.getUTCMonth() + 1).padStart(2, '0');
     const day = String(d.getUTCDate()).padStart(2, '0');
@@ -313,62 +250,24 @@ async function fetchVisaRateViaChromium(
     from: string,
     to: string,
 ): Promise<VisaPayload> {
-    const executablePath = chromiumExecutable();
-    if (!executablePath) {
-        throw new Error('chromium executable not found');
-    }
-    const launcher = await getChromium();
-
-    const browser = await launcher.launch({
-        executablePath,
-        headless: true,
-        args: ['--no-sandbox', '--disable-blink-features=AutomationControlled'],
-    });
-    try {
-        // 必须用非 headless 标识的 UA：Cloudflare 会拦截 Playwright 默认的
-        // "HeadlessChrome" UA（实测 403），newContext 设置 UA 才能改网络层请求头。
-        const context = await browser.newContext({
-            userAgent:
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
-                '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        });
-        const page = await context.newPage();
-
-        for (let offset = 0; offset < 7; offset++) {
-            const date = new Date();
-            date.setUTCDate(date.getUTCDate() - offset);
-            const d = formatApiDate(date);
-            const url =
-                `${VISA_API_BASE}?amount=1&fee=0` +
+    const urls: string[] = [];
+    for (let offset = 0; offset < 7; offset++) {
+        const date = new Date();
+        date.setUTCDate(date.getUTCDate() - offset);
+        const d = formatApiDate(date);
+        urls.push(
+            `${VISA_API_BASE}?amount=1&fee=0` +
                 `&utcConvertedDate=${d}&exchangedate=${d}` +
-                `&fromCurr=${to}&toCurr=${from}`;
-
-            const resp = await page.goto(url, {
-                waitUntil: 'domcontentloaded',
-                timeout: 45000,
-            });
-            const status = resp?.status() ?? 0;
-            const text = await page.evaluate(() => document.body.innerText);
-            if (status === 200) {
-                const payload = JSON.parse(text) as VisaPayload;
-                if (!payload.originalValues?.fxRateVisa) {
-                    throw new Error(
-                        `Visa response missing fxRateVisa for ${from}/${to}`,
-                    );
-                }
-                return payload;
-            }
-            if (status === 400) continue;
-            throw new Error(
-                `Visa API ${status} via chromium for ${from}/${to} (${d})`,
-            );
-        }
-        throw new Error(
-            `Visa no published rate in last 7 days for ${from}/${to} (chromium)`,
+                `&fromCurr=${to}&toCurr=${from}`,
         );
-    } finally {
-        await browser.close();
     }
+
+    const text = await fetchTextViaChromium(urls);
+    const payload = JSON.parse(text) as VisaPayload;
+    if (!payload.originalValues?.fxRateVisa) {
+        throw new Error(`Visa response missing fxRateVisa for ${from}/${to}`);
+    }
+    return payload;
 }
 
 export default class visaFXM extends fxManager {
