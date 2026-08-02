@@ -1,0 +1,30 @@
+# Type-check and lint gate for the fxrate backend.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  typecheck-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      # package.json's lint script passes --fix; CI must not modify files.
+      - name: Lint
+        run: npx eslint "{src,test}/**/*.ts"
