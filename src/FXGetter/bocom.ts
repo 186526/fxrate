@@ -3,9 +3,9 @@ import axios from 'axios';
 import crypto from 'crypto';
 import https from 'https';
 
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 
-import { currency, FXRate } from 'src/types';
+import { currency, FXRate } from 'src/types.d';
 
 /**
  * Handle this problem with Node 18
@@ -20,10 +20,13 @@ const allowLegacyRenegotiationforNodeJsOptions = {
 };
 
 const getBOCOMFXRates = async (): Promise<FXRate[]> => {
+    // HTTPS endpoint fails with `unsafe legacy renegotiation disabled` TLS error,
+    // even with SSL_OP_LEGACY_SERVER_CONNECT; upstream only serves HTTP.
     const req = await axios.get(
         'http://www.bankcomm.com/SITE/queryExchangeResult.do',
         {
             ...allowLegacyRenegotiationforNodeJsOptions,
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -59,6 +62,9 @@ const getBOCOMFXRates = async (): Promise<FXRate[]> => {
                 unit: parseInt($($(el).children()[1]).text()),
                 updated: updatedTime,
             };
+
+            result.rate.buy ??= {};
+            result.rate.sell ??= {};
 
             if ($($(el).children()[2]).text() !== '-')
                 result.rate.buy.remit = parseFloat(

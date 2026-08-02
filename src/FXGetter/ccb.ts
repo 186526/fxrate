@@ -1,9 +1,20 @@
 import { XMLParser } from 'fast-xml-parser';
-import { FXRate, currency } from 'src/types';
+import { FXRate, currency } from 'src/types.d';
 import axios from 'axios';
 
 import crypto from 'crypto';
 import https from 'https';
+
+interface ccbSettlementItem {
+    Ofrd_Ccy_CcyCd: string;
+    BidRateOfCash: number;
+    BidRateOfCcy: number;
+    OfrRateOfCash: number;
+    OfrRateOfCcy: number;
+    Mdl_ExRt_Prc: number;
+    LstPr_Dt: number;
+    LstPr_Tm: number;
+}
 
 /**
  * Handle this problem with Node 18
@@ -19,7 +30,7 @@ const allowLegacyRenegotiationforNodeJsOptions = {
 
 const parser = new XMLParser();
 
-const currencyMap = {
+const currencyMap: { [key: string]: { name: currency } } = {
     '840': { name: 'USD' as currency.USD },
     '978': { name: 'EUR' as currency.EUR },
     '826': { name: 'GBP' as currency.GBP },
@@ -56,6 +67,7 @@ const getCCBFXRates = async (): Promise<FXRate[]> => {
         'https://www.ccb.com/cn/home/news/jshckpj_new.xml',
         {
             ...allowLegacyRenegotiationforNodeJsOptions,
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -66,7 +78,7 @@ const getCCBFXRates = async (): Promise<FXRate[]> => {
         'ReferencePriceSettlement'
     ];
 
-    const result = settlements.map((data: any) => {
+    const result = settlements.map((data: ccbSettlementItem) => {
         if (!(data['Ofrd_Ccy_CcyCd'] in currencyMap)) {
             console.log(
                 `[${new Date().toUTCString()}] [CCB] Unsupported currency code ${data['Ofrd_Ccy_CcyCd']}, skipped.`,
@@ -90,6 +102,8 @@ const getCCBFXRates = async (): Promise<FXRate[]> => {
                 },
                 middle: data['Mdl_ExRt_Prc'],
             },
+            // CCB's ReferencePriceSettlement quotes every currency per 1 unit
+            // (verified: JPY Mdl_ExRt_Prc=0.042804, KRW=0.004685), so unit stays 1.
             unit: 1,
             updated: new Date(
                 ((date: number, time: number) => {

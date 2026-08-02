@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { currency, FXRate } from 'src/types';
+import { currency, FXRate } from 'src/types.d';
 
 interface citicBankResponse {
     quotePriceDate: string;
@@ -8,19 +8,12 @@ interface citicBankResponse {
     curName: string;
     curCode: string;
 
-    totalPidPrice: string;
-    totalSellPrice: string;
-
+    // 2026-08 实测：API 仅返回以下两个价格字段，无现金价（cstpur*）与中间价（midPrice）。
     cstexcBuyPrice: string;
     cstexcSellPrice: string;
-
-    cstpurBuyPrice: string;
-    cstpurSellPrice: string;
-
-    midPrice: string;
 }
 
-const currencyMap = {
+const currencyMap: Record<string, currency> = {
     '027001': 'JPY' as currency.JPY,
     '012001': 'GBP' as currency.GBP,
     '023001': 'NOK' as currency.NOK,
@@ -45,6 +38,7 @@ const getCITICCNFXRates = async (): Promise<FXRate[]> => {
     const req = await axios.get(
         `https://etrade.citicbank.com/portalweb/cms/getForeignExchRate.htm?callback=JSON.stringify`,
         {
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -52,8 +46,10 @@ const getCITICCNFXRates = async (): Promise<FXRate[]> => {
         },
     );
 
-    const data: citicBankResponse[] = JSON.parse([eval][0](req.data)).content
-        .resultList;
+    // Response is JSONP wrapped (callback=JSON.stringify): `JSON.stringify({...})`.
+    // Unwrap the object literal between the first '(' and the last ')' before parsing.
+    const jsonpData = req.data.replace(/^[^(]*\(/, '').replace(/\)\s*$/, '');
+    const data: citicBankResponse[] = JSON.parse(jsonpData).content.resultList;
 
     const answer: FXRate[] = [];
 
@@ -62,6 +58,9 @@ const getCITICCNFXRates = async (): Promise<FXRate[]> => {
             return;
         }
 
+        const buyPrice = parseFloat(k.cstexcBuyPrice);
+        const sellPrice = parseFloat(k.cstexcSellPrice);
+
         answer.push({
             currency: {
                 from: currencyMap[k.curCode] as currency.unknown,
@@ -69,14 +68,18 @@ const getCITICCNFXRates = async (): Promise<FXRate[]> => {
             },
             rate: {
                 buy: {
-                    remit: parseFloat(k.cstexcBuyPrice),
-                    cash: parseFloat(k.cstexcBuyPrice),
+                    remit: buyPrice,
+                    cash: buyPrice,
                 },
                 sell: {
-                    cash: parseFloat(k.cstexcSellPrice),
-                    remit: parseFloat(k.cstexcSellPrice),
+                    cash: sellPrice,
+                    remit: sellPrice,
                 },
-                middle: parseFloat(k.midPrice),
+                // API 不返回 midPrice 字段（2026-08 实测），用买卖均价估算中间价。
+                middle:
+                    Number.isFinite(buyPrice) && Number.isFinite(sellPrice)
+                        ? (buyPrice + sellPrice) / 2
+                        : NaN,
             },
             unit: 100,
             updated: new Date(

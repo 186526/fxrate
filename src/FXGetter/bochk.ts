@@ -1,9 +1,9 @@
 import axios from 'axios';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 
 import { currency, FXRate } from 'src/types.d';
 
-const currencyMapping = {
+const currencyMapping: Record<string, currency> = {
     '人民幣(在岸)': currency.CNY,
     人民幣: currency.CNY,
     '人民幣(離岸)': currency.CNH,
@@ -42,9 +42,16 @@ const getBOCHKFxRatesBasis = async (
         updatedDate: Date;
     };
 }> => {
-    const answer = {};
+    const answer: {
+        [currency: string]: {
+            buy: number;
+            sell: number;
+            updatedDate: Date;
+        };
+    } = {};
 
     const res = await axios.get(link, {
+        timeout: 10000,
         headers: {
             'User-Agent':
                 process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -71,11 +78,11 @@ const getBOCHKFxRatesBasis = async (
                     const e = $(el);
                     const zhName = e.find('td:nth-child(1)').text().trim();
 
-                    if (!currencyMapping[zhName]) {
+                    const enName = currencyMapping[zhName];
+                    if (!enName) {
                         console.error('Unknown currency:', zhName);
+                        return;
                     }
-
-                    const enName = currencyMapping[zhName] || 'unknown';
 
                     const Buy = e.find('td:nth-child(2)').text().trim();
                     const Sell = e.find('td:nth-child(3)').text().trim();
@@ -144,6 +151,9 @@ export const getBOCHKFxRates = async (): Promise<FXRate[]> => {
                 },
                 unit: 1,
             };
+
+            answer.rate.buy ??= {};
+            answer.rate.sell ??= {};
 
             if (cash) {
                 answer.rate.buy.cash = cash.buy;

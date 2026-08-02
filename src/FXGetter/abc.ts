@@ -3,7 +3,16 @@ import axios from 'axios';
 import crypto from 'crypto';
 import https from 'https';
 
-import { currency, FXRate } from 'src/types';
+import { currency, FXRate } from 'src/types.d';
+
+interface abcRateItem {
+    CurrId: string;
+    BuyingPrice: string;
+    CashBuyingPrice: string;
+    SellPrice: string;
+    BenchMarkPrice: string;
+    PublishTime: string;
+}
 
 /**
  * Handle this problem with Node 18
@@ -17,7 +26,7 @@ const allowLegacyRenegotiationforNodeJsOptions = {
     }),
 };
 
-const currencyMap = {
+const currencyMap: { [key: string]: { name: currency } } = {
     '14': { name: 'USD' as currency.USD },
     '13': { name: 'HKD' as currency.HKD },
     '38': { name: 'EUR' as currency.EUR },
@@ -49,6 +58,7 @@ const getABCFXRates = async (): Promise<FXRate[]> => {
         'https://ewealth.abchina.com/app/data/api/DataService/ExchangeRateV2',
         {
             ...allowLegacyRenegotiationforNodeJsOptions,
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -59,10 +69,13 @@ const getABCFXRates = async (): Promise<FXRate[]> => {
     const data = req.data.Data.Table;
 
     return data
-        .map((d: any) => {
+        .map((d: abcRateItem) => {
+            const curr = currencyMap[d.CurrId];
+            if (!curr) return null;
+
             return {
                 currency: {
-                    from: currencyMap[d.CurrId].name,
+                    from: curr.name,
                     to: 'CNY' as currency.CNY,
                 },
                 rate: {
@@ -80,6 +93,7 @@ const getABCFXRates = async (): Promise<FXRate[]> => {
                 unit: 100,
             } as FXRate;
         })
+        .filter((d): d is FXRate => d !== null)
         .sort();
 };
 

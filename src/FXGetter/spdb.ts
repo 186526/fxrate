@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 
-import { currency, FXRate } from 'src/types';
+import { currency, FXRate } from 'src/types.d';
 
 import crypto from 'crypto';
 import https from 'https';
@@ -31,6 +31,7 @@ const getSPDBFXRates = async (): Promise<FXRate[]> => {
         },
         {
             ...allowLegacyRenegotiationforNodeJsOptions,
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -44,7 +45,9 @@ const getSPDBFXRates = async (): Promise<FXRate[]> => {
         .map((d) => {
             if (!d.CurrencyName) return null; // means that currency not visible globally (secret for SPDB)
 
+            // CurrencyName looks like '美元 USD' — take the code after the space.
             const fromCurrency = d.CurrencyName.split(' ')[1] as currency;
+            if (!fromCurrency) return null;
 
             return {
                 currency: {
@@ -68,19 +71,18 @@ const getSPDBFXRates = async (): Promise<FXRate[]> => {
                 unit: parseInt(d.ExgRtUnt),
             } as FXRate;
         })
-        .sort();
+        .filter((d): d is FXRate => d !== null);
 };
 
 const getSPDBFXRatesByOldHTML = async (): Promise<FXRate[]> => {
     const req = await axios.get('https://www.spdb.com.cn/wh_pj/index.shtml', {
         ...allowLegacyRenegotiationforNodeJsOptions,
+        timeout: 10000,
         headers: {
             'User-Agent':
                 process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
         },
     });
-
-    console.log(req.data);
 
     const $ = cheerio.load(req.data);
 
@@ -89,10 +91,12 @@ const getSPDBFXRatesByOldHTML = async (): Promise<FXRate[]> => {
     return $('.table04 > tbody > tr')
         .toArray()
         .map((el) => {
-            const toCurrency = $($(el).children()[0])
-                .text()
+            // first cell looks like '美元 USD' — take the code after the space.
+            const currencyName = $($(el).children()[0]).text();
+            const toCurrency = currencyName
                 .split(' ')[1]
-                .replace('\n', '') as currency;
+                ?.replace('\n', '') as currency;
+            if (!toCurrency) return null;
 
             const result: FXRate = {
                 currency: {
@@ -106,6 +110,8 @@ const getSPDBFXRatesByOldHTML = async (): Promise<FXRate[]> => {
                         remit: parseFloat($($(el).children()[2]).text()),
                     },
                     sell: {
+                        // The current SPDB page has a single 卖出价 column
+                        // (children[4]); cash and remit share the same offer.
                         cash: parseFloat($($(el).children()[4]).text()),
                         remit: parseFloat($($(el).children()[4]).text()),
                     },
@@ -117,7 +123,7 @@ const getSPDBFXRatesByOldHTML = async (): Promise<FXRate[]> => {
             };
             return result;
         })
-        .sort();
+        .filter((d): d is FXRate => d !== null);
 };
 
 export default getSPDBFXRates;

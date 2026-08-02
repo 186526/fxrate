@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { FXRate, currency } from 'src/types';
-import cheerio from 'cheerio';
+import { FXRate, currency } from 'src/types.d';
+import * as cheerio from 'cheerio';
 
 import crypto from 'crypto';
 import https from 'https';
@@ -15,6 +15,10 @@ import {
     min,
     Fraction,
 } from 'mathjs';
+
+interface cibRowItem {
+    cell: string[];
+}
 
 /**
  * Handle this problem with Node 18
@@ -48,7 +52,7 @@ const getCIBFXRates = async (): Promise<FXRate[]> => {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
                 Cookie: resHTML.headers['set-cookie']
-                    .map((cookie) => cookie.split(';')[0])
+                    ?.map((cookie) => cookie.split(';')[0])
                     .join('; '),
             },
         },
@@ -75,25 +79,25 @@ const getCIBFXRates = async (): Promise<FXRate[]> => {
             .join(' ') + ' UTC+8',
     );
 
-    res.data.rows.forEach((row) => {
-        row = row.cell;
+    res.data.rows.forEach((row: cibRowItem) => {
+        const cells = row.cell;
         const FXRate = {
             currency: {
-                from: row[1] as currency.unknown,
+                from: cells[1] as unknown as currency.unknown,
                 to: 'CNY' as currency.CNY,
             },
-            unit: parseFloat(row[2]) as number,
+            unit: parseFloat(cells[2]) as number,
             updated: updateTime,
             rate: {
                 buy: {
-                    remit: parseFloat(row[3]) as number,
-                    cash: parseFloat(row[5]) as number,
+                    remit: parseFloat(cells[3]) as number,
+                    cash: parseFloat(cells[5]) as number,
                 },
                 sell: {
-                    remit: parseFloat(row[4]) as number,
-                    cash: parseFloat(row[6]) as number,
+                    remit: parseFloat(cells[4]) as number,
+                    cash: parseFloat(cells[6]) as number,
                 },
-                middle: undefined as number,
+                middle: undefined as unknown as number,
             },
         };
         FXRate.rate.middle =
@@ -119,6 +123,8 @@ const getCIBHuanyuFXRates = async (): Promise<FXRate[]> => {
     return origin
         .map((rate) => {
             const originRate = JSON.parse(JSON.stringify(rate.rate));
+            rate.rate.buy ??= {};
+            rate.rate.sell ??= {};
             rate.rate.buy.remit = promotePrice(
                 originRate.buy.remit as number,
                 originRate.sell.remit as number,

@@ -1,11 +1,21 @@
 import axios from 'axios';
 
-import { currency, FXRate } from 'src/types';
+import { currency, FXRate } from 'src/types.d';
+
+interface hsbcHkRateItem {
+    ccy: string;
+    lastUpdateDate: string;
+    ttBuyRt?: string;
+    bankBuyRt?: string;
+    ttSelRt?: string;
+    bankSellRt?: string;
+}
 
 const getHSBCHKFXRates = async (): Promise<FXRate[]> => {
     const req = await axios.get(
         `https://rbwm-api.hsbc.com.hk/digital-pws-tools-investments-eapi-prod-proxy/v1/investments/exchange-rate?locale=en_HK`,
         {
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -16,10 +26,10 @@ const getHSBCHKFXRates = async (): Promise<FXRate[]> => {
     const data = req.data.detailRates;
 
     const answers: FXRate[] = data
-        .map((k) => {
+        .map((k: hsbcHkRateItem) => {
             const answer: FXRate = {
                 currency: {
-                    from: k.ccy as currency.unknown,
+                    from: k.ccy as unknown as currency.unknown,
                     to: 'HKD' as currency.HKD,
                 },
                 rate: {
@@ -29,6 +39,9 @@ const getHSBCHKFXRates = async (): Promise<FXRate[]> => {
                 updated: new Date(k.lastUpdateDate),
                 unit: 1,
             };
+
+            answer.rate.buy ??= {};
+            answer.rate.sell ??= {};
 
             if (k.ttBuyRt) answer.rate.buy.remit = parseFloat(k.ttBuyRt);
             if (k.bankBuyRt) answer.rate.buy.cash = parseFloat(k.bankBuyRt);
@@ -47,8 +60,6 @@ const getHSBCHKFXRates = async (): Promise<FXRate[]> => {
                         sell: { ...answer.rate.sell },
                     },
                 };
-
-                console.log(answer, CNHAnswer);
 
                 return [answer, CNHAnswer];
             } else return answer;

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { currency, FXRate } from 'src/types';
+import { currency, FXRate } from 'src/types.d';
 
 import { parseYYYYMMDDHHmmss } from './ncb.cn';
 
@@ -30,6 +30,7 @@ const getXIBFXRates = async (): Promise<FXRate[]> => {
             },
         },
         {
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -38,24 +39,34 @@ const getXIBFXRates = async (): Promise<FXRate[]> => {
         },
     );
 
-    const data: {
-        baseRate: number;
-        cashBuyPrice: number;
-        cashSellPrice: number;
-        companyType: 'XIB';
-        currency: string;
-        currencyBuyPrice: number;
-        currencySellPrice: number;
-        squareBuyRate: number;
-        squareSellRate: number;
-        term: null;
-        updateDate: string;
-        updateTime: string;
-    }[] = req.data.rateList;
+    const data:
+        | {
+              baseRate: number;
+              cashBuyPrice: number;
+              cashSellPrice: number;
+              companyType: 'XIB';
+              currency: string;
+              currencyBuyPrice: number;
+              currencySellPrice: number;
+              squareBuyRate: number;
+              squareSellRate: number;
+              term: null;
+              updateDate: string;
+              updateTime: string;
+          }[]
+        | undefined = req.data?.rateList;
+
+    if (!Array.isArray(data)) {
+        throw new Error(
+            'XIB response format changed: rateList is missing or not an array',
+        );
+    }
 
     const FXRates: FXRate[] = [];
 
     data.forEach((fx) => {
+        if (!fx.currency) return;
+
         FXRates.push({
             currency: {
                 from: fx.currency as unknown as currency.unknown,

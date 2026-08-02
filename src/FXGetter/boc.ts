@@ -1,11 +1,17 @@
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
-import { FXRate, currency } from '../types';
-import cheerio from 'cheerio';
+import { FXRate, currency } from 'src/types.d';
+import * as cheerio from 'cheerio';
+
+interface bocRssItem {
+    description: string;
+    guid: string;
+    pubDate: string;
+}
 
 const parser = new XMLParser();
 
-const enNames = {
+const enNames: Record<string, string> = {
     阿联酋迪拉姆: 'AED',
     澳大利亚元: 'AUD',
     巴西里亚尔: 'BRL',
@@ -40,6 +46,7 @@ const getBOCFXRatesFromRSSHub = async (
 ): Promise<FXRate[]> => {
     // Thanks to https://rsshub.app/ for providing the RSS feed of BOC's FX rates
     const res = await axios.get(RSSHubEndpoint, {
+        timeout: 10000,
         headers: {
             'User-Agent':
                 process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -51,29 +58,39 @@ const getBOCFXRatesFromRSSHub = async (
 
     const FXrates: FXRate[] = [];
 
-    jsonData.forEach((item: any) => {
+    jsonData.forEach((item: bocRssItem) => {
         const tmp = item.description.split('<br>');
+        // guid is expected to be like '美元 USD'; skip if the format changed.
+        const currencyCode = item.guid.split(' ')[1];
+        // middle sits in the 5th description field; skip if the format changed.
+        const middle = tmp[4]?.split('：')[1];
+
+        if (!currencyCode || !middle) return;
+
         const FXRate: FXRate = {
             currency: {
-                from: item.guid.split(' ')[1] as currency.unknown,
+                from: currencyCode as unknown as currency.unknown,
                 to: 'CNY' as currency.CNY,
             },
             rate: {
                 buy: {},
                 sell: {},
-                middle: parseFloat(tmp[4].split('：')[1]),
+                middle: parseFloat(middle),
             },
             unit: 100,
             updated: new Date(item.pubDate),
         };
 
-        if (tmp[0].split('：')[1])
+        FXRate.rate.buy ??= {};
+        FXRate.rate.sell ??= {};
+
+        if (tmp[0]?.split('：')[1])
             FXRate.rate.buy.remit = parseFloat(tmp[0].split('：')[1]);
-        if (tmp[1].split('：')[1])
+        if (tmp[1]?.split('：')[1])
             FXRate.rate.buy.cash = parseFloat(tmp[1].split('：')[1]);
-        if (tmp[2].split('：')[1])
+        if (tmp[2]?.split('：')[1])
             FXRate.rate.sell.remit = parseFloat(tmp[2].split('：')[1]);
-        if (tmp[3].split('：')[1])
+        if (tmp[3]?.split('：')[1])
             FXRate.rate.sell.cash = parseFloat(tmp[3].split('：')[1]);
 
         FXrates.push(FXRate);
@@ -99,6 +116,7 @@ const getBOCFXRatesFromBOC = async (): Promise<FXRate[]> => {
             const res = await axios.get(
                 `https://www.boc.cn/sourcedb/whpj/${index}`,
                 {
+                    timeout: 10000,
                     headers: {
                         'User-Agent':
                             process.env['HEADER_USER_AGENT'] ??
@@ -116,7 +134,8 @@ const getBOCFXRatesFromBOC = async (): Promise<FXRate[]> => {
                         .map((el) => {
                             const e = $(el);
                             const zhName = e.find('td:nth-child(1)').text();
-                            const enName = enNames[zhName] || '';
+                            const enName = enNames[zhName];
+                            if (!enName) return null;
                             const date = e.find('td:nth-child(7)').text();
 
                             const xhmr = e.find('td:nth-child(2)').text();
@@ -129,7 +148,7 @@ const getBOCFXRatesFromBOC = async (): Promise<FXRate[]> => {
 
                             const FXRate: FXRate = {
                                 currency: {
-                                    from: enName as currency.unknown,
+                                    from: enName as unknown as currency.unknown,
                                     to: 'CNY' as currency.CNY,
                                 },
                                 rate: {
@@ -143,6 +162,9 @@ const getBOCFXRatesFromBOC = async (): Promise<FXRate[]> => {
                                 unit: 100,
                             };
 
+                            FXRate.rate.buy ??= {};
+                            FXRate.rate.sell ??= {};
+
                             if (xhmr) FXRate.rate.buy.remit = parseFloat(xhmr);
                             if (xcmr) FXRate.rate.buy.cash = parseFloat(xcmr);
                             if (xhmc) FXRate.rate.sell.remit = parseFloat(xhmc);
@@ -151,7 +173,9 @@ const getBOCFXRatesFromBOC = async (): Promise<FXRate[]> => {
                             return FXRate;
                         }),
                 ),
-            ).sort();
+            )
+                .filter((d): d is FXRate => d !== null)
+                .sort();
         }),
     );
     return result.flat().sort();

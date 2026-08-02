@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { FXRate, currency } from 'src/types';
-import cheerio from 'cheerio';
+import { FXRate, currency } from 'src/types.d';
+import * as cheerio from 'cheerio';
 
-const currencyMap = {
+const currencyMap: Record<string, string> = {
     美元: 'USD',
     欧元: 'EUR',
     日元: 'JPY',
@@ -50,8 +50,9 @@ const undirectPrice: currency[] = [
 
 const getPBOCFXRates = async (): Promise<FXRate[]> => {
     const res = await axios.get(
-        'http://www.safe.gov.cn/AppStructured/hlw/RMBQuery.do',
+        'https://www.safe.gov.cn/AppStructured/hlw/RMBQuery.do',
         {
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -94,16 +95,22 @@ const getPBOCFXRates = async (): Promise<FXRate[]> => {
                         .text()
                         .trim();
 
-                    if (undirectPrice.includes(currencyMap[currencyZHName])) {
+                    if (
+                        undirectPrice.includes(
+                            currencyMap[currencyZHName] as currency,
+                        )
+                    ) {
                         anz.currency = {
                             from: 'CNY' as currency.CNY,
-                            to: currencyMap[currencyZHName] as currency.unknown,
+                            to: currencyMap[
+                                currencyZHName
+                            ] as unknown as currency.unknown,
                         };
                     } else {
                         anz.currency = {
                             from: currencyMap[
                                 currencyZHName
-                            ] as currency.unknown,
+                            ] as unknown as currency.unknown,
                             to: 'CNY' as currency.CNY,
                         };
                     }

@@ -1,15 +1,23 @@
 import axios from 'axios';
-import { FXRate, currency } from 'src/types';
+import { FXRate, currency } from 'src/types.d';
 import { parseYYYYMMDDHHmmss } from './ncb.cn';
 
 import https from 'https';
 import crypto from 'crypto';
 
+interface psbcRateItem {
+    flag: number;
+    cur: string;
+    fe_buy_prc: number;
+    fc_buy_prc: number;
+    fe_sell_prc: number;
+    mid_prc: number;
+    effect_date: string;
+    effect_time: string;
+}
+
 const allowPSBCCertificateforNodeJsOptions = {
     httpsAgent: new https.Agent({
-        // dont vertify sb PSBC SSL Certificate (becuz they don't send full certificate chain now!!!)
-        // 💩 PSBC
-        rejectUnauthorized: false,
         // allow sb PSBC to use legacy renegotiation
         secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
     }),
@@ -20,6 +28,7 @@ const getPSBCFXRates = async () => {
         'https://s.psbc.com/portal/PsbcService/foreignexchange/curr',
         {
             ...allowPSBCCertificateforNodeJsOptions,
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -32,11 +41,11 @@ const getPSBCFXRates = async () => {
     ).resultList;
 
     const answer = data
-        .filter((k) => k.flag == 2)
-        .map((fx) => {
+        .filter((k: psbcRateItem) => k.flag == 2)
+        .map((fx: psbcRateItem) => {
             return {
                 currency: {
-                    from: fx.cur as currency.unknown,
+                    from: fx.cur as unknown as currency.unknown,
                     to: 'CNY' as currency.CNY,
                 },
                 rate: {

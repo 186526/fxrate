@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { FXRate, currency } from 'src/types';
+import axios, { AxiosResponse } from 'axios';
+import { FXRate, currency } from 'src/types.d';
 
 import { create, all } from 'mathjs';
 
@@ -7,40 +7,58 @@ const math = create(all, {
     number: 'Fraction',
 });
 
+const MAX_WALK_BACK_DAYS = 7;
+const MAX_RETRIES = 2;
+
+const fetchDateFile = async (date: number): Promise<AxiosResponse> => {
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            return await axios.get(
+                `https://www.unionpayintl.com/upload/jfimg/${date}.json`,
+                {
+                    timeout: 10000,
+                    headers: {
+                        'User-Agent':
+                            process.env['HEADER_USER_AGENT'] ??
+                            'fxrate axios/latest',
+                    },
+                },
+            );
+        } catch (e) {
+            if (axios.isAxiosError(e) && e.response?.status === 404) {
+                throw e;
+            }
+            lastError = e;
+        }
+    }
+    throw lastError;
+};
+
 const getUnionPayFXRates = async (): Promise<FXRate[]> => {
-    let currentDate = parseInt(
+    const today = parseInt(
         new Date().toISOString().split('T')[0].replaceAll('-', ''),
     );
 
-    let res = await axios
-        .get(`https://www.unionpayintl.com/upload/jfimg/${currentDate}.json`, {
-            headers: {
-                'User-Agent':
-                    process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
-            },
-        })
-        .catch(() => {
-            return { status: 404 };
-        });
+    let res: AxiosResponse | undefined;
 
-    while (res.status !== 200) {
-        currentDate -= 1;
+    for (let day = 0; day <= MAX_WALK_BACK_DAYS; day++) {
+        try {
+            const current = await fetchDateFile(today - day);
+            if (current.status === 200) {
+                res = current;
+                break;
+            }
+        } catch (e) {
+            if (!(axios.isAxiosError(e) && e.response?.status === 404)) {
+                throw e;
+            }
+        }
+    }
 
-        console.log(
-            currentDate + 1,
-            'UnionPay FXRate not found, trying',
-            currentDate,
-        );
-
-        res = await axios.get(
-            `https://www.unionpayintl.com/upload/jfimg/${currentDate}.json`,
-            {
-                headers: {
-                    'User-Agent':
-                        process.env['HEADER_USER_AGENT'] ??
-                        'fxrate axios/latest',
-                },
-            },
+    if (!res) {
+        throw new Error(
+            'UnionPay FXRate file not found within the last 7 days',
         );
     }
 
@@ -51,15 +69,15 @@ const getUnionPayFXRates = async (): Promise<FXRate[]> => {
             rateData: number;
         }[];
         curDate: string;
-    } = (res as any).data;
+    } = res.data;
 
     const date = new Date(`${data.curDate} 16:30 UTC+8`);
 
     const answerMap: {
         [from: string]: {
             [to: string]: {
-                forward: number;
-                reverse: number;
+                forward?: number;
+                reverse?: number;
             };
         };
     } = {};

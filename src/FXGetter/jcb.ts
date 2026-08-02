@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { FXRate, currency } from 'src/types';
-import cheerio from 'cheerio';
+import { FXRate, currency } from 'src/types.d';
+import * as cheerio from 'cheerio';
 
 const getJCBJPYBasedFXRates = async (): Promise<FXRate[]> => {
     const res = await axios.get('https://www.jcb.jp/rate/jpy.html', {

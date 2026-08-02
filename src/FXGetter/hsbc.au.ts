@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-import { currency, FXRate } from 'src/types';
+import { currency, FXRate } from 'src/types.d';
+
+interface hsbcAuRateItem {
+    curr_s: string;
+    buy: number;
+    sell: number;
+}
 
 const getHSBCAUFXRates = async (): Promise<FXRate[]> => {
     const req = await axios.get(
@@ -13,15 +19,21 @@ const getHSBCAUFXRates = async (): Promise<FXRate[]> => {
         },
     );
 
-    const data = JSON.parse([eval][0](req.data)).data;
+    // response is `JSON.stringify({data:{...}})`: unwrap without eval
+    const data = JSON.parse(
+        req.data
+            .replace(/^\s*JSON\.stringify\(/, '')
+            .replace(/\)\s*$/, '')
+            .replace(/^\{(\w+):/, '{"$1":'),
+    ).data;
 
-    const date = new Date(req.headers['date']);
+    const date = new Date();
 
-    const answer: FXRate[] = data.fxList.map((k) => {
+    const answer: FXRate[] = data.fxList.map((k: hsbcAuRateItem) => {
         return {
             currency: {
                 from: 'AUD' as currency.AUD,
-                to: k.curr_s as currency.unknown,
+                to: k.curr_s as unknown as currency.unknown,
             },
             rate: {
                 sell: {
@@ -38,13 +50,13 @@ const getHSBCAUFXRates = async (): Promise<FXRate[]> => {
         } as FXRate;
     });
 
-    answer.push(
-        ((answer) => {
-            const tmp = answer.find((k) => k.currency.to === 'CNY');
-            tmp.currency.to = 'CNH' as currency.CNH;
-            return tmp;
-        })(answer),
-    );
+    const cnyRate = answer.find((k) => k.currency.to === 'CNY');
+    if (cnyRate) {
+        answer.push({
+            ...cnyRate,
+            currency: { ...cnyRate.currency, to: 'CNH' as currency.CNH },
+        });
+    }
 
     return answer;
 };

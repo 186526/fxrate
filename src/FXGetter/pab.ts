@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-import { FXRate, currency } from 'src/types';
+import { FXRate, currency } from 'src/types.d';
 
 export interface PABResponse {
     data: {
@@ -28,6 +28,7 @@ const getPABFXRates = async (): Promise<FXRate[]> => {
     const req = await axios.get(
         'https://bank.pingan.com.cn/rmb/account/cmp/cust/acct/forex/exchange/qryFoexPriceExchangeList.do?pageIndex=1&pageSize=100&realFlag=1&currencyCode=&exchangeDate=&languageCode=zh_CN&access_source=PC',
         {
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -37,7 +38,14 @@ const getPABFXRates = async (): Promise<FXRate[]> => {
 
     const data: PABResponse = req.data;
 
-    return data.data.exchangeList
+    const exchangeList = data?.data?.exchangeList;
+    if (!Array.isArray(exchangeList)) {
+        throw new Error(
+            `PAB response format changed: responseCode=${data?.responseCode} responseMsg=${data?.responseMsg}`,
+        );
+    }
+
+    return exchangeList
         .map((rate) => {
             return {
                 currency: {

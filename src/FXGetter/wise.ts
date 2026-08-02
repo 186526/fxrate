@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-import { FXRate, currency } from 'src/types';
+import { FXRate, currency } from 'src/types.d';
 import fxmManager from '../fxmManager';
 
 const getWiseFXRates = (
@@ -14,7 +14,6 @@ const getWiseFXRates = (
     }
 
     return async (fxmManager?: fxmManager): Promise<FXRate[]> => {
-        console.log(isInSandbox, useTokenInWeb, WiseToken);
         if (fxmManager && isInSandbox)
             fxmManager.log('Getting Wise FX Rates in sandbox mode.');
         else if (fxmManager)
