@@ -29,6 +29,18 @@ export const useBasic = (response: response<any>): void => {
     }
 };
 
+// handlers.js 0.1.6 的 response.body 类型是 string | Uint8Array | ArrayBuffer | ReadableStream | AsyncIterable | null，
+// 统一解码为 string 供 JSON.parse 使用（本服务内部写入的 body 始终是 string）。
+const bodyToString = (body: response<any>['body']): string => {
+    if (typeof body === 'string') return body;
+    if (body instanceof Uint8Array) return Buffer.from(body).toString('utf8');
+    if (body instanceof ArrayBuffer) {
+        return Buffer.from(new Uint8Array(body)).toString('utf8');
+    }
+    if (body === null) return '';
+    throw new Error('Unsupported response body type');
+};
+
 export const useInternalRestAPI = async (url: string, router: router) => {
     const restResponse = await router
         .respond(
@@ -40,28 +52,34 @@ export const useInternalRestAPI = async (url: string, router: router) => {
                 {},
             ),
         )
-        .catch((e) => e);
+        .catch((e: unknown) => e);
+
+    if (restResponse instanceof Error) throw restResponse;
+    if (!(restResponse instanceof response)) {
+        throw new Error(
+            `Internal REST API returned an invalid response: ${String(restResponse)}`,
+        );
+    }
 
     try {
-        return JSON.parse(restResponse.body);
+        return JSON.parse(bodyToString(restResponse.body));
     } catch (_e) {
-        if (!(restResponse instanceof response)) throw new Error(restResponse);
         return restResponse;
     }
 };
 
-const sortObject = (obj: unknown): any => {
+const sortObject = (obj: unknown): unknown => {
     if (obj instanceof Array) {
-        return obj.sort();
+        return obj;
     }
-    if (typeof obj !== 'object') {
+    if (typeof obj !== 'object' || obj === null) {
         return obj;
     }
     const keys = Object.keys(obj).sort(),
-        sortedObj = {};
+        sortedObj: Record<string, unknown> = {};
 
     for (const key of keys) {
-        sortedObj[key] = sortObject(obj[key]);
+        sortedObj[key] = sortObject((obj as Record<string, unknown>)[key]);
     }
 
     return sortedObj;
@@ -70,7 +88,7 @@ const sortObject = (obj: unknown): any => {
 const useJson = (response: response<any>, request: request<any>): void => {
     useBasic(response);
 
-    const answer = JSON.parse(response.body);
+    const answer = JSON.parse(bodyToString(response.body));
     const sortedAnswer = sortObject(answer);
 
     response.body = JSON.stringify(sortedAnswer);
@@ -100,14 +118,16 @@ const getConvert = async (
         type as 'cash' | 'remit' | 'middle',
         Number(request.query.get('amount')) || amount || 100,
         request.query.has('reverse'),
+        request.query.get('bfs') === '1' || request.query.get('bfs') === 'true',
     );
     answer = multiply(
         answer,
         1 + (Number(request.query.get('fees')) || fees) / 100,
     ) as Fraction;
+    const precision = Number(request.query.get('precision') ?? 5);
     answer =
-        Number(request.query.get('precision')) !== -1
-            ? round(answer, Number(request.query.get('precision')) || 5)
+        precision !== -1
+            ? round(answer, Number.isNaN(precision) ? 5 : precision)
             : answer;
     return Number(answer.toString()) || answer.toString();
 };
@@ -118,9 +138,30 @@ const getDetails = async (
     fxManager: fxManager,
     request: request<any>,
 ) => {
-    const result = {
-        updated: (await fxManager.getUpdatedDate(from, to)).toUTCString(),
+    const result: {
+        [type: string]: string | number | boolean | string[];
+    } = {
+        updated: new Date().toUTCString(),
     };
+    try {
+        result.updated = (
+            await fxManager.getUpdatedDate(from, to)
+        ).toUTCString();
+    } catch (_e) {
+        // 源不可用时（如上游 403/WAF）不 500，保留默认 updated 时间，具体汇率由下方 type 循环降级为 false。
+    }
+    // ?bfs=1 时回传实际经过的兑换路径（直连时也返回直连对，便于前端展示）。
+    if (
+        request.query.get('bfs') === '1' ||
+        request.query.get('bfs') === 'true'
+    ) {
+        try {
+            const fxp = await fxManager.getFXPath(from, to, true);
+            result.path = fxp.path.map(String);
+        } catch (_e) {
+            result.path = [];
+        }
+    }
     for (const type of ['cash', 'remit', 'middle']) {
         try {
             result[type] = await getConvert(from, to, type, fxManager, request);
@@ -140,18 +181,22 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         [source: string]: 'ready' | 'pending';
     } = {};
 
+    private pendingPromises: {
+        [source: string]: Promise<void> | undefined;
+    } = {};
+
     private fxRateGetter: {
         [source: string]: (fxmManager?: fxmManager) => Promise<FXRate[]>;
     } = {};
 
     public intervalIDs: {
-        key: { timeout: NodeJS.Timeout; refreshDate: Date };
-    } = {} as any;
+        [source: string]: { timeout: NodeJS.Timeout; refreshDate: Date };
+    } = {};
 
     protected rpcHandlers = {
         instanceInfo: () => useInternalRestAPI('info', this),
 
-        listCurrencies: ({ source }) => {
+        listCurrencies: ({ source }: { source: string }) => {
             if (!source) throw new Error('source is required.');
 
             return useInternalRestAPI(`${source}/`, this).then(
@@ -170,12 +215,21 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             amount = 100,
             fees = 0,
             reverse = false,
+            bfs = false,
+        }: {
+            source: string;
+            from: string;
+            precision?: number;
+            amount?: number;
+            fees?: number;
+            reverse?: boolean;
+            bfs?: boolean;
         }) => {
             if (!source) throw new Error('source is required.');
             if (!from) throw new Error('from is required.');
 
             return useInternalRestAPI(
-                `${source}/${from}?precision=${precision}&amount=${amount}&fees=${fees}${reverse ? '&reverse' : ''}`,
+                `${source}/${from}?precision=${precision}&amount=${amount}&fees=${fees}${reverse ? '&reverse' : ''}${bfs ? '&bfs=1' : ''}`,
                 this,
             );
         },
@@ -189,6 +243,17 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             amount = 100,
             fees = 0,
             reverse = false,
+            bfs = false,
+        }: {
+            source: string;
+            from: string;
+            to: string;
+            type: string;
+            precision?: number;
+            amount?: number;
+            fees?: number;
+            reverse?: boolean;
+            bfs?: boolean;
         }) => {
             if (!source) throw new Error('source is required.');
             if (!from) throw new Error('from is required.');
@@ -197,7 +262,7 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             if (type == 'all') type = '';
 
             return useInternalRestAPI(
-                `${source}/${from}/${to}/${type}?precision=${precision}&fees=${fees}${reverse ? '&reverse' : ''}&amount=${amount}`,
+                `${source}/${from}/${to}/${type}?precision=${precision}&fees=${fees}${reverse ? '&reverse' : ''}&amount=${amount}${bfs ? '&bfs=1' : ''}`,
                 this,
             );
         },
@@ -208,6 +273,9 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         for (const source in sources) {
             this.registerGetter(source, sources[source]);
         }
+
+        process.once('SIGTERM', () => this.stopAllInterval());
+        process.once('SIGINT', () => this.stopAllInterval());
 
         this.binding(
             '/info',
@@ -241,21 +309,45 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     }
 
     public async updateFXManager(source: string): Promise<void> {
-        if (!this.has(source)) {
-            throw new Error('Source not found');
+        const currentPromise = this.pendingPromises[source];
+        if (currentPromise) return currentPromise;
+
+        const pendingPromise = (async () => {
+            try {
+                if (!this.has(source)) {
+                    throw new Error('Source not found');
+                }
+                this.log(`${source} is updating...`);
+                const fxRates = await this.fxRateGetter[source](this);
+                fxRates.forEach((f) => this.fxms[source].update(f));
+                this.fxmStatus[source] = 'ready';
+                this.intervalIDs[source].refreshDate = new Date();
+                this.log(`${source} is updated, now is ready.`);
+            } catch (error) {
+                this.fxmStatus[source] = 'pending';
+                this.log(
+                    `${source} update failed: ${
+                        error instanceof Error ? error.message : String(error)
+                    }`,
+                );
+                throw error;
+            }
+        })();
+
+        this.pendingPromises[source] = pendingPromise;
+        try {
+            await pendingPromise;
+        } finally {
+            if (this.pendingPromises[source] === pendingPromise) {
+                delete this.pendingPromises[source];
+            }
         }
-        this.log(`${source} is updating...`);
-        const fxRates = await this.fxRateGetter[source](this);
-        fxRates.forEach((f) => this.fxms[source].update(f));
-        this.fxmStatus[source] = 'ready';
-        this.intervalIDs[source].refreshDate = new Date();
-        this.log(`${source} is updated, now is ready.`);
-        return;
     }
 
     public async requestFXManager(source: string): Promise<fxManager> {
         if (this.fxmStatus[source] === 'pending') {
-            await this.updateFXManager(source);
+            await (this.pendingPromises[source] ??
+                this.updateFXManager(source));
         }
         return this.fxms[source];
     }
@@ -274,7 +366,7 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
 
         this.intervalIDs[source] = {
             timeout: setInterval(
-                () => this.updateFXManager(source),
+                () => this.updateFXManager(source).catch(() => undefined),
                 1000 * 60 * 30,
             ),
             refreshDate: refreshDate,
@@ -289,8 +381,23 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     }
 
     private mountFXMRouter(source: string): void {
+        // handlers.js 0.1.6 的 use() 要求路径含未命名捕获组（用于转发子路径），
+        // 且空子路径（`/${source}` 精确访问）时 params['0'] 为空字符串、子路由不会自动匹配，
+        // 因此单独绑定精确路径并显式重写 pathname 后转发到子路由的 '/'。
         this.use([this.getFXMRouter(source)], `/${source}/(.*)`);
-        this.use([this.getFXMRouter(source)], `/${source}`);
+        this.binding(
+            `/${source}`,
+            new handler('ANY', [
+                async (req: request<any>, res: response<any>) => {
+                    req.url.pathname = '/';
+                    delete req.params['0'];
+                    return this.getFXMRouter(source).respond(
+                        req,
+                        res ?? new response(''),
+                    );
+                },
+            ]),
+        );
     }
 
     private getFXMRouter(source: string): router {
@@ -343,13 +450,15 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             if (request.params.from)
                 request.params.from = request.params.from.toUpperCase();
 
-            const { from } = request.params;
+            const { from } = request.params as { from: string };
 
             const result: {
-                [to in keyof currency]: {
-                    [type in string]: string;
-                };
-            } = {} as any;
+                [to: string]:
+                    | string
+                    | {
+                          [type: string]: string | number | boolean | string[];
+                      };
+            } = {};
             if (!(await this.requestFXManager(source)).ableToGetAllFXRate) {
                 response.status = 403;
                 result['status'] = 'error';
@@ -395,17 +504,22 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             );
             response.body = JSON.stringify(result);
             useJson(response, request);
-            response.headers.set(
-                'Date',
-                (
-                    await (
-                        await this.requestFXManager(source)
-                    ).getUpdatedDate(
-                        from as unknown as currency,
-                        to as unknown as currency,
-                    )
-                ).toUTCString(),
-            );
+            try {
+                response.headers.set(
+                    'Date',
+                    (
+                        await (
+                            await this.requestFXManager(source)
+                        ).getUpdatedDate(
+                            from as unknown as currency,
+                            to as unknown as currency,
+                        )
+                    ).toUTCString(),
+                );
+            } catch (_e) {
+                // 源不可用（如上游 403/WAF）时 Date 头回落为当前时间，避免整个请求 500。
+                response.headers.set('Date', new Date().toUTCString());
+            }
             useCache(response);
 
             return response;
@@ -422,27 +536,38 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                 request.params.to = request.params.to.toUpperCase();
 
             const { from, to, type, amount } = request.params;
-            const result = await getConvert(
-                from as unknown as currency,
-                to as unknown as currency,
-                type,
-                await this.requestFXManager(source),
-                request,
-                Number(amount),
-            );
+            let result: string | number | boolean;
+            try {
+                result = await getConvert(
+                    from as unknown as currency,
+                    to as unknown as currency,
+                    type!,
+                    await this.requestFXManager(source),
+                    request,
+                    Number(amount),
+                );
+            } catch (_e) {
+                // 源不可用（如上游 403/WAF）时降级返回 false，避免整个请求 500。
+                result = false;
+            }
             response.body = result.toString();
             useBasic(response);
-            response.headers.set(
-                'Date',
-                (
-                    await (
-                        await this.requestFXManager(source)
-                    ).getUpdatedDate(
-                        from as unknown as currency.unknown,
-                        to as unknown as currency.unknown,
-                    )
-                ).toUTCString(),
-            );
+            try {
+                response.headers.set(
+                    'Date',
+                    (
+                        await (
+                            await this.requestFXManager(source)
+                        ).getUpdatedDate(
+                            from as unknown as currency.unknown,
+                            to as unknown as currency.unknown,
+                        )
+                    ).toUTCString(),
+                );
+            } catch (_e) {
+                // 源不可用（如上游 403/WAF）时 Date 头回落为当前时间，避免整个请求 500。
+                response.headers.set('Date', new Date().toUTCString());
+            }
             useCache(response);
 
             return response;

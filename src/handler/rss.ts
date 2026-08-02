@@ -6,6 +6,18 @@ import { Feed } from 'feed';
 
 import { sourceNamesInZH } from '../constant';
 
+interface PriceDetail {
+    remit?: number | string | boolean;
+    cash?: number | string | boolean;
+    middle?: number | string | boolean;
+    updated: string;
+    sellRemit?: number | string | boolean;
+    sellCash?: number | string | boolean;
+    sellMiddle?: number | string | boolean;
+    sellUpdated: string;
+    source: string;
+}
+
 export class RSSHandler extends router {
     private fxmManager: fxmManager;
 
@@ -18,12 +30,10 @@ export class RSSHandler extends router {
     async requestPrice(from: string, to: string, excludeSource: string[] = []) {
         const sources = (
             await useInternalRestAPI(`info`, this.fxmManager)
-        ).sources.filter((source) => !excludeSource.includes(source));
+        ).sources.filter((source: string) => !excludeSource.includes(source));
 
-        const answer = [];
-
-        await Promise.all(
-            sources.map(async (source) => {
+        const answer = await Promise.all(
+            sources.map(async (source: string) => {
                 try {
                     const buyPrices = await useInternalRestAPI(
                         `${source}/${to}/${from}/?precision=4&fees=0&amount=100`,
@@ -35,22 +45,28 @@ export class RSSHandler extends router {
                         this.fxmManager,
                     );
 
-                    answer.push({
-                        sell: sellPrices,
-                        buy: buyPrices,
+                    return {
+                        remit: buyPrices.remit,
+                        cash: buyPrices.cash,
+                        middle: buyPrices.middle,
+                        updated: buyPrices.updated,
+                        sellRemit: sellPrices.remit,
+                        sellCash: sellPrices.cash,
+                        sellMiddle: sellPrices.middle,
+                        sellUpdated: sellPrices.updated,
                         source,
-                    });
+                    };
                 } catch (e) {
                     console.error(
                         `not suppported: ${source} with ${from} to ${to}`,
                         e,
                     );
+                    return null;
                 }
-                return '';
             }),
         );
 
-        return answer;
+        return answer.filter((x): x is PriceDetail => x !== null);
     }
 
     mount() {
@@ -64,7 +80,7 @@ export class RSSHandler extends router {
             if (request.params.to)
                 request.params.to = request.params.to.toUpperCase();
 
-            const { from, to } = request.params;
+            const { from, to } = request.params as { from: string; to: string };
 
             const feed = new Feed({
                 title: `FXRate 实时 ${from} <=> ${to} 汇率信息`,
@@ -82,14 +98,14 @@ export class RSSHandler extends router {
             const prices = await this.requestPrice(from, to);
 
             prices.forEach((price) => {
-                const description = `现汇买入: ${price.buy.remit} 现钞买入: ${price.buy.cash} 买入中间价: ${price.buy.middle} 买入更新时间: ${price.buy.updated}\n现汇卖出: ${price.sell.remit} 现钞卖出: ${price.sell.cash} 卖出中间价: ${price.sell.middle} 卖出更新时间: ${price.sell.updated}`;
+                const description = `现汇买入: ${price.remit} 现钞买入: ${price.cash} 买入中间价: ${price.middle} 买入更新时间: ${price.updated}\n现汇卖出: ${price.sellRemit} 现钞卖出: ${price.sellCash} 卖出中间价: ${price.sellMiddle} 卖出更新时间: ${price.sellUpdated}`;
 
                 feed.addItem({
-                    title: `${sourceNamesInZH[price.source] ?? price.source}`,
+                    title: `${(sourceNamesInZH as Record<string, string>)[price.source] ?? price.source}`,
                     link: `https://github.com/186526/fxrate`,
                     description: description,
                     content: description,
-                    date: new Date(price.buy.updated ?? price.sell.updated),
+                    date: new Date(price.updated),
                 });
             });
 

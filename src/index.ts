@@ -3,7 +3,7 @@ import http from 'node:http';
 
 import esMain from 'es-main';
 
-import rootRouter, { handler } from 'handlers.js';
+import rootRouter, { handler, response } from 'handlers.js';
 
 import fxmManager from './fxmManager';
 import { useBasic } from './fxmManager';
@@ -75,7 +75,7 @@ if (process.env.ENABLE_WISE != '0') {
         getWiseFXRates(
             process.env.WISE_SANDBOX_API == '1',
             process.env.WISE_USE_TOKEN_FROM_WEB != '0',
-            process.env.WISE_TOKEN,
+            process.env.WISE_TOKEN!,
         ),
     );
 }
@@ -84,7 +84,7 @@ export const makeInstance = async (App: rootRouter, Manager: fxmManager) => {
     App.binding(
         '/(.*)',
         new handler('ANY', [
-            async (_request, response) => {
+            async (_request, response: response<any>) => {
                 useBasic(response);
                 response.status = 404;
             },
@@ -101,7 +101,7 @@ export const makeInstance = async (App: rootRouter, Manager: fxmManager) => {
     App.binding(
         '/(.*)',
         new handler('ANY', [
-            async (request, response) => {
+            async (request, response: response<any>) => {
                 Manager.log(
                     `${request.ip} ${request.method} ${request.originURL}`,
                 );

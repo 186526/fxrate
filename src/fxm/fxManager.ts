@@ -1,5 +1,5 @@
 import { create, all, Fraction } from 'mathjs';
-import { currency, FXRate, FXPath } from '../types';
+import { currency, FXRate, FXPath } from 'src/types.d';
 
 const math = create(all, {
     number: 'Fraction',
@@ -7,7 +7,7 @@ const math = create(all, {
 
 const { multiply, divide, fraction, add } = math;
 
-type FXRateType = {
+export type FXRateType = {
     cash: Fraction;
     remit: Fraction;
     middle: Fraction;
@@ -16,14 +16,16 @@ type FXRateType = {
 
 export default class fxManager {
     private _fxRateList: {
-        [currency in keyof currency]: {
-            [currency in keyof currency]: FXRateType;
-        };
-    } = {} as any;
+        [from: string]: { [to: string]: FXRateType };
+    } = {};
 
-    public get fxRateList() {
+    public get fxRateList(): {
+        [from: string]: { [to: string]: FXRateType };
+    } {
         const fxRateList = new Proxy(this._fxRateList, {
             get: function (target, prop) {
+                if (typeof prop !== 'string') return undefined;
+
                 let child = target[prop];
 
                 if (prop == 'CNY' && !('CNY' in target)) {
@@ -38,6 +40,8 @@ export default class fxManager {
 
                 return new Proxy(child, {
                     get: function (target, prop) {
+                        if (typeof prop !== 'string') return undefined;
+
                         let child = target[prop];
 
                         if (prop == 'CNY' && !('CNY' in target)) {
@@ -55,7 +59,9 @@ export default class fxManager {
         return fxRateList;
     }
 
-    public set fxRateList(value) {
+    public set fxRateList(value: {
+        [from: string]: { [to: string]: FXRateType };
+    }) {
         this._fxRateList = value;
     }
 
@@ -82,7 +88,7 @@ export default class fxManager {
     ableToGetAllFXRate: boolean = true;
 
     constructor(FXRates: FXRate[]) {
-        FXRates.sort().forEach((fxRate) => {
+        FXRates.forEach((fxRate) => {
             try {
                 this.update(fxRate);
             } catch (e) {
@@ -107,12 +113,17 @@ export default class fxManager {
             if (this.fxRateList[from][to].updated > FXRate.updated) return;
         }
 
-        if (!rate.buy && !rate.sell && !rate.middle) {
+        // 注意：getter 里 buy/sell 常被初始化为空对象 {}（truthy），
+        // 所以必须按字段值判断是否真的有买卖价，否则中间价兜底会失效。
+        const hasBuy = !!(rate.buy?.cash || rate.buy?.remit);
+        const hasSell = !!(rate.sell?.cash || rate.sell?.remit);
+
+        if (!hasBuy && !hasSell && !rate.middle) {
             console.log(FXRate);
             throw new Error('Invalid FXRate');
         }
 
-        if (!rate.buy && !rate.sell) {
+        if (!hasBuy && !hasSell) {
             rate = {
                 buy: {
                     cash: rate.middle,
@@ -124,9 +135,9 @@ export default class fxManager {
                 },
                 middle: rate.middle,
             };
-        } else if (!rate.buy && rate.sell) {
+        } else if (!hasBuy && rate.sell) {
             rate.buy = rate.sell;
-        } else if (!rate.sell && rate.buy) {
+        } else if (!hasSell && rate.buy) {
             rate.sell = rate.buy;
         }
 
@@ -134,16 +145,16 @@ export default class fxManager {
             rate.middle = divide(
                 add(
                     math.min(
-                        rate.buy.cash || Infinity,
-                        rate.buy.remit || Infinity,
-                        rate.sell.cash || Infinity,
-                        rate.sell.remit || Infinity,
+                        rate.buy?.cash || Infinity,
+                        rate.buy?.remit || Infinity,
+                        rate.sell?.cash || Infinity,
+                        rate.sell?.remit || Infinity,
                     ),
                     math.max(
-                        rate.buy.cash || -Infinity,
-                        rate.buy.remit || -Infinity,
-                        rate.sell.cash || -Infinity,
-                        rate.sell.remit || -Infinity,
+                        rate.buy?.cash || -Infinity,
+                        rate.buy?.remit || -Infinity,
+                        rate.sell?.cash || -Infinity,
+                        rate.sell?.remit || -Infinity,
                     ),
                 ),
                 2,
@@ -161,9 +172,9 @@ export default class fxManager {
             };
         }
         this.fxRateList[from][to] = {
-            middle: divide(fraction(rate.middle), unit),
+            middle: divide(fraction(rate.middle), unit) as Fraction,
             updated: FXRate.updated,
-        };
+        } as FXRateType;
         if (!this.fxRateList[to]) {
             this.fxRateList[to] = {
                 [to]: {
@@ -174,37 +185,39 @@ export default class fxManager {
                 },
             };
         }
-        this.fxRateList[to][from] = {
-            middle: divide(unit, fraction(rate.middle)),
-            updated: FXRate.updated,
-        };
-
-        if (rate.buy.cash) {
-            this.fxRateList[from][to].cash = divide(
-                fraction(rate.buy.cash),
-                unit,
-            );
+        const shouldUpdateReverse =
+            !this.fxRateList[to][from] ||
+            this.fxRateList[to][from].updated <= FXRate.updated;
+        if (shouldUpdateReverse) {
+            this.fxRateList[to][from] = {
+                middle: divide(unit, fraction(rate.middle)) as Fraction,
+                updated: FXRate.updated,
+            } as FXRateType;
         }
 
-        if (rate.sell.cash) {
+        // 单项缺失时按 现金价 → 汇价 → 中间价 依次回落，保证 cash/remit 都有值
+        const buyCash = rate.buy?.cash ?? rate.buy?.remit ?? rate.middle;
+        const buyRemit = rate.buy?.remit ?? rate.buy?.cash ?? rate.middle;
+        const sellCash = rate.sell?.cash ?? rate.sell?.remit ?? rate.middle;
+        const sellRemit = rate.sell?.remit ?? rate.sell?.cash ?? rate.middle;
+
+        this.fxRateList[from][to].cash = divide(
+            fraction(buyCash),
+            unit,
+        ) as Fraction;
+        this.fxRateList[from][to].remit = divide(
+            fraction(buyRemit),
+            unit,
+        ) as Fraction;
+        if (shouldUpdateReverse) {
             this.fxRateList[to][from].cash = divide(
                 unit,
-                fraction(rate.sell.cash),
-            );
-        }
-
-        if (rate.buy.remit) {
-            this.fxRateList[from][to].remit = divide(
-                fraction(rate.buy.remit),
-                unit,
-            );
-        }
-
-        if (rate.sell.remit) {
+                fraction(sellCash),
+            ) as Fraction;
             this.fxRateList[to][from].remit = divide(
                 unit,
-                fraction(rate.sell.remit),
-            );
+                fraction(sellRemit),
+            ) as Fraction;
         }
     }
 
@@ -232,7 +245,11 @@ export default class fxManager {
         ) as unknown as Fraction;
     }
 
-    async getFXPath(from: currency, to: currency): Promise<FXPath> {
+    async getFXPath(
+        from: currency,
+        to: currency,
+        allowBFS: boolean = false,
+    ): Promise<FXPath> {
         const FXPath = {
             from,
             end: to,
@@ -243,12 +260,17 @@ export default class fxManager {
             FXPath.path.push(from);
             return FXPath;
         }
-        if (this.fxRateList[from][to]) {
+        if (this.fxRateList[from] && this.fxRateList[from][to]) {
             FXPath.path.push(to);
             return FXPath;
         }
         if (!this.fxRateList[from] || !this.fxRateList[to]) {
             throw new Error('Invalid currency');
+        }
+        // 默认不启用 BFS：交叉汇率有累积误差（如经 HKD 折算 USD/CNY），
+        // 仅当调用方显式请求（?bfs=1）时才在汇率图上搜索中间货币路径。
+        if (!allowBFS) {
+            throw new Error(`No FX path found between ${from} and ${to}`);
         }
         const queue: { currency: currency; path: currency[] }[] = [];
         const visited: currency[] = [];
@@ -286,27 +308,24 @@ export default class fxManager {
         type: 'cash' | 'remit' | 'middle',
         amount: number,
         reverse: boolean = false,
+        allowBFS: boolean = false,
     ): Promise<Fraction> {
-        const FXPath = await this.getFXPath(from, to);
-        if (reverse) FXPath.path = FXPath.path.reverse();
+        const FXPath = await this.getFXPath(from, to, allowBFS);
+        const path =
+            FXPath.path[0] === from ? FXPath.path : [from, ...FXPath.path];
+        const conversionPath = reverse ? [...path].reverse() : path;
 
-        let current = from;
+        let current = conversionPath[0];
         let result = fraction(amount);
 
         try {
-            for (const next of FXPath.path) {
-                result = await this.convertDirect(
-                    current,
-                    next,
-                    type,
-                    result,
-                    reverse,
-                );
+            for (const next of conversionPath.slice(1)) {
+                result = await this.convertDirect(current, next, type, result);
                 current = next;
             }
         } catch (e) {
             throw new Error(
-                `Cannot convert from ${from} to ${to} with ${type}: \n${e.message}`,
+                `Cannot convert from ${from} to ${to} with ${type}: \n${(e as Error).message}`,
             );
         }
 

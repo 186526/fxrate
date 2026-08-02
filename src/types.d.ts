@@ -1,4 +1,14 @@
 import { Fraction } from 'mathjs';
+import type rootRouter from 'handlers.js';
+
+// esbuild --define 注入的构建时全局（见 package.json build script）
+declare global {
+    var GITBUILD: string | undefined;
+    var BUILDTIME: string | undefined;
+    var esBuilt: boolean | undefined;
+    var App: rootRouter;
+}
+
 export enum currency {
     USD = 'USD',
     EUR = 'EUR',

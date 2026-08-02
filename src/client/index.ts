@@ -1,4 +1,4 @@
-interface infoResponse {
+export interface infoResponse {
     environment: string;
     sources: string[];
     version: string;
@@ -6,29 +6,62 @@ interface infoResponse {
     apiVersion: string;
 }
 
-interface fxRateResponse {
+export interface fxRateResponse {
     cash?: number | string;
     middle: number | string;
     remit?: number | string;
     updated: Date;
 }
 
-interface fxRateListResponse {
+export interface fxRateListResponse {
     [currency: string]: fxRateResponse;
 }
 
-interface currencyListResponse {
+export interface currencyListResponse {
     currency: string[];
     date: Date;
 }
 
-type getFXRateResponse = number | string | fxRateResponse;
+export type getFXRateResponse = number | string | fxRateResponse;
+
+export interface jsonRpcResponse {
+    error?: {
+        message: string;
+        data: unknown;
+    };
+    id: string;
+    result: unknown;
+}
+
+interface pendingCallback {
+    resolve: (resp: unknown) => void;
+    reject: (reason?: unknown) => void;
+}
+
+type wireFXRateResponse = Omit<fxRateResponse, 'updated'> & {
+    updated: string | number | Date;
+};
+
+const requestTimeout = 30_000;
+
+const toDate = (date: string | number | Date): Date =>
+    new Date(date instanceof Date ? date.getTime() : date);
+
+const toError = (error: unknown): Error =>
+    error instanceof Error ? error : new Error(String(error));
+
+const isJsonRpcResponse = (response: unknown): response is jsonRpcResponse =>
+    typeof response === 'object' &&
+    response !== null &&
+    'id' in response &&
+    typeof response.id === 'string';
 
 class FXRates {
     public endpoint: URL;
 
-    private requestDetails: { methods: string; params: any; id: string }[] = [];
-    private callbacks: { [id: string]: (resp: any) => any } = {};
+    private requestDetails: { methods: string; params: unknown; id: string }[] =
+        [];
+    private callbacks: { [id: string]: pendingCallback } = {};
 
     private inBatch = false;
 
@@ -45,10 +78,11 @@ class FXRates {
         this.endpoint = endpoint;
     }
 
-    private addToQueue<T = any>(
+    private addToQueue<T = unknown>(
         method: string,
-        params: any,
-        callback?: (resp: T) => any,
+        params: unknown,
+        callback?: (resp: T) => void,
+        transform: (resp: unknown) => T = (resp) => resp as T,
     ): this | Promise<T> {
         const id = this.generateID();
 
@@ -58,36 +92,51 @@ class FXRates {
             id: id,
         });
 
-        this.callbacks[id] = callback;
-
-        if (this.inBatch) return this;
-        else {
-            const answer = new Promise<T>((resolve) => {
-                this.callbacks[id] = resolve;
-            });
-
-            this.done();
-
-            return answer;
+        if (this.inBatch) {
+            this.callbacks[id] = {
+                resolve: (resp) => callback?.(transform(resp)),
+                reject: () => undefined,
+            };
+            return this;
         }
+
+        const answer = new Promise<T>((resolve, reject) => {
+            this.callbacks[id] = {
+                resolve: (resp) => {
+                    const result = transform(resp);
+                    resolve(result);
+                    callback?.(result);
+                },
+                reject,
+            };
+        });
+
+        this.done().catch(() => undefined);
+
+        return answer;
     }
 
-    info(callback?: (resp: infoResponse) => any) {
+    info(callback?: (resp: infoResponse) => void) {
         return this.addToQueue<infoResponse>('instanceInfo', '', callback);
     }
 
     listCurrencies(
         source: string,
-        callback?: (resp: currencyListResponse) => any,
+        callback?: (resp: currencyListResponse) => void,
     ) {
         return this.addToQueue<currencyListResponse>(
             'listCurrencies',
             { source },
-            ({ currency, date }) => {
-                callback({
+            callback,
+            (resp) => {
+                const { currency, date } = resp as {
+                    currency: string[];
+                    date: string | number | Date;
+                };
+                return {
                     currency,
-                    date: new Date(date),
-                });
+                    date: toDate(date),
+                };
             },
         );
     }
@@ -95,25 +144,29 @@ class FXRates {
     listFXRates(
         source: string,
         from: string,
-        callback?: (resp: fxRateListResponse) => any,
+        callback?: (resp: fxRateListResponse) => void,
         precision = 2,
         amount = 100,
         fees = 0,
         reverse = false,
+        bfs = false,
     ) {
         return this.addToQueue<fxRateListResponse>(
             'listFXRates',
-            { source, from, precision, amount, fees, reverse },
+            { source, from, precision, amount, fees, reverse, bfs },
+            callback,
             (resp) => {
-                const anz = {};
-                for (const x in resp) {
-                    anz[x] = {};
-                    if (resp[x].cash) anz[x].cash = resp[x].cash;
-                    if (resp[x].remit) anz[x].remit = resp[x].remit;
-                    anz[x].middle = resp[x].middle;
-                    anz[x].updated = new Date(resp[x].updated);
+                const response = resp as Record<string, wireFXRateResponse>;
+                const anz: fxRateListResponse = {};
+                for (const x in response) {
+                    anz[x] = {
+                        middle: response[x].middle,
+                        updated: toDate(response[x].updated),
+                    };
+                    if (response[x].cash) anz[x].cash = response[x].cash;
+                    if (response[x].remit) anz[x].remit = response[x].remit;
                 }
-                callback(anz);
+                return anz;
             },
         );
     }
@@ -122,12 +175,13 @@ class FXRates {
         source: string,
         from: string,
         to: string,
-        callback: (rates: getFXRateResponse) => any,
+        callback: (rates: getFXRateResponse) => void,
         type: 'cash' | 'remit' | 'middle' | 'all' = 'all',
         precision = 2,
         amount = 100,
         fees = 0,
         reverse = false,
+        bfs = false,
     ) {
         return this.addToQueue<getFXRateResponse>(
             'getFXRate',
@@ -140,12 +194,18 @@ class FXRates {
                 amount,
                 fees,
                 reverse,
+                bfs,
             },
+            callback,
             (resp) => {
-                if (typeof resp == 'object') {
-                    resp.updated = new Date(resp.updated);
-                    callback(resp);
-                } else callback(resp);
+                if (typeof resp === 'object' && resp !== null) {
+                    const rate = resp as wireFXRateResponse;
+                    return {
+                        ...rate,
+                        updated: toDate(rate.updated),
+                    };
+                }
+                return resp as number | string;
             },
         );
     }
@@ -164,6 +224,8 @@ class FXRates {
         this.requestDetails = [];
         this.callbacks = {};
 
+        if (requestDetails.length === 0) return;
+
         const responseBody = requestDetails.map(
             (k) =>
                 new Object({
@@ -174,41 +236,83 @@ class FXRates {
                 }),
         );
 
-        const resp = await this.fetch(this.endpoint, {
-            method: 'POST',
-            body: JSON.stringify(responseBody),
-        });
-
-        let body: any;
-
-        const content = await resp.text();
-
-        try {
-            body = JSON.parse(content);
-        } catch (e) {
-            console.error(e);
-            console.error(content);
-            console.error(responseBody);
-            throw new Error('Error parsing response');
-        }
-
-        const handler = (k) => {
-            if (k.error) {
-                throw new Error(k.error.message + '\n' + k.error.data);
-            }
-
-            callbacks[k.id](k.result);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), requestTimeout);
+        const rejectAll = (error: Error) => {
+            Object.values(callbacks).forEach(({ reject }) => reject(error));
         };
 
-        if (body instanceof Array) {
-            body.forEach((k) => {
+        try {
+            const resp = await this.fetch(this.endpoint, {
+                method: 'POST',
+                body: JSON.stringify(responseBody),
+                signal: controller.signal,
+            });
+
+            let body: unknown;
+            const content = await resp.text();
+
+            try {
+                body = JSON.parse(content);
+            } catch (error) {
+                console.error(error);
+                console.error(content);
+                console.error(responseBody);
+                throw new Error('Error parsing response');
+            }
+
+            const responses = body instanceof Array ? body : [body];
+            const pendingIDs = new Set(Object.keys(callbacks));
+            let firstError: Error | undefined;
+
+            responses.forEach((response) => {
+                if (!isJsonRpcResponse(response)) {
+                    firstError ??= new Error('Invalid JSON-RPC response');
+                    return;
+                }
+
+                const callback = callbacks[response.id];
+                if (!callback || !pendingIDs.has(response.id)) return;
+                pendingIDs.delete(response.id);
+
+                if (response.error) {
+                    const error = new Error(
+                        response.error.message +
+                            '\n' +
+                            String(response.error.data),
+                    );
+                    callback.reject(error);
+                    firstError ??= error;
+                    return;
+                }
+
                 try {
-                    handler(k);
-                } catch (e) {
-                    console.error('Error in batch request:', e);
+                    callback.resolve(response.result);
+                } catch (error) {
+                    const callbackError = toError(error);
+                    callback.reject(callbackError);
+                    firstError ??= callbackError;
                 }
             });
-        } else handler(body);
+
+            pendingIDs.forEach((id) => {
+                const error = new Error(
+                    `Missing JSON-RPC response for request ${id}`,
+                );
+                callbacks[id].reject(error);
+                firstError ??= error;
+            });
+
+            if (firstError) throw firstError;
+        } catch (error) {
+            const requestError = controller.signal.aborted
+                ? new Error(`Request timed out after ${requestTimeout}ms`)
+                : toError(error);
+            rejectAll(requestError);
+            throw requestError;
+        } finally {
+            clearTimeout(timeout);
+        }
 
         return;
     }
