@@ -89,7 +89,8 @@ yarn format            # prettier（singleQuote、trailingComma all、tabWidth 4
 -   **数据源语义（实测验证过，勿凭字段名想当然）**：
     -   部分银行 API 的 `Buy/Sell` 是**客户视角**（如 `hsbc.cn` 的 `*SellingRate` 映射到 buy 方向）——代码已正确翻转，勿再改。
     -   `ncb.cn`：**ccyPair 方向不一致**——部分为「外币/CNY」（EUR/USD/GBP 等），部分为「CNY/外币」（THB/DKK/SEK/NOK），必须用 ccyPair 原序，勿假设外币在前；数值口径是「1 外币 = X CNY」（USD/CNY=6.75 即 1USD=6.75CNY），**仅 JPY 按 100 单位**。`cstExgBuyPrc` 是客户视角（客户买外币=银行卖），代码已正确翻转。
-    -   `ncb.hk` 的 `inNum/outNum` 是「100 外币 = X HKD」（`in`=银行买入外币价、`out`=银行卖出外币价）；**离岸人民币等货币的买入价可能高于卖出价**，不能按 min/max 推断买卖方向。
+  - `ncb.hk` 的 `inNum/outNum` 是「100 外币 = X HKD」（`in`=银行买入外币价、`out`=银行卖出外币价）；**离岸人民币等货币的买入价可能高于卖出价**，不能按 min/max 推断买卖方向。
+  - `hsbc.au`：数据源是 HSBC 澳洲官网汇率 widget（`mkdlc.ebanking.hsbc.com.hk/hsbcfxwidget`，`hsbc.com.au/calculators/HSBC-exchange-rates/` 页面内嵌 iframe），**所有货币对以 AUD 为基准**（AUD→各外币）。API 的 `buy`/`sell` 是**银行视角**（页面列名 `HSBC Buys`/`HSBC Sells`，2026-08-03 官方 calculate API 实测对照）：`k.buy`=银行买 AUD 价=客户卖 AUD 得外币价（映射到 `rate.sell`），`k.sell`=银行卖 AUD 价=客户买 AUD 付外币价（映射到 `rate.buy`）。**映射 `buy: k.sell, sell: k.buy` 勿再翻转**——曾因误判方向翻转导致交叉汇率偏离 4%。注意该源单边点差约 2%（零售全球账户牌价），经 AUD 的多跳交叉（如 HKD→USD）会叠加两段点差（合计约 4% 损耗），交叉 cash 价显著低于直连源，但直连 AUD 对（AUD↔X）与官方计算器完全吻合。
     -   `citic.cn`：API（2026-08 实测）**不返回 `midPrice`/`cstpur*` 字段**，仅 `cstexcBuyPrice`/`cstexcSellPrice`，中间价需用买卖均价估算。
     -   汇率数值交叉验证方式：各源 `USD/CNY` 中间价应一致（~675 百元口径）；偏差 >5% 说明方向/单位可能写错（小币种 RUB/ZAR 等银行点差大，偏差 20%+ 属正常）。可用 `RUN_NETWORK_TESTS=1` 跑 `test/validate-rates.test.ts` 自动校验。
 -   **Wise 硬编码 token（勿当安全漏洞处理）**：`FXGetter/wise.ts` 里的 Basic 认证 token（`Basic OGNhN2FlMjUt...`）是**有意为之**——Wise API 强制要求携带凭据，该 token 是从 Wise 公开网页 UI 中提取的（等同任何浏览器用户可见），非私密密钥。未设 `WISE_TOKEN` 环境变量时自动回退到它（`WISE_USE_TOKEN_FROM_WEB=1`）。安全扫描或审查若标记它，勿改动、勿删除，直接忽略并说明原因。
