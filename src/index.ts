@@ -6,7 +6,7 @@ import esMain from 'es-main';
 import rootRouter, { handler, response } from 'handlers.js';
 
 import fxmManager from './fxmManager';
-import { useBasic } from './fxmManager';
+import { useBasic } from './handler/rest';
 
 import getBOCFXRatesFromBOC from './FXGetter/boc';
 import getBOCHKFxRates from './FXGetter/bochk';
@@ -31,6 +31,7 @@ import getNCBHKFXRates from './FXGetter/ncb.hk';
 import getXIBFXRates from './FXGetter/xib';
 import getPABFXRates from './FXGetter/pab';
 import getCEBFXRates from './FXGetter/ceb';
+import getECBFXRates from './FXGetter/ecb';
 
 import mastercardFXM from './FXGetter/mastercard';
 import visaFXM from './FXGetter/visa';
@@ -60,6 +61,7 @@ const Manager = new fxmManager({
     xib: getXIBFXRates,
     pab: getPABFXRates,
     ceb: getCEBFXRates,
+    ecb: getECBFXRates,
 });
 
 Manager.registerFXM('mastercard', new mastercardFXM());
