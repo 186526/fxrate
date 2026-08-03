@@ -55,6 +55,7 @@ import getDBSCNFXRates from './FXGetter/dbs.cn';
 import getDBSHKFXRates from './FXGetter/dbs.hk';
 import getAlipayFXRates from './FXGetter/alipay';
 import getHKMAFXRates from './FXGetter/hkma';
+import getHKABFXRates from './FXGetter/hkab';
 import getCNCBIFXRates from './FXGetter/cncbi';
 import getCCBAFXRates from './FXGetter/ccba';
 import getCMBWLFXRates from './FXGetter/cmbwl';
@@ -116,6 +117,7 @@ const Manager = new fxmManager({
     'dbs.hk': getDBSHKFXRates,
     alipay: getAlipayFXRates,
     hkma: getHKMAFXRates,
+    hkab: getHKABFXRates,
     cncbi: getCNCBIFXRates,
     ccba: getCCBAFXRates,
     cmbwl: getCMBWLFXRates,

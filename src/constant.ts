@@ -49,6 +49,7 @@ export const sourceNamesInZH = {
     'dbs.hk': '星展银行（香港）',
     alipay: '支付宝',
     hkma: '香港金管局',
+    hkab: '香港银行公会',
     cncbi: '中信银行国际',
     ccba: '建银亚洲',
     cmbwl: '招商永隆银行',
