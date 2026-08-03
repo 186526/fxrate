@@ -68,6 +68,7 @@
 -   `sell.remit`/`sell.cash`：银行卖出价。
 -   单一中间价源（如 pboc/mastercard/visa/wise）：`remit`/`cash` 与中间价相同。
 -   单方向源（如 alipay）：反向查询报 `No FX path found`（不生成伪倒数）。
+-   **CNY/CNH 别名提示**：源只用 CNH 报价（如 dbs/ocbc）时，请求 CNY 方向的直连或 BFS 路径实际使用 CNH 汇率——`?bfs=1` 响应体含 `alias` 字段（如 `"alias":"CNH"`，路径 `path` 已归一为目标货币），REST 响应头同时设置 `X-FXRate-Alias: CNH`，前端可据此显示「经 CNH 折算」。无别名命中（源有真实 CNY 报价）时不设该头。
 -   响应头 `Date` 为该汇率的更新时间；`Cache-Control` 与下次刷新挂钩（30 分钟周期递减）。
 -   JSON 键按字典序排序（数组如 `path` 除外，保留顺序语义）。
 

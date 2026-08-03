@@ -263,6 +263,26 @@ export default class fxManager {
             FXPath.path.push(from);
             return FXPath;
         }
+
+        // CNY/CNH 别名 fallback 检测：Proxy get trap 会静默把不存在的 CNY/CNH
+        // 映射到图里实际存在的别名（如 DBS/OCBC 只有 CNH），直连判断与 BFS 起点
+        // 都可能实际使用别名货币（如 USD→CNY 实际用 USD→CNH 行）——统一标记 alias
+        // 供 API 响应提示（result.alias + X-FXRate-Alias header），2026-08 实测。
+        const ALIAS_MAP: Partial<Record<string, currency>> = {
+            CNY: 'CNH' as currency.CNH,
+            CNH: 'CNY' as currency.CNY,
+        };
+        const fromNode = this.fxRateList[from];
+        let aliasUsed: currency | undefined;
+        if (!(from in this.fxRateList)) {
+            // 一级 fallback：from 节点本身不存在（CNY 请求，图里只有 CNH）
+            aliasUsed = ALIAS_MAP[from as string];
+        } else if (fromNode && !(to in fromNode)) {
+            // 二级 fallback：from 节点存在但 to 边不存在（USD→CNY，图里只有 USD→CNH）
+            aliasUsed = ALIAS_MAP[to as string];
+        }
+        if (aliasUsed) FXPath.alias = aliasUsed;
+
         if (this.fxRateList[from] && this.fxRateList[from][to]) {
             FXPath.path.push(to);
             return FXPath;
