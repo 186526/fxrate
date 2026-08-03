@@ -32,7 +32,7 @@ const parseUpdatedTime = (value: string): Date => {
     return Number.isNaN(updated.getTime()) ? new Date() : updated;
 };
 
-const getCQCBankFXRates = async (): Promise<FXRate[]> => {
+const getBCQFXRates = async (): Promise<FXRate[]> => {
     const res = await axios.get(
         'https://www.cqcbank.com/cms/ExchangeRateQryInfo.do',
         {
@@ -98,4 +98,4 @@ const getCQCBankFXRates = async (): Promise<FXRate[]> => {
         .sort();
 };
 
-export default getCQCBankFXRates;
+export default getBCQFXRates;

@@ -39,7 +39,7 @@ const parseDate = (dateValue: string, timeValue: string): Date => {
     return Number.isFinite(date.getTime()) ? date : new Date();
 };
 
-const getGHBankFXRates = async (): Promise<FXRate[]> => {
+const getGHBFXRates = async (): Promise<FXRate[]> => {
     const res = await axios.get<GHBankResponse>(
         'https://www.ghbank.com.cn/product/findForeignExchangeList',
         {
@@ -102,4 +102,4 @@ const getGHBankFXRates = async (): Promise<FXRate[]> => {
     return rates.sort();
 };
 
-export default getGHBankFXRates;
+export default getGHBFXRates;

@@ -10,9 +10,9 @@ const parseChinaDate = (value: string): Date => {
     return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 };
 
-const getHXFXRates = async (): Promise<FXRate[]> => {
+const getCGBFXRates = async (): Promise<FXRate[]> => {
     const res = await axios.get(
-        'https://sbank.hxb.com.cn/gateway/forexquote.jsp',
+        'https://www.cgbchina.com.cn/searchExchangePrice.gsp',
         {
             headers: {
                 'User-Agent': process.env['HEADER_USER_AGENT'] ?? USER_AGENT,
@@ -21,6 +21,10 @@ const getHXFXRates = async (): Promise<FXRate[]> => {
         },
     );
     const $ = cheerio.load(res.data);
+    const timestamp = $('span._times')
+        .text()
+        .match(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)?.[0];
+    const updated = timestamp ? parseChinaDate(timestamp) : new Date();
 
     return $('tr')
         .toArray()
@@ -29,20 +33,29 @@ const getHXFXRates = async (): Promise<FXRate[]> => {
                 .find('td')
                 .toArray()
                 .map((cell) => $(cell).text().trim());
-            if (cells.length < 7) return null;
+            if (cells.length < 8) return null;
 
-            const pair = cells[0].match(/^([A-Z]{3})CNY$/);
+            const pair = cells[1].match(/^([A-Z]{3})\/(CNY)$/);
             if (!pair) return null;
 
-            const remitBuy = Number(cells[2]);
-            const cashBuy = Number(cells[3]);
-            const sell = Number(cells[4]);
-            const middle = Number(cells[5]);
-            const values = [remitBuy, cashBuy, sell, middle];
+            const unit = Number(cells[2]);
+            const middle = Number(cells[3]);
+            const remitBuy = Number(cells[4]);
+            const cashBuy = Number(cells[5]);
+            const remitSell = Number(cells[6]);
+            const cashSell = Number(cells[7]);
+            const values = [
+                unit,
+                middle,
+                remitBuy,
+                cashBuy,
+                remitSell,
+                cashSell,
+            ];
             if (
                 values.some((value) => !Number.isFinite(value) || value <= 0) ||
-                remitBuy >= sell ||
-                cashBuy >= sell
+                remitBuy >= remitSell ||
+                cashBuy >= cashSell
             ) {
                 return null;
             }
@@ -58,17 +71,17 @@ const getHXFXRates = async (): Promise<FXRate[]> => {
                         cash: cashBuy,
                     },
                     sell: {
-                        remit: sell,
-                        cash: sell,
+                        remit: remitSell,
+                        cash: cashSell,
                     },
                     middle,
                 },
-                unit: 100,
-                updated: parseChinaDate(cells[6]),
+                unit,
+                updated,
             };
         })
         .filter((rate): rate is FXRate => rate !== null)
         .sort();
 };
 
-export default getHXFXRates;
+export default getCGBFXRates;

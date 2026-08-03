@@ -120,7 +120,7 @@ const parseDate = (value: string): Date => {
     return Number.isFinite(date.getTime()) ? date : new Date();
 };
 
-const getJSBankFXRates = async (): Promise<FXRate[]> => {
+const getBOJSFXRates = async (): Promise<FXRate[]> => {
     let payload: JSBankResponse;
     try {
         payload = await fetchDirect();
@@ -183,4 +183,4 @@ const getJSBankFXRates = async (): Promise<FXRate[]> => {
     return rates.sort();
 };
 
-export default getJSBankFXRates;
+export default getBOJSFXRates;

@@ -27,7 +27,7 @@ const parseUpdatedTime = (value: string): Date => {
     return Number.isNaN(updated.getTime()) ? new Date() : updated;
 };
 
-const getBCSCFXRates = async (): Promise<FXRate[]> => {
+const getBCSFXRates = async (): Promise<FXRate[]> => {
     const res = await axios.get(
         'http://www.bankofchangsha.com.cn/ajax/list_new_whpj',
         {
@@ -90,4 +90,4 @@ const getBCSCFXRates = async (): Promise<FXRate[]> => {
         .sort();
 };
 
-export default getBCSCFXRates;
+export default getBCSFXRates;

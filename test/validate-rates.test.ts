@@ -37,8 +37,8 @@ import getXIBFXRates from '../src/FXGetter/xib';
 import getPABFXRates from '../src/FXGetter/pab';
 import getCEBFXRates from '../src/FXGetter/ceb';
 import getCMBCFXRates from '../src/FXGetter/cmbc';
-import getCGBChinaFXRates from '../src/FXGetter/cgbchina';
-import getHXFXRates from '../src/FXGetter/hx';
+import getCGBFXRates from '../src/FXGetter/cgb';
+import getHXBFXRates from '../src/FXGetter/hxb';
 import getCBHBFXRates from '../src/FXGetter/cbhb';
 import getBOBFXRates from '../src/FXGetter/bob';
 import getBOSCFXRates from '../src/FXGetter/bosc';
@@ -46,13 +46,13 @@ import getNJCBFXRates from '../src/FXGetter/njcb';
 import getHZBankFXRates from '../src/FXGetter/hzbank';
 import getGZCBFXRates from '../src/FXGetter/gzcb';
 import getHSBankFXRates from '../src/FXGetter/hsbank';
-import getCQCBankFXRates from '../src/FXGetter/cqcbank';
-import getBCSCFXRates from '../src/FXGetter/bcsc';
+import getBCQFXRates from '../src/FXGetter/bcq';
+import getBCSFXRates from '../src/FXGetter/bcs';
 import getCQTGFXRates from '../src/FXGetter/cqtg';
-import getGHBankFXRates from '../src/FXGetter/ghbank';
+import getGHBFXRates from '../src/FXGetter/ghb';
 import getHFBankFXRates from '../src/FXGetter/hfbank';
 import getZYBankFXRates from '../src/FXGetter/zybank';
-import getJSBankFXRates from '../src/FXGetter/jsbank';
+import getBOJSFXRates from '../src/FXGetter/bojs';
 import mastercardFXM from '../src/FXGetter/mastercard';
 import visaFXM from '../src/FXGetter/visa';
 import type fxManager from '../src/fxm/fxManager';
@@ -84,8 +84,8 @@ const getters: { [source: string]: () => Promise<FXRate[]> } = {
     pab: getPABFXRates,
     ceb: getCEBFXRates,
     cmbc: getCMBCFXRates,
-    cgbchina: getCGBChinaFXRates,
-    hx: getHXFXRates,
+    cgb: getCGBFXRates,
+    hxb: getHXBFXRates,
     cbhb: getCBHBFXRates,
     bob: getBOBFXRates,
     bosc: getBOSCFXRates,
@@ -93,13 +93,13 @@ const getters: { [source: string]: () => Promise<FXRate[]> } = {
     hzbank: getHZBankFXRates,
     gzcb: getGZCBFXRates,
     hsbank: getHSBankFXRates,
-    cqcbank: getCQCBankFXRates,
-    bcsc: getBCSCFXRates,
+    bcq: getBCQFXRates,
+    bcs: getBCSFXRates,
     cqtg: getCQTGFXRates,
-    ghbank: getGHBankFXRates,
+    ghb: getGHBFXRates,
     hfbank: getHFBankFXRates,
     zybank: getZYBankFXRates,
-    jsbank: getJSBankFXRates,
+    bojs: getBOJSFXRates,
 };
 
 // mastercard/visa 是 FXM 类（懒加载 + 异步请求），抽查关键货币对。

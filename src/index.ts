@@ -32,8 +32,8 @@ import getXIBFXRates from './FXGetter/xib';
 import getPABFXRates from './FXGetter/pab';
 import getCEBFXRates from './FXGetter/ceb';
 import getCMBCFXRates from './FXGetter/cmbc';
-import getCGBChinaFXRates from './FXGetter/cgbchina';
-import getHXFXRates from './FXGetter/hx';
+import getCGBFXRates from './FXGetter/cgb';
+import getHXBFXRates from './FXGetter/hxb';
 import getCBHBFXRates from './FXGetter/cbhb';
 import getBOBFXRates from './FXGetter/bob';
 import getBOSCFXRates from './FXGetter/bosc';
@@ -41,13 +41,13 @@ import getNJCBFXRates from './FXGetter/njcb';
 import getHZBankFXRates from './FXGetter/hzbank';
 import getGZCBFXRates from './FXGetter/gzcb';
 import getHSBankFXRates from './FXGetter/hsbank';
-import getCQCBankFXRates from './FXGetter/cqcbank';
-import getBCSCFXRates from './FXGetter/bcsc';
+import getBCQFXRates from './FXGetter/bcq';
+import getBCSFXRates from './FXGetter/bcs';
 import getCQTGFXRates from './FXGetter/cqtg';
-import getGHBankFXRates from './FXGetter/ghbank';
+import getGHBFXRates from './FXGetter/ghb';
 import getHFBankFXRates from './FXGetter/hfbank';
 import getZYBankFXRates from './FXGetter/zybank';
-import getJSBankFXRates from './FXGetter/jsbank';
+import getBOJSFXRates from './FXGetter/bojs';
 import getECBFXRates from './FXGetter/ecb';
 import getCFETSFXRates from './FXGetter/cfets';
 import getDBSFXRates from './FXGetter/dbs';
@@ -85,8 +85,8 @@ const Manager = new fxmManager({
     pab: getPABFXRates,
     ceb: getCEBFXRates,
     cmbc: getCMBCFXRates,
-    cgbchina: getCGBChinaFXRates,
-    hx: getHXFXRates,
+    cgb: getCGBFXRates,
+    hxb: getHXBFXRates,
     cbhb: getCBHBFXRates,
     bob: getBOBFXRates,
     bosc: getBOSCFXRates,
@@ -94,13 +94,13 @@ const Manager = new fxmManager({
     hzbank: getHZBankFXRates,
     gzcb: getGZCBFXRates,
     hsbank: getHSBankFXRates,
-    cqcbank: getCQCBankFXRates,
-    bcsc: getBCSCFXRates,
+    bcq: getBCQFXRates,
+    bcs: getBCSFXRates,
     cqtg: getCQTGFXRates,
-    ghbank: getGHBankFXRates,
+    ghb: getGHBFXRates,
     hfbank: getHFBankFXRates,
     zybank: getZYBankFXRates,
-    jsbank: getJSBankFXRates,
+    bojs: getBOJSFXRates,
     ecb: getECBFXRates,
     cfets: getCFETSFXRates,
     dbs: getDBSFXRates,
