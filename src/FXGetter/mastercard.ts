@@ -10,6 +10,18 @@ const cache = new LRUCache<string, string>({
     ttlAutopurge: true,
 });
 
+// 常见浏览器 UA 池：Akamai 对 undici 默认 UA 返回 403，需伪装浏览器。
+// 进程启动时随机固定一个（不逐请求更换，避免 UA 漂移被反爬识别）。
+const BROWSER_UA_POOL = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+];
+const BROWSER_UA =
+    BROWSER_UA_POOL[Math.floor(Math.random() * BROWSER_UA_POOL.length)];
+
 const currenciesList: string[] = [
     'AFN',
     'ALL',
@@ -267,6 +279,12 @@ export default class mastercardFXM extends fxManager {
                     signal: AbortSignal.timeout(10000),
                     headers: {
                         accept: 'application/json, text/plain, */*',
+                        // 必须带浏览器 UA：Node 26（Docker node:alpine 镜像）的 undici
+                        // 默认 UA 会被 Akamai 识别为机器人返回 403；带浏览器 UA 后 200
+                        // （2026-08 生产实测，本地 Node 24 不带 UA 也能过，统一带上更稳）。
+                        // 进程启动时从常见浏览器 UA 池随机固定一个（不逐请求换，避免
+                        // Akamai 的 UA 漂移检测），与真实用户指纹一致。
+                        'user-agent': BROWSER_UA,
                     },
                 });
             } catch (_e) {
