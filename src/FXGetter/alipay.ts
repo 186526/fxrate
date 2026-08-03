@@ -8,7 +8,9 @@ import { FXRate, currency } from 'src/types.d';
 //   返回 JSONP 包裹的 resultData，含 commonRateList：每条 { currencyInfo.engAbbr, contrastRate, mbarcodeRate }。
 //   contrastRate = 1 外币 = X 人民币（USD=6.7704，2026-08 实测）；mbarcodeRate 为会员专属汇率。
 // 纯 curl/axios 可直连（2026-08 实测，无需 cookie/referer/UA），但需伪装 callback 参数。
-// 语义：支付宝境外消费「付款时按外币换算人民币」，contrastRate 即客户实际结算汇率（中间价性质，无买卖价）。
+// 语义：用户付人民币、支付宝付商家外币 = **购汇价**（客户买入外币价）。
+// 因此注册方向为 CNY → 外币（值 = 1/contrastRate，如 1 CNY = 0.1477 USD），
+// oneWay 保留购汇方向、禁止结汇方向（外币 → CNY）——支付宝不做结汇业务。
 const getAlipayFXRates = async (): Promise<FXRate[]> => {
     const forward = JSON.stringify({
         positionInfo: { latitude: 22.3, longitude: 114.17 },
@@ -53,20 +55,20 @@ const getAlipayFXRates = async (): Promise<FXRate[]> => {
     for (const r of rows) {
         const ccy = r.currencyInfo.engAbbr;
         if (!/^[A-Z]{3}$/.test(ccy) || ccy === 'CNY') continue;
-        const middle = Number(r.contrastRate);
+        const middle = 1 / Number(r.contrastRate);
         if (!Number.isFinite(middle) || middle <= 0) continue;
         rates.push({
             currency: {
-                from: ccy as unknown as currency.unknown,
-                to: 'CNY' as currency.CNY,
+                from: 'CNY' as currency.CNY,
+                to: ccy as unknown as currency.unknown,
             },
             rate: {
                 middle,
             },
             unit: 1,
             updated: date,
-            // 单向结算汇率：支付宝只做「外币账单 → 人民币扣款」，反向（人民币→外币）无实际业务，
-            // oneWay 让 fxManager 跳过反向写入，避免出现误导性的 CNY→外币 倒数牌价。
+            // 单向购汇汇率：支付宝只做「人民币 → 外币」购汇结算（用户付人民币、支付宝付商家外币），
+            // 结汇方向（外币 → 人民币）无实际业务，oneWay 让 fxManager 跳过反向写入。
             oneWay: true,
         } as FXRate);
     }

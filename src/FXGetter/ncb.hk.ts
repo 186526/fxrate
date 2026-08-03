@@ -56,8 +56,9 @@ const getNCBHKFXRates = async (): Promise<FXRate[]> => {
 
             // 绝大多数货币：inNum/outNum = 「100 外币 = X HKD」（1 USD = 7.8274 HKD，实测验证）。
             // 但 CNY/CNH 特殊：报价是「100 HKD = X CNY」（1 HKD = 0.8671 CNY，交叉验证 1 USD = 6.76 CNY 吻合市场），
-            // 方向与其他货币相反，必须反转。inNum=银行买入价、outNum=银行卖出价；
-            // 离岸人民币的买入价可能高于卖出价，不能按 min/max 推断买卖方向。
+            // 方向与其他货币相反。此时 inNum=银行买入 CNY 价（=100/inNum HKD/CNY，低）、
+            // outNum=银行卖出 CNY 价（=100/outNum HKD/CNY，高），映射到 HKD→CNY 方向必须 buy/sell 对调
+            // （rate.buy=outNum、rate.sell=inNum），否则输出 buy > sell 方向倒挂（2026-08 实测修复）。
             // JPY 特殊：按「10000 日元 = X HKD」报价（1 JPY = 0.0490 HKD，交叉验证与 hsbc.hk 一致）。
             const buy = Number(fx.inNum);
             const sell = Number(fx.outNum);
@@ -77,12 +78,12 @@ const getNCBHKFXRates = async (): Promise<FXRate[]> => {
                       },
                 rate: {
                     buy: {
-                        remit: buy,
-                        cash: buy,
+                        remit: hkdBase ? sell : buy,
+                        cash: hkdBase ? sell : buy,
                     },
                     sell: {
-                        remit: sell,
-                        cash: sell,
+                        remit: hkdBase ? buy : sell,
+                        cash: hkdBase ? buy : sell,
                     },
                 },
                 unit: unit,
