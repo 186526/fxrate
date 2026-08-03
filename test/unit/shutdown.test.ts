@@ -1,30 +1,19 @@
-// shutdown baseline（Phase 0）：子进程启动真实服务入口（makeInstance + listen），
-// 验证 harness 可探测到当前 SIGTERM 行为——已知缺陷（计划 §5.2）：信号只清定时器/写快照，
-// 不关闭 HTTP listener，进程在 deadline 内不退出。Phase 2 修复后本文件改为断言
-// 「SIGTERM 后停止接收并在 deadline 内优雅退出」。全程只访问 127.0.0.1，不访问公网。
+// shutdown（Phase 2）：子进程启动真实服务入口（makeInstance + 默认 handler + installShutdown），
+// 验证首次 SIGTERM/SIGINT 后：① 停止接收新连接（再连接返回 ECONNREFUSED）；② 等待在途请求
+// 自然结束后进程以 0 退出；③ 超过可配置硬截止（SHUTDOWN_DEADLINE_MS）强制 exit 0。
+// fixture 显式绑定 127.0.0.1 并打印实际监听地址，测试断言只监听回环地址、全程不访问公网。
 // 每个 test 各自 spawn 独立子进程，无跨 test 状态依赖。
 
 import { spawn, type ChildProcess } from 'node:child_process';
 import http from 'node:http';
+import net from 'node:net';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const fixturePath = join(repoRoot, 'test', 'fixtures', 'shutdown-child.ts');
-
-function getFreePort(): Promise<number> {
-    return new Promise((resolvePort, reject) => {
-        const server = net.createServer();
-        server.on('error', reject);
-        server.listen(0, '127.0.0.1', () => {
-            const address = server.address() as net.AddressInfo;
-            server.close(() => resolvePort(address.port));
-        });
-    });
-}
 
 function httpGet(
     port: number,
@@ -62,6 +51,60 @@ async function waitFor(
     }
 }
 
+// 打开一个「在途请求」连接：只写 HTTP 请求行 + 部分 header，不写完，
+// 让 server.close() 认为仍有活动请求而等待它，从而可观察停机中间态。
+function openPartialRequest(port: number): Promise<net.Socket> {
+    return new Promise((resolveSocket, reject) => {
+        const socket = net.connect({ host: '127.0.0.1', port }, () => {
+            socket.write('GET /info HTTP/1.1\r\nHost: localhost\r\n');
+            resolveSocket(socket);
+        });
+        socket.on('error', reject);
+    });
+}
+
+// 断言端口已拒绝新连接（server.close() 后 OS 不再接受新 TCP 连接）。
+// 信号处理可能有一两 tick 延迟，故带重试；若始终可连接则超时失败。
+async function expectConnectionRefused(
+    port: number,
+    timeoutMs = 3000,
+): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+        try {
+            await new Promise<void>((resolveRefused, reject) => {
+                const socket = net.connect({ host: '127.0.0.1', port });
+                socket.once('connect', () => {
+                    socket.destroy();
+                    reject(new Error(`port ${port} still accepts connections`));
+                });
+                socket.once('error', (error: NodeJS.ErrnoException) => {
+                    if (error.code === 'ECONNREFUSED') resolveRefused();
+                    else reject(error);
+                });
+            });
+            return;
+        } catch (error) {
+            if (Date.now() > deadline) throw error;
+            await new Promise((resolveSleep) => setTimeout(resolveSleep, 50));
+        }
+    }
+}
+
+async function waitForExit(
+    started: StartedChild,
+    timeoutMs: number,
+): Promise<number | null> {
+    const deadline = Date.now() + timeoutMs;
+    while (!started.exited()) {
+        if (Date.now() > deadline) {
+            throw new Error('process did not exit in time');
+        }
+        await new Promise((resolveSleep) => setTimeout(resolveSleep, 50));
+    }
+    return started.child.exitCode;
+}
+
 interface StartedChild {
     child: ChildProcess;
     port: number;
@@ -69,17 +112,19 @@ interface StartedChild {
     exited: () => boolean;
 }
 
-async function startChild(cacheDir: string): Promise<StartedChild> {
-    const port = await getFreePort();
+async function startChild(
+    cacheDir: string,
+    extraEnv: Record<string, string> = {},
+): Promise<StartedChild> {
     let stdout = '';
     let exited = false;
     const child = spawn(process.execPath, ['--import', 'tsx', fixturePath], {
         cwd: repoRoot,
         env: {
             ...process.env,
-            PORT: String(port),
             FXRATE_CACHE_DIR: cacheDir,
             LOG_LEVEL: 'error',
+            ...extraEnv,
         },
         stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -89,11 +134,16 @@ async function startChild(cacheDir: string): Promise<StartedChild> {
     child.on('exit', () => {
         exited = true;
     });
-    await waitFor(() => stdout.includes('SHUTDOWN_CHILD_READY'), 30000);
+    await waitFor(() => /SHUTDOWN_CHILD_READY \d+ \S+/.test(stdout), 30000);
+    const match = /SHUTDOWN_CHILD_READY (\d+) (\S+)/.exec(stdout);
+    const port = Number(match?.[1]);
+    const address = match?.[2];
+    // 只绑定回环地址：全程不开放对外端口、不访问公网
+    expect(address).toBe('127.0.0.1');
     return { child, port, stdout: () => stdout, exited: () => exited };
 }
 
-describe('shutdown baseline (Phase 0, offline)', () => {
+describe('shutdown (Phase 2, offline, loopback-only)', () => {
     let cacheDir: string;
 
     beforeAll(() => {
@@ -119,7 +169,7 @@ describe('shutdown baseline (Phase 0, offline)', () => {
         }
     }
 
-    test('harness: child starts the real app and serves /info', async () => {
+    test('harness: child starts the real app on 127.0.0.1 and serves /info', async () => {
         const started = await startChild(cacheDir);
         try {
             const res = await httpGet(started.port, '/info');
@@ -131,15 +181,62 @@ describe('shutdown baseline (Phase 0, offline)', () => {
         }
     }, 60000);
 
-    test('baseline: SIGTERM does not close the listener within deadline (known Phase 2 bug)', async () => {
-        const started = await startChild(cacheDir);
+    test('SIGTERM: listener rejects new connections, exits 0 after in-flight drain', async () => {
+        const started = await startChild(cacheDir, {
+            SHUTDOWN_DEADLINE_MS: '20000',
+        });
+        const inflight = await openPartialRequest(started.port);
         try {
             started.child.kill('SIGTERM');
-            await new Promise((resolveSleep) => setTimeout(resolveSleep, 1500));
-            // 当前实现（§5.2）：SIGTERM 只清 timer + 写快照，不关闭 listener → 进程仍在。
+            // 有在途连接时 server.close() 不会立刻触发 'close'，进程应仍在（deadline 20s 远未到）
+            await new Promise((resolveSleep) => setTimeout(resolveSleep, 500));
             expect(started.exited()).toBe(false);
-            const res = await httpGet(started.port, '/info');
-            expect(res.status).toBe(200);
+            // 新连接必须被拒绝（listener 已停止接收）
+            await expectConnectionRefused(started.port);
+            // 放行在途请求 → server 'close' → 进程以 0 退出。
+            // 若优雅关闭失效，进程要等到 20s 硬截止才退出，8s 的 waitForExit 会先超时失败。
+            inflight.destroy();
+            const code = await waitForExit(started, 8000);
+            expect(code).toBe(0);
+            await expectConnectionRefused(started.port);
+        } finally {
+            inflight.destroy();
+            await stopChild(started);
+        }
+    }, 30000);
+
+    test('SIGTERM: configurable hard deadline forces exit 0 with in-flight connection', async () => {
+        const deadlineMs = 800;
+        const started = await startChild(cacheDir, {
+            SHUTDOWN_DEADLINE_MS: String(deadlineMs),
+        });
+        const inflight = await openPartialRequest(started.port);
+        const signalledAt = Date.now();
+        try {
+            started.child.kill('SIGTERM');
+            // 在途连接未放行，deadline 未到 → 进程不应立刻退出
+            await new Promise((resolveSleep) => setTimeout(resolveSleep, 300));
+            expect(started.exited()).toBe(false);
+            const code = await waitForExit(started, 10000);
+            expect(code).toBe(0);
+            const elapsed = Date.now() - signalledAt;
+            // 不是等 close（连接一直开着），而是被 ~deadline 兜底强制退出
+            expect(elapsed).toBeGreaterThan(deadlineMs - 200);
+            expect(elapsed).toBeLessThan(5000);
+            await expectConnectionRefused(started.port);
+        } finally {
+            inflight.destroy();
+            await stopChild(started);
+        }
+    }, 30000);
+
+    test('SIGINT: process exits 0 within deadline', async () => {
+        const started = await startChild(cacheDir);
+        try {
+            started.child.kill('SIGINT');
+            const code = await waitForExit(started, 10000);
+            expect(code).toBe(0);
+            await expectConnectionRefused(started.port);
         } finally {
             await stopChild(started);
         }
