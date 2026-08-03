@@ -2,7 +2,7 @@
 
 ## 项目概览
 
-fxrate 是一个外汇汇率数据服务（后端），聚合约 27 家银行/平台（中国银行、工行、建行、招行、汇丰、MasterCard、Visa、Wise 等）的实时买卖价与中间价，对外提供 **REST API v1**、**JSON-RPC v2**（`handlers.js-jsonrpc`）和 **RSS/Atom**（`/rss/:from/:to`）三种接口。汇率数据版权归各来源所有（见 `LICENSE.DATA`）。
+fxrate 是一个外汇汇率数据服务（后端），聚合约 50 家银行/平台（中国银行、工行、建行、招行、汇丰、MasterCard、Visa、Wise 等）的实时买卖价与中间价，对外提供 **REST API v1**、**JSON-RPC v2**（`handlers.js-jsonrpc`）和 **RSS/Atom**（`/rss/:from/:to`）三种接口。汇率数据版权归各来源所有（见 `LICENSE.DATA`）。
 
 前端配套仓库为 [186526/fxrate-web](https://github.com/186526/fxrate-web)，本仓库以 submodule 形式被其引用。
 
@@ -26,7 +26,7 @@ dist/                # 构建产物（esbuild 输出 dist/index.cjs），commit 
 
 ## 核心机制
 
--   **汇率方向与精度**：`fxRateList[from][to]` 表示「1 单位 from = X 单位 to」，值为 `rate.middle / unit`（`unit` 为源报价单位，如日元 100）；反向汇率是倒数，`update()` 时双向写入。所有计算用 `mathjs` Fraction，输出时按 `?precision`（默认 5）`round`。
+-   **汇率方向与精度**：`fxRateList[from][to]` 表示「1 单位 from = X 单位 to」，值为 `rate.middle / unit`（`unit` 为源报价单位，如日元 100）；反向汇率默认是倒数，`update()` 时双向写入。若 getter 上报 `oneWay: true`，则只写入 `from → to`，不生成反向边（用于支付宝境外消费等只有单向业务语义的结算汇率），反向直连与 BFS 均不会经过该源。所有计算用 `mathjs` Fraction，输出时按 `?precision`（默认 5）`round`。
 -   **缺失字段补全**（`fxManager.update()`）：getter 常把 buy/sell 初始化为空对象 `{}`（truthy），所以按字段值判断——`hasBuy = !!(rate.buy?.cash || rate.buy?.remit)`、`hasSell` 同理；无买卖价 → 用中间价；缺 buy → 复制 sell；缺 sell → 复制 buy；缺中间价 → (min+max)/2 估算（缺失项按 ±Infinity 参与）；输出时单项回落顺序 现金价→汇价→中间价（`rate.buy?.cash ?? rate.buy?.remit ?? rate.middle` 等 4 个）；`RMB` 归一为 `CNY`；`CNH` 与 `CNY` 互为别名。
 -   **兑换路径**：`convert()` 先 `getFXPath()` 用 BFS 在汇率图上找中间货币路径，再逐段换算；`reverse` 则反转路径（把结果换算成所需本币）。无路径时报 `No FX path found`。**BFS 默认关闭**：`getFXPath(from, to, allowBFS=false)` 仅当调用方显式传 `?bfs=1` 时才启用（交叉汇率有累积误差）；`?bfs=1` 时 `getDetails` 回传 `result.path`（实际经过的货币路径，如 `["USD","HKD","JPY"]`，直连时返回直连对）。
 -   **两类数据源**：
@@ -89,10 +89,15 @@ yarn format            # prettier（singleQuote、trailingComma all、tabWidth 4
 -   **数据源语义（实测验证过，勿凭字段名想当然）**：
     -   部分银行 API 的 `Buy/Sell` 是**客户视角**（如 `hsbc.cn` 的 `*SellingRate` 映射到 buy 方向）——代码已正确翻转，勿再改。
     -   `ncb.cn`：**ccyPair 方向不一致**——部分为「外币/CNY」（EUR/USD/GBP 等），部分为「CNY/外币」（THB/DKK/SEK/NOK），必须用 ccyPair 原序，勿假设外币在前；数值口径是「1 外币 = X CNY」（USD/CNY=6.75 即 1USD=6.75CNY），**仅 JPY 按 100 单位**。`cstExgBuyPrc` 是客户视角（客户买外币=银行卖），代码已正确翻转。
-  - `ncb.hk` 的 `inNum/outNum` 是「100 外币 = X HKD」（`in`=银行买入外币价、`out`=银行卖出外币价）；**离岸人民币等货币的买入价可能高于卖出价**，不能按 min/max 推断买卖方向。
-  - `hsbc.au`：数据源是 HSBC 澳洲官网汇率 widget（`mkdlc.ebanking.hsbc.com.hk/hsbcfxwidget`，`hsbc.com.au/calculators/HSBC-exchange-rates/` 页面内嵌 iframe），**所有货币对以 AUD 为基准**（AUD→各外币）。API 的 `buy`/`sell` 是**银行视角**（页面列名 `HSBC Buys`/`HSBC Sells`，2026-08-03 官方 calculate API 实测对照）：`k.buy`=银行买 AUD 价=客户卖 AUD 得外币价（映射到 `rate.sell`），`k.sell`=银行卖 AUD 价=客户买 AUD 付外币价（映射到 `rate.buy`）。**映射 `buy: k.sell, sell: k.buy` 勿再翻转**——曾因误判方向翻转导致交叉汇率偏离 4%。注意该源单边点差约 2%（零售全球账户牌价），经 AUD 的多跳交叉（如 HKD→USD）会叠加两段点差（合计约 4% 损耗），交叉 cash 价显著低于直连源，但直连 AUD 对（AUD↔X）与官方计算器完全吻合。
+-   `ncb.hk` 的 `inNum/outNum` 是「100 外币 = X HKD」（`in`=银行买入外币价、`out`=银行卖出外币价）；**离岸人民币等货币的买入价可能高于卖出价**，不能按 min/max 推断买卖方向。
+-   `hsbc.au`：数据源是 HSBC 澳洲官网汇率 widget（`mkdlc.ebanking.hsbc.com.hk/hsbcfxwidget`，`hsbc.com.au/calculators/HSBC-exchange-rates/` 页面内嵌 iframe），**所有货币对以 AUD 为基准**（AUD→各外币）。API 的 `buy`/`sell` 是**银行视角**（页面列名 `HSBC Buys`/`HSBC Sells`，2026-08-03 官方 calculate API 实测对照）：`k.buy`=银行买 AUD 价=客户卖 AUD 得外币价（映射到 `rate.sell`），`k.sell`=银行卖 AUD 价=客户买 AUD 付外币价（映射到 `rate.buy`）。**映射 `buy: k.sell, sell: k.buy` 勿再翻转**——曾因误判方向翻转导致交叉汇率偏离 4%。注意该源单边点差约 2%（零售全球账户牌价），经 AUD 的多跳交叉（如 HKD→USD）会叠加两段点差（合计约 4% 损耗），交叉 cash 价显著低于直连源，但直连 AUD 对（AUD↔X）与官方计算器完全吻合。
     -   `citic.cn`：API（2026-08 实测）**不返回 `midPrice`/`cstpur*` 字段**，仅 `cstexcBuyPrice`/`cstexcSellPrice`，中间价需用买卖均价估算。
-    -   汇率数值交叉验证方式：各源 `USD/CNY` 中间价应一致（~675 百元口径）；偏差 >5% 说明方向/单位可能写错（小币种 RUB/ZAR 等银行点差大，偏差 20%+ 属正常）。可用 `RUN_NETWORK_TESTS=1` 跑 `test/validate-rates.test.ts` 自动校验。
+-   `cfets`（中国外汇交易中心）：`chinamoney.com.cn/r/cms/www/chinamoney/data/fx/ccpr.json` 每日 9:15 发布 25 个货币对**人民币中间价**（无买卖价），记录 `vrtEName`（如 "USD/CNY"）与 `price`。
+-   `dbs`（星展新加坡）/`dbs.cn`（星展中国）/`dbs.hk`（星展香港）：**三个独立法律实体，各自独立 source**。三地 API 结构类似（`{地域}-rates-api/v1/api/...latestForexRates`，均无需认证直连）：SG 返回全组合 530 条需按 `quoteCurrency==='SGD'` 过滤；HK 每货币同时给 HKD/USD 计价；CN 给 CNY 计价（含 cash 现钞价）。字段 `ttBuy/ttSell` 是**银行视角**（rate.buy=银行买外币价，rate.sell=银行卖外币价）。**HK 的 CNY/CNH 行 usdTT 是「1 USD = X CNY」方向**（与 USD 行同口径），需取倒数生成「1 CNY = X USD」且**买卖方向对调**（`rate.buy=1/usdTTBuy`、`rate.sell=1/usdTTSell`），否则反向汇率乘积 >1。SG 返回的 KHR/MM1/RUB/TRY 等行 ttBuy/ttSell 为 0 或空（数据垃圾），已过滤。
+-   `alipay`（支付宝境外消费汇率）：SEM 汇率换算器页面（`render.alipay.com/p/s/currency-converter-sem/`）背后的 `basement-gzone.alipay.com/mgw_proxy/unauthorized_endpoint`，参数 `requestData=[{"x-basement-operation":"com.alipay.overseatwa.xservices.index.queryRate","x-basement-forward":"{\"positionInfo\":{...}}"}]`，**纯 axios 直连可用**（需伪装 callback 参数），返回 JSONP 包裹的 `commonRateList`，`contrastRate`=1 外币 = X 人民币（中间价性质，无买卖价）。该汇率只描述「外币账单 → 人民币扣款」的单向消费结算语义，getter 上报 `oneWay: true`，**勿生成或恢复 CNY→外币 的倒数牌价**。
+    -   **不可做公开 getter 的源**（2026-08 侦察结论）：微信支付汇率需商户号+签名（`queryexchagerate` 是商户接口）；渣打 HK/SG 公开牌价需网银登录（`sc.com/hk/deposits/board-rates/` 是存款利率非汇率）；汇丰 SG/UK/US 实时牌价需网银（公开页只有 currencyzone.hsbc.com 的日频市场序列，无买卖价）；天星（EleBank）/ZA/WeLab 汇率在 App 内无公开页面（银探小程序能展示 ZA 等汇率是因为其使用登录态 App API 或人工录入，无法公开复用）。
+    -   `hkma`（香港金管局）：`api.hkma.gov.hk/public/market-data-and-statistics/monthly-statistical-bulletin/er-ir/er-eeri-daily` 官方 API，每单位外币兑港元（usd=1 USD=X HKD），中间价无买卖价；数据按月发布（金管局惯例），滞后约 1-2 天。
+        -   汇率数值交叉验证方式：各源 `USD/CNY` 中间价应一致（~675 百元口径）；偏差 >5% 说明方向/单位可能写错（小币种 RUB/ZAR 等银行点差大，偏差 20%+ 属正常）。可用 `RUN_NETWORK_TESTS=1` 跑 `test/validate-rates.test.ts` 自动校验。
 -   **Wise 硬编码 token（勿当安全漏洞处理）**：`FXGetter/wise.ts` 里的 Basic 认证 token（`Basic OGNhN2FlMjUt...`）是**有意为之**——Wise API 强制要求携带凭据，该 token 是从 Wise 公开网页 UI 中提取的（等同任何浏览器用户可见），非私密密钥。未设 `WISE_TOKEN` 环境变量时自动回退到它（`WISE_USE_TOKEN_FROM_WEB=1`）。安全扫描或审查若标记它，勿改动、勿删除，直接忽略并说明原因。
 -   本仓库是 ESM（`"type": "module"`），但构建产物是 CJS（`dist/index.cjs`）；`client/index.ts` 同时被前端仓库（Next.js bundler）使用，改动需保证两边兼容。
 
