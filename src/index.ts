@@ -1,15 +1,17 @@
 import process from 'node:process';
 import http from 'node:http';
 
-// 生产兜底：未捕获的 rejection/异常只记录日志不退出进程，
-// 避免单个源的 playwright/网络超时拖垮整个服务（2026-08 bojs 崩溃后加）。
+// 未捕获的 rejection/异常记录日志后以非零码退出（supervisor 语义：pm2/Docker 检测到
+// 退出码后自动重启），不再「只记录不退出」——后者会掩盖真实故障让进程带病存活。
 process.on('unhandledRejection', (reason) => {
     console.error(
         `[unhandledRejection] ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}`,
     );
+    process.exit(1);
 });
 process.on('uncaughtException', (error) => {
     console.error(`[uncaughtException] ${error?.stack ?? error}`);
+    process.exit(1);
 });
 
 import esMain from 'es-main';
@@ -17,6 +19,7 @@ import esMain from 'es-main';
 import rootRouter, { handler, response } from 'handlers.js';
 
 import fxmManager from './fxmManager';
+import { installShutdown } from './shutdown';
 import { useBasic } from './handler/rest';
 
 import getBOCFXRatesFromBOC from './FXGetter/boc';
@@ -208,11 +211,22 @@ if (
     (async () => {
         globalThis.App = await makeInstance(new rootRouter(), Manager);
 
-        if (process.env.VERCEL != '1')
-            globalThis.App.listen(Number(process?.env?.PORT) || 8080);
+        const port = Number(process?.env?.PORT) || 8080;
+
+        if (process.env.VERCEL != '1') {
+            await globalThis.App.listen(port);
+
+            // 保留本地 HTTP server 句柄（handlers.js Node adapter 的内部 server），
+            // 安装优雅停机：SIGTERM/SIGINT 后停止接收新连接、停定时器、落盘快照一次，
+            // 等待在途请求自然结束后 exit 0，超时可配置硬截止强制退出。
+            const localServer = (
+                globalThis.App.adapater as unknown as { server: http.Server }
+            ).server;
+            installShutdown(localServer, Manager);
+        }
 
         console.log(
-            `[${new Date().toUTCString()}] Server is started at ${Number(process?.env?.PORT) || 8080} with NODE_ENV ${process.env.NODE_ENV || 'development'}.`,
+            `[${new Date().toUTCString()}] Server is started at ${port} with NODE_ENV ${process.env.NODE_ENV || 'development'}.`,
         );
     })();
 }

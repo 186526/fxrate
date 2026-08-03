@@ -28,6 +28,7 @@ dist/                # 构建产物（esbuild 输出 dist/index.cjs），commit 
 
 -   **汇率方向与精度**：`fxRateList[from][to]` 表示「1 单位 from = X 单位 to」，值为 `rate.middle / unit`（`unit` 为源报价单位，如日元 100）；反向汇率默认是倒数，`update()` 时双向写入。若 getter 上报 `oneWay: true`，则只写入 `from → to`，不生成反向边（用于支付宝境外消费等只有单向业务语义的结算汇率），反向直连与 BFS 均不会经过该源。所有计算用 `mathjs` Fraction，输出时按 `?precision`（默认 5）`round`。
 -   **缺失字段补全**（`fxManager.update()`）：getter 常把 buy/sell 初始化为空对象 `{}`（truthy），所以按字段值判断——`hasBuy = !!(rate.buy?.cash || rate.buy?.remit)`、`hasSell` 同理；无买卖价 → 用中间价；缺 buy → 复制 sell；缺 sell → 复制 buy；缺中间价 → (min+max)/2 估算（缺失项按 ±Infinity 参与）；输出时单项回落顺序 现金价→汇价→中间价（`rate.buy?.cash ?? rate.buy?.remit ?? rate.middle` 等 4 个）；`RMB` 归一为 `CNY`；`CNH` 与 `CNY` 互为别名。
+-   **严格输入校验与原子提交**（`fxManager.update()`，Phase 3）：`validateFXRate` 在触碰 `_fxRateList` 前校验——`unit` 必须有限正数、各报价（buy/sell cash/remit、middle）存在时必须是有限正数（number 或 mathjs Fraction）、`updated` 必须是合法 `Date`（非 Invalid Date）、货币代码必须是 3 位大写字母（`^[A-Z]{3}$`，ISO 风格，兼容 ECB 等源上报的枚举外代码如 BGN/ISK）。**update 为原子提交**：所有正/反向 middle/cash/remit 先在本地结构（含 CNY/CNH 别名解析，写路径与 `fxRateList` Proxy get trap 同规则）计算完成，最后一次性 `this._fxRateList = next` 替换——任何异常（如非法输入、Fraction 转换失败）都发生在提交之前，快照与调用前 deep-equal（无部分写入）。契约测试见 `test/unit/fx-manager-atomic.test.ts`。
 -   **兑换路径**：`convert()` 先 `getFXPath()` 用 BFS 在汇率图上找中间货币路径，再逐段换算；`reverse` 则反转路径（把结果换算成所需本币）。无路径时报 `No FX path found`。**BFS 默认关闭**：`getFXPath(from, to, allowBFS=false)` 仅当调用方显式传 `?bfs=1` 时才启用（交叉汇率有累积误差）；`?bfs=1` 时 `getDetails` 回传 `result.path`（实际经过的货币路径，如 `["USD","HKD","JPY"]`，直连时返回直连对）。**CNY/CNH 别名**：`update()` 只写入 getter 上报的货币（如 DBS/OCBC 只有 CNH 无 CNY），直连判断走 Proxy `get` 有别名 fallback，但 **BFS 的邻居枚举走 `Object.keys`（ownKeys）不做别名归一**——`getFXPath` 内须自行用 `isAlias` 判断 CNH↔CNY 等价（否则「目标 CNY 但图里只有 CNH」时反向找不到路径，2026-08 实测修复）；命中别名时路径末节点归一为目标货币，且 `result.alias` 记录实际别名货币（如 `CNH`），REST 响应同时设 `X-FXRate-Alias: CNH` header 供前端提示「经 CNH 折算」。
 -   **两类数据源**：
     -   `registerGetter(source, getter)`：抓取型，首次访问时懒更新（`pending` → `ready`），随后每 30 分钟 `setInterval` 刷新（`intervalIDs`，`stopAllInterval()` 清理）。
@@ -51,14 +52,20 @@ dist/                # 构建产物（esbuild 输出 dist/index.cjs），commit 
 | `WISE_TOKEN` / `WISE_SANDBOX_API=1` / `WISE_USE_TOKEN_FROM_WEB` | Wise 抓取配置；未设 `WISE_TOKEN` 时自动置 `WISE_USE_TOKEN_FROM_WEB=1`，回退到 `FXGetter/wise.ts` 内硬编码的网页 token（**有意为之，勿删，见「约定与注意事项」**） |
 | `VERCEL=1`                                                      | Vercel 部署模式（不本地监听，走默认导出；持久化自动禁用，serverless 只读 FS 无持久性）                                                                            |
 | `FXRATE_CACHE_DIR`                                              | 汇率快照 JSON 落盘目录（默认 `process.cwd()`，文件名 `fxrate-cache.json`）                                                                                        |
+| `SHUTDOWN_DEADLINE_MS`                                          | 优雅停机硬截止毫秒数（默认 `10000`；超过该时长仍无法自然关停时强制 `exit 0`，见「优雅停机」）                                                                     |
+
+## 优雅停机（graceful shutdown）
+
+-   `src/shutdown.ts` 的 `installShutdown(server, manager)` 在本地 HTTP 入口（`src/index.ts`，`App.listen()` 后保留 `App.adapater.server` 句柄）安装 SIGTERM/SIGINT 处理：首次信号后① `server.close()` 停止接收新连接（Node 顺带关闭空闲 keep-alive）；② `Manager.stopAllInterval()` 停定时器并落盘快照一次；③ 等在途请求自然结束后（server `'close'` 事件）`exit 0`；④ 超过 `SHUTDOWN_DEADLINE_MS`（默认 10000）强制 `exit 0`；⑤ 二次信号立即强制 `exit 0`。Vercel serverless 模式不本地监听，不安装。
+-   未捕获的 rejection/异常（`unhandledRejection`/`uncaughtException`，`src/index.ts` 模块级）记录日志后以非零码退出——supervisor 语义（pm2/Docker 检测退出码后重启），**不再「只记录不退出」**；曾为容忍单源 playwright/网络超时改成过 log-only（2026-08 bojs 崩溃后），该行为已移除。
 
 ## 汇率快照持久化（persistence）
 
--   **机制**：`src/persistence.ts` 在停机（SIGTERM/SIGINT → `stopAllInterval()`）时将内存汇率表 dump 为 JSON（`fxrate-cache.json`，原子写：临时文件 + rename）；冷启动构造 `fxmManager` 时 `loadSnapshot()` 读回并 `restoreSnapshot()` 恢复，源标记 `ready` 跳过懒加载上游抓取（Visa 等慢源首访可达 30s+，是 SSR 卡顿根因）。
+-   **机制**：`src/persistence.ts` 在停机（SIGTERM/SIGINT → `installShutdown` → `Manager.stopAllInterval()`）时将内存汇率表 dump 为 JSON（`fxrate-cache.json`，原子写：临时文件 + rename）；冷启动构造 `fxmManager` 时 `loadSnapshot()` 读回并 `restoreSnapshot()` 恢复，源标记 `ready` 跳过懒加载上游抓取（Visa 等慢源首访可达 30s+，是 SSR 卡顿根因）。
 -   **序列化**：mathjs Fraction 的 `JSON.stringify` 输出 `{mathjs,n,d}`（实测无 s 字段），reviver 用 `fraction({n,d})` 还原；`updated` 为 Date → ISO 字符串还原。
 -   **新鲜度**：无自建过期——30 分钟定时刷新仍按 `update()` 的 updated 时间戳守卫覆盖旧数据；恢复时 `refreshDate=now` 保住 Cache-Control。
 -   **覆盖范围**：仅抓取型源（`_fxRateList`）。mastercard/visa 数据在各自模块级 LRUCache（未导出）不在快照内。
--   **接入点**：`fxManager.snapshot()/restore()`（访问私有 `_fxRateList`）；`fxmManager.dumpSnapshot()/restoreSnapshot()`（访问私有 `fxms/fxmStatus`）；`fxmManager` 构造函数加载、`stopAllInterval()` 写回。
+-   **接入点**：`fxManager.snapshot()/restore()`（访问私有 `_fxRateList`）；`fxmManager.dumpSnapshot()/restoreSnapshot()`（访问私有 `fxms/fxmStatus`）；`fxmManager` 构造函数加载、停机时由 `installShutdown` 调用 `stopAllInterval()` 写回（信号监听已从 `fxmManager` 构造函数移除，统一收敛到 `src/shutdown.ts`）。
 
 ## 构建与运行
 

@@ -144,9 +144,6 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             this.registerGetter(source, sources[source]);
         }
 
-        process.once('SIGTERM', () => this.stopAllInterval());
-        process.once('SIGINT', () => this.stopAllInterval());
-
         this.binding(
             '/info',
             this.create('GET', async (request: request<any>) => {
