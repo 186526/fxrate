@@ -109,8 +109,89 @@ export default class fxManager {
         return this;
     }
 
+    // 严格 getter 输入校验：unit/rates 必须为有限正数、updated 必须是合法 Date、
+    // 货币代码必须是 3 位大写字母（ISO 风格）。任何非法输入直接抛错，
+    // 且校验发生在触碰 _fxRateList 之前，保证异常时快照与提交前 deep-equal。
+    private validateFXRate(FXRate: FXRate): void {
+        const { currency, unit, updated, rate } = FXRate;
+
+        const isValidCurrencyCode = (code: unknown): code is string =>
+            typeof code === 'string' && /^[A-Z]{3}$/.test(code);
+        if (
+            !isValidCurrencyCode(currency?.from) ||
+            !isValidCurrencyCode(currency?.to)
+        ) {
+            throw new Error(
+                `Invalid FXRate currency: ${String(currency?.from)}/${String(currency?.to)}`,
+            );
+        }
+
+        if (typeof unit !== 'number' || !Number.isFinite(unit) || unit <= 0) {
+            throw new Error(`Invalid FXRate unit: ${String(unit)}`);
+        }
+
+        if (!(updated instanceof Date) || Number.isNaN(updated.getTime())) {
+            throw new Error(`Invalid FXRate updated: ${String(updated)}`);
+        }
+
+        if (!rate || typeof rate !== 'object' || Array.isArray(rate)) {
+            throw new Error('Invalid FXRate rate');
+        }
+
+        const rateValues: [string, unknown][] = [
+            ['buy.cash', rate?.buy?.cash],
+            ['buy.remit', rate?.buy?.remit],
+            ['sell.cash', rate?.sell?.cash],
+            ['sell.remit', rate?.sell?.remit],
+            ['middle', rate?.middle],
+        ];
+        for (const [label, value] of rateValues) {
+            if (value === undefined) continue;
+            const isFinitePositive =
+                (typeof value === 'number' &&
+                    Number.isFinite(value) &&
+                    value > 0) ||
+                (math.isFraction(value) &&
+                    (value as Fraction).s > 0 &&
+                    (value as Fraction).n > 0);
+            if (!isFinitePositive) {
+                throw new Error(
+                    `Invalid FXRate rate.${label}: ${String(value)}`,
+                );
+            }
+        }
+    }
+
+    // 与 fxRateList getter Proxy 相同的 CNY/CNH 别名解析：请求 CNY 而图内
+    // 只有 CNH 节点时，读写都落到 CNH 节点上（保持 update 写路径的别名语义）。
+    private resolveAliasKey(
+        code: currency,
+        graph: { [from: string]: { [to: string]: FXRateType } },
+    ): string {
+        if (
+            code === ('CNY' as currency.CNY) &&
+            !(code in graph) &&
+            'CNH' in graph
+        ) {
+            return 'CNH';
+        }
+        return code as string;
+    }
+
+    private static selfRate(): FXRateType {
+        return {
+            cash: fraction(1),
+            remit: fraction(1),
+            middle: fraction(1),
+            updated: new Date('1970-1-1 00:00:00 UTC'),
+        };
+    }
+
     public update(FXRate: FXRate): void {
         if (FXRate === null) return;
+
+        // 严格输入校验：任何非法数据在此抛错，尚未触碰 _fxRateList。
+        this.validateFXRate(FXRate);
 
         const { currency, unit } = FXRate;
         let { rate } = FXRate;
@@ -172,67 +253,62 @@ export default class fxManager {
             ) as Fraction;
         }
 
-        if (!this.fxRateList[from]) {
-            this.fxRateList[from] = {
-                [from]: {
-                    cash: fraction(1),
-                    remit: fraction(1),
-                    middle: fraction(1),
-                    updated: new Date(`1970-1-1 00:00:00 UTC`),
-                },
-            };
-        }
-        this.fxRateList[from][to] = {
-            middle: divide(fraction(rate.middle), unit) as Fraction,
-            updated: FXRate.updated,
-        } as FXRateType;
-        if (!this.fxRateList[to]) {
-            this.fxRateList[to] = {
-                [to]: {
-                    cash: fraction(1),
-                    remit: fraction(1),
-                    middle: fraction(1),
-                    updated: new Date(`1970-1-1 00:00:00 UTC`),
-                },
-            };
-        }
-        // oneWay 源（如支付宝消费结算汇率）反向无实际业务，跳过反向写入——
-        // fxRateList 中不存在反向键，直连查询报 No FX path found，BFS 也不会经过伪反向。
-        const shouldUpdateReverse =
-            !FXRate.oneWay &&
-            (!this.fxRateList[to][from] ||
-                this.fxRateList[to][from].updated <= FXRate.updated);
-        if (shouldUpdateReverse) {
-            this.fxRateList[to][from] = {
-                middle: divide(unit, fraction(rate.middle)) as Fraction,
-                updated: FXRate.updated,
-            } as FXRateType;
-        }
-
         // 单项缺失时按 现金价 → 汇价 → 中间价 依次回落，保证 cash/remit 都有值
         const buyCash = rate.buy?.cash ?? rate.buy?.remit ?? rate.middle;
         const buyRemit = rate.buy?.remit ?? rate.buy?.cash ?? rate.middle;
         const sellCash = rate.sell?.cash ?? rate.sell?.remit ?? rate.middle;
         const sellRemit = rate.sell?.remit ?? rate.sell?.cash ?? rate.middle;
 
-        this.fxRateList[from][to].cash = divide(
-            fraction(buyCash),
-            unit,
-        ) as Fraction;
-        this.fxRateList[from][to].remit = divide(
-            fraction(buyRemit),
-            unit,
-        ) as Fraction;
-        if (shouldUpdateReverse) {
-            this.fxRateList[to][from].cash = divide(
-                unit,
-                fraction(sellCash),
-            ) as Fraction;
-            this.fxRateList[to][from].remit = divide(
-                unit,
-                fraction(sellRemit),
-            ) as Fraction;
+        // oneWay 源（如支付宝消费结算汇率）反向无实际业务，跳过反向写入——
+        // fxRateList 中不存在反向键，直连查询报 No FX path found，BFS 也不会经过伪反向。
+        const existingReverse = this.fxRateList[to]?.[from];
+        const shouldUpdateReverse =
+            !FXRate.oneWay &&
+            (!existingReverse || existingReverse.updated <= FXRate.updated);
+
+        // —— 原子提交：以下全部先在本地结构计算，全部成功后才一次性替换 _fxRateList ——
+        // 任何异常（如 fraction 转换失败）都发生在 commit 之前，
+        // 因此异常发生时快照与调用前 deep-equal（不产生部分写入）。
+        const next: { [from: string]: { [to: string]: FXRateType } } = {
+            ...this._fxRateList,
+        };
+
+        const fromNodeKey = this.resolveAliasKey(from, next);
+        if (!next[fromNodeKey]) {
+            next[from] = {
+                [from]: fxManager.selfRate(),
+            };
         }
+        next[fromNodeKey] = {
+            ...next[fromNodeKey],
+            [to]: {
+                middle: divide(fraction(rate.middle), unit) as Fraction,
+                cash: divide(fraction(buyCash), unit) as Fraction,
+                remit: divide(fraction(buyRemit), unit) as Fraction,
+                updated: FXRate.updated,
+            },
+        };
+
+        const toNodeKey = this.resolveAliasKey(to, next);
+        if (!next[toNodeKey]) {
+            next[to] = {
+                [to]: fxManager.selfRate(),
+            };
+        }
+        if (shouldUpdateReverse) {
+            next[toNodeKey] = {
+                ...next[toNodeKey],
+                [from]: {
+                    middle: divide(unit, fraction(rate.middle)) as Fraction,
+                    cash: divide(unit, fraction(sellCash)) as Fraction,
+                    remit: divide(unit, fraction(sellRemit)) as Fraction,
+                    updated: FXRate.updated,
+                },
+            };
+        }
+
+        // 单点提交：全部计算成功后一次性替换引用，异常永远走不到这一步。
+        this._fxRateList = next;
     }
 
     private async convertDirect(

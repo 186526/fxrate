@@ -26,7 +26,8 @@ export function buildGraph(nodeCount: number, topology: Topology): fxManager {
     }
     const leaves = Array.from(
         { length: nodeCount - 1 },
-        (_, i) => `C${String(i + 1).padStart(3, '0')}`,
+        (_, i) =>
+            `A${String.fromCharCode(65 + Math.floor(i / 26))}${String.fromCharCode(65 + (i % 26))}`,
     );
     const rates: FXRate[] = [];
     if (topology === 'mesh') {
