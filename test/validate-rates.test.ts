@@ -53,6 +53,14 @@ import getGHBFXRates from '../src/FXGetter/ghb';
 import getHFBankFXRates from '../src/FXGetter/hfbank';
 import getZYBankFXRates from '../src/FXGetter/zybank';
 import getBOJSFXRates from '../src/FXGetter/bojs';
+import getCNCBIFXRates from '../src/FXGetter/cncbi';
+import getCCBAFXRates from '../src/FXGetter/ccba';
+import getCMBWLFXRates from '../src/FXGetter/cmbwl';
+import getHSBFXRates from '../src/FXGetter/hsb';
+import getICBCAFXRates from '../src/FXGetter/icbca';
+import getOCBCHKFXRates from '../src/FXGetter/ocbchk';
+import getOCBCFXRates from '../src/FXGetter/ocbc';
+import getBEAFXRates from '../src/FXGetter/bea';
 import mastercardFXM from '../src/FXGetter/mastercard';
 import visaFXM from '../src/FXGetter/visa';
 import type fxManager from '../src/fxm/fxManager';
@@ -100,6 +108,14 @@ const getters: { [source: string]: () => Promise<FXRate[]> } = {
     hfbank: getHFBankFXRates,
     zybank: getZYBankFXRates,
     bojs: getBOJSFXRates,
+    cncbi: getCNCBIFXRates,
+    ccba: getCCBAFXRates,
+    cmbwl: getCMBWLFXRates,
+    hsb: getHSBFXRates,
+    icbca: getICBCAFXRates,
+    ocbchk: getOCBCHKFXRates,
+    ocbc: getOCBCFXRates,
+    bea: getBEAFXRates,
 };
 
 // mastercard/visa 是 FXM 类（懒加载 + 异步请求），抽查关键货币对。

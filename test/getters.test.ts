@@ -60,6 +60,14 @@ const SOURCES = [
     'mastercard',
     'visa',
     'wise',
+    'cncbi',
+    'ccba',
+    'cmbwl',
+    'hsb',
+    'icbca',
+    'ocbchk',
+    'ocbc',
+    'bea',
 ];
 
 test('all sources USD/CNY smoke', async () => {
@@ -68,6 +76,8 @@ test('all sources USD/CNY smoke', async () => {
         try {
             // ecb 只有 EUR 基准对，用 EUR/USD 抽查；cfets 是 CNY 基准用 EUR/CNY；
             // dbs 用 USD/SGD、dbs.cn 用 USD/CNY、dbs.hk 用 EUR/HKD；其余源用 USD/CNY。
+            // HKD 基准港行（cncbi/ccba/cmbwl/hsb/icbca/ocbchk/bea）用 USD/HKD；ocbc 用 USD/SGD。
+            const HKD_BASED = ['cncbi', 'ccba', 'cmbwl', 'hsb', 'icbca', 'ocbchk', 'bea'];
             const path =
                 s === 'ecb'
                     ? `${s}/EUR/USD?amount=1`
@@ -79,7 +89,11 @@ test('all sources USD/CNY smoke', async () => {
                           ? `${s}/USD/CNY?amount=1`
                           : s === 'dbs.hk'
                             ? `${s}/EUR/HKD?amount=1`
-                            : `${s}/USD/CNY?amount=1`;
+                            : s === 'ocbc'
+                              ? `${s}/USD/SGD?amount=1`
+                              : HKD_BASED.includes(s)
+                                ? `${s}/USD/HKD?amount=1`
+                                : `${s}/USD/CNY?amount=1`;
             const r = await Instance.respond(mk(path));
             const b = JSON.parse(String(r.body));
             const mid =
@@ -127,7 +141,8 @@ test('buy/sell direction: 买入价 > 卖出价', async () => {
         // 无反向直连，双向乘积会走 BFS 交叉失真——跳过方向断言。
         if (s === 'cfets' || s === 'alipay') continue;
         // 各源基准对：hsbc.au 只有 AUD 基准；ecb 只有 EUR 基准；dbs 用 SGD、
-        // dbs.cn 用 CNY、dbs.hk 用 HKD（EUR 计价）；其余源用 USD/CNY。
+        // dbs.cn 用 CNY、dbs.hk 用 HKD（EUR 计价）；港行（HKD 基准）与 ocbc（SGD 基准）同理。
+        const HKD_BASED = ['cncbi', 'ccba', 'cmbwl', 'hsb', 'icbca', 'ocbchk', 'bea'];
         const pair =
             s === 'hsbc.au'
                 ? ['AUD', 'CNY']
@@ -139,7 +154,11 @@ test('buy/sell direction: 买入价 > 卖出价', async () => {
                       ? ['USD', 'CNY']
                       : s === 'dbs.hk'
                         ? ['EUR', 'HKD']
-                        : ['USD', 'CNY'];
+                        : s === 'ocbc'
+                          ? ['USD', 'SGD']
+                          : HKD_BASED.includes(s)
+                            ? ['USD', 'HKD']
+                            : ['USD', 'CNY'];
         try {
             const a = await Instance.respond(
                 mk(`${s}/${pair[0]}/${pair[1]}?amount=1`),

@@ -55,6 +55,14 @@ import getDBSCNFXRates from './FXGetter/dbs.cn';
 import getDBSHKFXRates from './FXGetter/dbs.hk';
 import getAlipayFXRates from './FXGetter/alipay';
 import getHKMAFXRates from './FXGetter/hkma';
+import getCNCBIFXRates from './FXGetter/cncbi';
+import getCCBAFXRates from './FXGetter/ccba';
+import getCMBWLFXRates from './FXGetter/cmbwl';
+import getHSBFXRates from './FXGetter/hsb';
+import getICBCAFXRates from './FXGetter/icbca';
+import getOCBCHKFXRates from './FXGetter/ocbchk';
+import getOCBCFXRates from './FXGetter/ocbc';
+import getBEAFXRates from './FXGetter/bea';
 
 import mastercardFXM from './FXGetter/mastercard';
 import visaFXM from './FXGetter/visa';
@@ -108,6 +116,14 @@ const Manager = new fxmManager({
     'dbs.hk': getDBSHKFXRates,
     alipay: getAlipayFXRates,
     hkma: getHKMAFXRates,
+    cncbi: getCNCBIFXRates,
+    ccba: getCCBAFXRates,
+    cmbwl: getCMBWLFXRates,
+    hsb: getHSBFXRates,
+    icbca: getICBCAFXRates,
+    ocbchk: getOCBCHKFXRates,
+    ocbc: getOCBCFXRates,
+    bea: getBEAFXRates,
 });
 
 Manager.registerFXM('mastercard', new mastercardFXM());
