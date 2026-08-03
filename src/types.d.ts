@@ -91,6 +91,8 @@ export interface FXPath {
     from: currency;
     end: currency;
     path: currency[];
+    /** BFS 命中 CNY/CNH 别名时记录实际使用的别名货币（如 'CNH'），未命中则不设置 */
+    alias?: currency;
 }
 
 export enum JSONRPCMethods {

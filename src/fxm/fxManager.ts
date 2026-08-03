@@ -278,14 +278,31 @@ export default class fxManager {
         const queue: { currency: currency; path: currency[] }[] = [];
         const visited: currency[] = [];
 
+        // CNY/CNH 互为别名（update 时只写入其一，如 DBS/OCBC 用 CNH 报价）。
+        // 直连判断走 Proxy get 有别名 fallback，但 BFS 的邻居枚举走 Object.keys（ownKeys）
+        // 不经过 get trap，导致「目标 CNY 但图里只有 CNH」时找不到路径（2026-08 实测）。
+        const isAlias = (a: currency, b: currency): boolean =>
+            (a === ('CNY' as currency.CNY) &&
+                b === ('CNH' as currency.CNH)) ||
+            (a === ('CNH' as currency.CNH) &&
+                b === ('CNY' as currency.CNY));
+
         queue.push({ currency: from, path: [from] });
 
         while (queue.length > 0) {
             const { currency, path } = queue.shift()!;
             visited.push(currency);
 
-            if (currency === to) {
-                FXPath.path = path;
+            if (currency === to || isAlias(currency, to)) {
+                // 命中别名目标时，路径末节点归一为目标货币（CNH → CNY），
+                // 保证 convert 按用户请求的 to 输出且 path 展示不含别名噪音。
+                const normalized =
+                    isAlias(currency, to) && currency !== to
+                        ? [...path.slice(0, -1), to]
+                        : path;
+                FXPath.path = normalized;
+                // 记录实际使用的别名货币，供 API 响应提示（X-FXRate-Alias header / result.alias）
+                if (currency !== to) FXPath.alias = currency;
                 return FXPath;
             }
 
@@ -293,6 +310,7 @@ export default class fxManager {
                 this.fxRateList[currency],
             ) as currency[];
             for (const neighbor of neighbors) {
+                if (neighbor === currency) continue;
                 if (!visited.includes(neighbor)) {
                     queue.push({
                         currency: neighbor,

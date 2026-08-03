@@ -122,6 +122,8 @@ export const getDetails = async (
         // 源不可用时（如上游 403/WAF）不 500，保留默认 updated 时间，具体汇率由下方 type 循环降级为 false。
     }
     // ?bfs=1 时回传实际经过的兑换路径（直连时也返回直连对，便于前端展示）。
+    // 路径命中 CNY/CNH 别名（如图里只有 CNH 而目标为 CNY）时，result.alias 记录实际别名货币，
+    // REST handler 据此设置 X-FXRate-Alias header（见 fxmManager），前端可提示「经 CNH 折算」。
     if (
         request.query.get('bfs') === '1' ||
         request.query.get('bfs') === 'true'
@@ -129,6 +131,7 @@ export const getDetails = async (
         try {
             const fxp = await fxManager.getFXPath(from, to, true);
             result.path = fxp.path.map(String);
+            if (fxp.alias) result.alias = String(fxp.alias);
         } catch (_e) {
             result.path = [];
         }

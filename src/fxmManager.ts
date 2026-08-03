@@ -371,6 +371,11 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                 await this.requestFXManager(source),
                 request,
             );
+            // BFS 命中 CNY/CNH 别名（如图里只有 CNH 而目标为 CNY）时提示调用方，
+            // 前端可据此显示「经 CNH 折算」；未命中别名则不设置该头。
+            if (typeof result.alias === 'string') {
+                response.headers.set('X-FXRate-Alias', result.alias);
+            }
             response.body = JSON.stringify(result);
             useJson(response, request);
             try {
