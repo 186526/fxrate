@@ -7,6 +7,11 @@ COPY package.json yarn.lock ./
 COPY patches ./patches
 RUN npm install -g yarn@1.22.22 && yarn install --production=false && yarn cache clean
 
+# headless chromium：visa/bea/hfbank/bojs 的反爬降级路径依赖（fetch 被 Cloudflare/WAF
+# 拦截时经 playwright-core 启动 chromium 直连）。alpine 包提供 /usr/bin/chromium-browser，
+# 位于 chromiumFetcher 的候选探测路径中。
+RUN apk add --no-cache chromium
+
 WORKDIR /app
 
 COPY pm2.json ./
