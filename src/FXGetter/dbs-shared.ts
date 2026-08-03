@@ -21,6 +21,8 @@ export type DBSRow = {
     cashBuy?: string;
     cashSell?: string;
     quoteCurrency?: string;
+    /** SG 专用：基准货币报价单位（JPY 等为 '100'，其余 '1'）；HK/CN 无此字段（恒为 1 单位） */
+    baseCurrencyUnit?: string;
 };
 
 export const parseDBSRow = (
@@ -48,6 +50,9 @@ export const parseDBSRow = (
     ) {
         return null;
     }
+    // SG 的 JPY 等按 100 单位报价（baseCurrencyUnit='100'），必须透传，
+    // 否则「100 JPY = X」被当作「1 JPY = X」差 100 倍（2026-08 实测）。
+    const unit = parseFloat(r.baseCurrencyUnit ?? '') || 1;
     return {
         currency: {
             from: r.currency as unknown as currency.unknown,
@@ -64,7 +69,7 @@ export const parseDBSRow = (
             },
             middle,
         },
-        unit: 1,
+        unit,
         updated: date,
     } as FXRate;
 };
