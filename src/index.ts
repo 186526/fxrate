@@ -31,7 +31,30 @@ import getNCBHKFXRates from './FXGetter/ncb.hk';
 import getXIBFXRates from './FXGetter/xib';
 import getPABFXRates from './FXGetter/pab';
 import getCEBFXRates from './FXGetter/ceb';
+import getCMBCFXRates from './FXGetter/cmbc';
+import getCGBChinaFXRates from './FXGetter/cgbchina';
+import getHXFXRates from './FXGetter/hx';
+import getCBHBFXRates from './FXGetter/cbhb';
+import getBOBFXRates from './FXGetter/bob';
+import getBOSCFXRates from './FXGetter/bosc';
+import getNJCBFXRates from './FXGetter/njcb';
+import getHZBankFXRates from './FXGetter/hzbank';
+import getGZCBFXRates from './FXGetter/gzcb';
+import getHSBankFXRates from './FXGetter/hsbank';
+import getCQCBankFXRates from './FXGetter/cqcbank';
+import getBCSCFXRates from './FXGetter/bcsc';
+import getCQTGFXRates from './FXGetter/cqtg';
+import getGHBankFXRates from './FXGetter/ghbank';
+import getHFBankFXRates from './FXGetter/hfbank';
+import getZYBankFXRates from './FXGetter/zybank';
+import getJSBankFXRates from './FXGetter/jsbank';
 import getECBFXRates from './FXGetter/ecb';
+import getCFETSFXRates from './FXGetter/cfets';
+import getDBSFXRates from './FXGetter/dbs';
+import getDBSCNFXRates from './FXGetter/dbs.cn';
+import getDBSHKFXRates from './FXGetter/dbs.hk';
+import getAlipayFXRates from './FXGetter/alipay';
+import getHKMAFXRates from './FXGetter/hkma';
 
 import mastercardFXM from './FXGetter/mastercard';
 import visaFXM from './FXGetter/visa';
@@ -61,7 +84,30 @@ const Manager = new fxmManager({
     xib: getXIBFXRates,
     pab: getPABFXRates,
     ceb: getCEBFXRates,
+    cmbc: getCMBCFXRates,
+    cgbchina: getCGBChinaFXRates,
+    hx: getHXFXRates,
+    cbhb: getCBHBFXRates,
+    bob: getBOBFXRates,
+    bosc: getBOSCFXRates,
+    njcb: getNJCBFXRates,
+    hzbank: getHZBankFXRates,
+    gzcb: getGZCBFXRates,
+    hsbank: getHSBankFXRates,
+    cqcbank: getCQCBankFXRates,
+    bcsc: getBCSCFXRates,
+    cqtg: getCQTGFXRates,
+    ghbank: getGHBankFXRates,
+    hfbank: getHFBankFXRates,
+    zybank: getZYBankFXRates,
+    jsbank: getJSBankFXRates,
     ecb: getECBFXRates,
+    cfets: getCFETSFXRates,
+    dbs: getDBSFXRates,
+    'dbs.cn': getDBSCNFXRates,
+    'dbs.hk': getDBSHKFXRates,
+    alipay: getAlipayFXRates,
+    hkma: getHKMAFXRates,
 });
 
 Manager.registerFXM('mastercard', new mastercardFXM());

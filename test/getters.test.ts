@@ -35,7 +35,28 @@ const SOURCES = [
     'xib',
     'pab',
     'ceb',
+    'cmbc',
+    'cgbchina',
+    'hx',
+    'cbhb',
+    'bob',
+    'bosc',
+    'njcb',
+    'hzbank',
+    'gzcb',
+    'hsbank',
+    'cqcbank',
+    'bcsc',
+    'cqtg',
+    'ghbank',
+    'hfbank',
+    'zybank',
+    'jsbank',
     'ecb',
+    'cfets',
+    'dbs',
+    'dbs.cn',
+    'dbs.hk',
     'mastercard',
     'visa',
     'wise',
@@ -45,8 +66,20 @@ test('all sources USD/CNY smoke', async () => {
     const out: string[] = [];
     for (const s of SOURCES) {
         try {
-            // ecb 只有 EUR 基准对，用 EUR/USD 抽查；其余源用 USD/CNY。
-            const path = s === 'ecb' ? `${s}/EUR/USD?amount=1` : `${s}/USD/CNY?amount=1`;
+            // ecb 只有 EUR 基准对，用 EUR/USD 抽查；cfets 是 CNY 基准用 EUR/CNY；
+            // dbs 用 USD/SGD、dbs.cn 用 USD/CNY、dbs.hk 用 EUR/HKD；其余源用 USD/CNY。
+            const path =
+                s === 'ecb'
+                    ? `${s}/EUR/USD?amount=1`
+                    : s === 'cfets'
+                      ? `${s}/EUR/CNY?amount=1`
+                      : s === 'dbs'
+                        ? `${s}/USD/SGD?amount=1`
+                        : s === 'dbs.cn'
+                          ? `${s}/USD/CNY?amount=1`
+                          : s === 'dbs.hk'
+                            ? `${s}/EUR/HKD?amount=1`
+                            : `${s}/USD/CNY?amount=1`;
             const r = await Instance.respond(mk(path));
             const b = JSON.parse(String(r.body));
             const mid =
@@ -90,13 +123,23 @@ test('buy/sell direction: 买入价 > 卖出价', async () => {
     const out: string[] = [];
     const failures: string[] = [];
     for (const s of SOURCES) {
-        // hsbc.au 只有 AUD 基准对；ecb 只有 EUR 基准对；其余源用 USD/CNY。
+        // cfets/alipay 是单一方向中间价（cfets 只有 X/CNY，alipay 只有外币/CNY），
+        // 无反向直连，双向乘积会走 BFS 交叉失真——跳过方向断言。
+        if (s === 'cfets' || s === 'alipay') continue;
+        // 各源基准对：hsbc.au 只有 AUD 基准；ecb 只有 EUR 基准；dbs 用 SGD、
+        // dbs.cn 用 CNY、dbs.hk 用 HKD（EUR 计价）；其余源用 USD/CNY。
         const pair =
             s === 'hsbc.au'
                 ? ['AUD', 'CNY']
                 : s === 'ecb'
                   ? ['EUR', 'USD']
-                  : ['USD', 'CNY'];
+                  : s === 'dbs'
+                    ? ['USD', 'SGD']
+                    : s === 'dbs.cn'
+                      ? ['USD', 'CNY']
+                      : s === 'dbs.hk'
+                        ? ['EUR', 'HKD']
+                        : ['USD', 'CNY'];
         try {
             const a = await Instance.respond(
                 mk(`${s}/${pair[0]}/${pair[1]}?amount=1`),

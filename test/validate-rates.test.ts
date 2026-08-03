@@ -36,6 +36,23 @@ import getNCBHKFXRates from '../src/FXGetter/ncb.hk';
 import getXIBFXRates from '../src/FXGetter/xib';
 import getPABFXRates from '../src/FXGetter/pab';
 import getCEBFXRates from '../src/FXGetter/ceb';
+import getCMBCFXRates from '../src/FXGetter/cmbc';
+import getCGBChinaFXRates from '../src/FXGetter/cgbchina';
+import getHXFXRates from '../src/FXGetter/hx';
+import getCBHBFXRates from '../src/FXGetter/cbhb';
+import getBOBFXRates from '../src/FXGetter/bob';
+import getBOSCFXRates from '../src/FXGetter/bosc';
+import getNJCBFXRates from '../src/FXGetter/njcb';
+import getHZBankFXRates from '../src/FXGetter/hzbank';
+import getGZCBFXRates from '../src/FXGetter/gzcb';
+import getHSBankFXRates from '../src/FXGetter/hsbank';
+import getCQCBankFXRates from '../src/FXGetter/cqcbank';
+import getBCSCFXRates from '../src/FXGetter/bcsc';
+import getCQTGFXRates from '../src/FXGetter/cqtg';
+import getGHBankFXRates from '../src/FXGetter/ghbank';
+import getHFBankFXRates from '../src/FXGetter/hfbank';
+import getZYBankFXRates from '../src/FXGetter/zybank';
+import getJSBankFXRates from '../src/FXGetter/jsbank';
 import mastercardFXM from '../src/FXGetter/mastercard';
 import visaFXM from '../src/FXGetter/visa';
 import type fxManager from '../src/fxm/fxManager';
@@ -66,6 +83,23 @@ const getters: { [source: string]: () => Promise<FXRate[]> } = {
     xib: getXIBFXRates,
     pab: getPABFXRates,
     ceb: getCEBFXRates,
+    cmbc: getCMBCFXRates,
+    cgbchina: getCGBChinaFXRates,
+    hx: getHXFXRates,
+    cbhb: getCBHBFXRates,
+    bob: getBOBFXRates,
+    bosc: getBOSCFXRates,
+    njcb: getNJCBFXRates,
+    hzbank: getHZBankFXRates,
+    gzcb: getGZCBFXRates,
+    hsbank: getHSBankFXRates,
+    cqcbank: getCQCBankFXRates,
+    bcsc: getBCSCFXRates,
+    cqtg: getCQTGFXRates,
+    ghbank: getGHBankFXRates,
+    hfbank: getHFBankFXRates,
+    zybank: getZYBankFXRates,
+    jsbank: getJSBankFXRates,
 };
 
 // mastercard/visa 是 FXM 类（懒加载 + 异步请求），抽查关键货币对。
