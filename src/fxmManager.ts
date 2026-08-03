@@ -222,8 +222,23 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
 
     public async requestFXManager(source: string): Promise<fxManager> {
         if (this.fxmStatus[source] === 'pending') {
-            await (this.pendingPromises[source] ??
-                this.updateFXManager(source));
+            // 懒加载抓取可能很慢（Visa 等上游 10s+ 超时）。
+            // 5s 内没就绪则快速失败返回空实例，避免拖住整个 batch / 首屏 SSR。
+            const p =
+                this.pendingPromises[source] ?? this.updateFXManager(source);
+            try {
+                await Promise.race([
+                    p,
+                    new Promise((_, reject) =>
+                        setTimeout(
+                            () => reject(new Error(`${source} load timeout`)),
+                            5000,
+                        ),
+                    ),
+                ]);
+            } catch {
+                this.log(`${source} load timed out, serving empty`);
+            }
         }
         return this.fxms[source];
     }
