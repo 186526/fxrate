@@ -185,9 +185,12 @@ export default class fxManager {
                 },
             };
         }
+        // oneWay 源（如支付宝消费结算汇率）反向无实际业务，跳过反向写入——
+        // fxRateList 中不存在反向键，直连查询报 No FX path found，BFS 也不会经过伪反向。
         const shouldUpdateReverse =
-            !this.fxRateList[to][from] ||
-            this.fxRateList[to][from].updated <= FXRate.updated;
+            !FXRate.oneWay &&
+            (!this.fxRateList[to][from] ||
+                this.fxRateList[to][from].updated <= FXRate.updated);
         if (shouldUpdateReverse) {
             this.fxRateList[to][from] = {
                 middle: divide(unit, fraction(rate.middle)) as Fraction,

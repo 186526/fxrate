@@ -83,6 +83,8 @@ export interface FXRate {
     };
     unit: 1 | 10 | 100 | 10000 | number;
     updated: Date;
+    /** 单向报价标记：为 true 时 fxManager 不写入反向汇率（如支付宝境外消费结算汇率，反向无实际业务） */
+    oneWay?: boolean;
 }
 
 export interface FXPath {
