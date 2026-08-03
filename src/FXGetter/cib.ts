@@ -37,6 +37,7 @@ const getCIBFXRates = async (): Promise<FXRate[]> => {
         'https://personalbank.cib.com.cn/pers/main/pubinfo/ifxQuotationQuery.do',
         {
             ...allowLegacyRenegotiationforNodeJsOptions,
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -48,6 +49,7 @@ const getCIBFXRates = async (): Promise<FXRate[]> => {
         `https://personalbank.cib.com.cn/pers/main/pubinfo/ifxQuotationQuery/list?_search=false&dataSet.nd=${Date.now()}&dataSet.rows=80&dataSet.page=1&dataSet.sidx=&dataSet.sord=asc`,
         {
             ...allowLegacyRenegotiationforNodeJsOptions,
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',

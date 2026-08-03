@@ -4,6 +4,7 @@ import * as cheerio from 'cheerio';
 
 const getJCBJPYBasedFXRates = async (): Promise<FXRate[]> => {
     const res = await axios.get('https://www.jcb.jp/rate/jpy.html', {
+        timeout: 10000,
         headers: {
             'User-Agent':
                 process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -50,6 +51,7 @@ const getJCBJPYBasedFXRates = async (): Promise<FXRate[]> => {
 // rate.sell = 银行卖 USD 价（客户买 USD 付外币）——与前端契约一致（rate.buy < rate.sell）。
 const getJCBUSDBasedFXRates = async (): Promise<FXRate[]> => {
     const listRes = await axios.get('https://www.jcb.jp/rate/usd.html', {
+        timeout: 10000,
         headers: {
             'User-Agent':
                 process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',
@@ -61,6 +63,7 @@ const getJCBUSDBasedFXRates = async (): Promise<FXRate[]> => {
     if (!latestHref) throw new Error('JCB USD rate page: no date link found');
 
     const res = await axios.get(`https://www.jcb.jp${latestHref}`, {
+        timeout: 10000,
         headers: {
             'User-Agent':
                 process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',

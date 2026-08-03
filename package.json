@@ -52,6 +52,8 @@
         "dev:production": "dotenvx run --env-file=.env.production.local --env-file=.env -- tsx watch src/index.ts",
         "start": "yarn build && node dist/index.cjs",
         "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+        "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest test/unit fx-manager.test.ts",
+        "test:network": "RUN_NETWORK_TESTS=1 NODE_OPTIONS=--experimental-vm-modules jest test/server-status.test.ts test/getters.test.ts test/validate-rates.test.ts --testTimeout=600000",
         "test:coverage": "yarn test --collectCoverage"
     }
 }

@@ -14,6 +14,7 @@ const getHSBCCNFXRates = async (): Promise<FXRate[]> => {
     const req = await axios.get(
         'https://www.services.cn-banking.hsbc.com.cn/mobile/channel/digital-proxy/cnyTransfer/ratesInfo/remittanceRate?locale=en_CN',
         {
+            timeout: 10000,
             headers: {
                 'User-Agent':
                     process.env['HEADER_USER_AGENT'] ?? 'fxrate axios/latest',

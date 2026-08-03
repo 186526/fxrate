@@ -20,6 +20,7 @@ const getWiseFXRates = (
             fxmManager.log('Getting Wise FX Rates in production mode.');
 
         const response = await axios.get(endPoint, {
+            timeout: 10000,
             headers: {
                 Authorization: !useTokenInWeb
                     ? `Bearer ${WiseToken}`
