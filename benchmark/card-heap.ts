@@ -36,8 +36,8 @@ export function parseOptions(args: string[]): CardHeapOptions {
     });
     return {
         pairs: Number(values.pairs) || 500,
-        output: values.output ?? '',
-        candidate: (values['candidate'] ?? false) as boolean,
+        output: typeof values.output === 'string' ? values.output : '',
+        candidate: values['candidate'] === true,
     };
 }
 
@@ -70,19 +70,19 @@ function measureAccess(pairs: number) {
             cache.set(`K${i}-K${j}`, payload);
         }
     }
-    const grid: Array<{ get: (prop: string) => number | undefined }> = [];
+    const grid: Array<{ middle: number | undefined }> = [];
     for (let i = 0; i < pairs; i += 1) {
         for (let j = 0; j < pairs; j += 1) {
             const key = `K${i}-K${j}`;
             grid.push(
-                new Proxy({} as Record<string, number>, {
+                new Proxy({} as Record<string, number | undefined>, {
                     get: (_obj, prop) => {
                         if (prop !== 'middle') return undefined;
                         const cached = cache.get(key);
                         if (!cached) return undefined;
                         return Number(JSON.parse(cached).data.fxRateVisa);
                     },
-                }) as unknown as { get: (prop: string) => number | undefined },
+                }) as { middle: number | undefined },
             );
         }
     }
@@ -93,7 +93,7 @@ function measureAccess(pairs: number) {
     const start = process.hrtime.bigint();
     for (const cell of grid) {
         const t0 = process.hrtime.bigint();
-        acc += cell.get('middle') ?? 0;
+        acc += cell.middle ?? 0;
         latencies.push(Number(process.hrtime.bigint() - t0) / 1e6);
     }
     const wallMs = Number(process.hrtime.bigint() - start) / 1e6;

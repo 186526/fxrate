@@ -35,7 +35,7 @@ export function parseOptions(args: string[]): RpcLoadOptions {
         bodyBytes: parseCsvNumbers(String(values['body-bytes'] ?? '1024')),
         batch: parseCsvNumbers(String(values.batch ?? '1,10,100')),
         concurrency: parseCsvNumbers(String(values.concurrency ?? '1,4')),
-        output: values.output ?? '',
+        output: typeof values.output === 'string' ? values.output : '',
     };
 }
 

@@ -45,8 +45,8 @@ export function parseOptions(args: string[]): DetailsBfsOptions {
         samples: Number(values.samples) || 1000,
         topology: values.topology === 'mesh' ? 'mesh' : 'star',
         seed: Number(values.seed) || 20260804,
-        output: values.output ?? '',
-        candidate: (values['candidate'] ?? false) as boolean,
+        output: typeof values.output === 'string' ? values.output : '',
+        candidate: values['candidate'] === true,
     };
 }
 

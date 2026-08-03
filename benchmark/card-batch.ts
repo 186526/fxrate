@@ -40,8 +40,8 @@ export function parseOptions(args: string[]): CardBatchOptions {
     return {
         latency: parseCsvNumbers(String(values.latency ?? '20')),
         batch: parseCsvNumbers(String(values.batch ?? '1,12,64,168,500')),
-        output: values.output ?? '',
-        singleFlight: (values['single-flight'] ?? false) as boolean,
+        output: typeof values.output === 'string' ? values.output : '',
+        singleFlight: values['single-flight'] === true,
         chromiumLimit: Number(values['chromium-limit']) || 1,
         nativeLimit: Number(values['native-limit']) || 8,
     };

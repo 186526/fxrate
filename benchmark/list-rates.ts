@@ -41,8 +41,8 @@ export function parseOptions(args: string[]): ListRatesOptions {
         nodes: parseCsvNumbers(String(values.nodes ?? '12,50,100,168,200')),
         samples: Number(values.samples) || 200,
         topology: values.topology === 'mesh' ? 'mesh' : 'star',
-        output: values.output ?? '',
-        candidate: (values['candidate'] ?? false) as boolean,
+        output: typeof values.output === 'string' ? values.output : '',
+        candidate: values['candidate'] === true,
     };
 }
 
