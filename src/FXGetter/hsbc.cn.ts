@@ -23,6 +23,13 @@ const getHSBCCNFXRates = async (): Promise<FXRate[]> => {
     );
 
     const data = req.data.data.counterForRepeatingBlock;
+    // API 返回 data.lastUpdateDate（如 "2026-08-03"，数据发布日期，无时分秒）——
+    // updated 应反映数据发布时间而非拉取时刻，解析为当天 00:00 +08:00。
+    const rawDate = req.data.data.lastUpdateDate as string | undefined;
+    const updated = rawDate
+        ? new Date(`${rawDate}T00:00:00+08:00`)
+        : new Date();
+    const updatedValid = Number.isNaN(updated.getTime()) ? new Date() : updated;
 
     return data.map((k: hsbcCnRateItem) => {
         return {
@@ -41,7 +48,7 @@ const getHSBCCNFXRates = async (): Promise<FXRate[]> => {
                 },
             },
             unit: 1,
-            updated: new Date(),
+            updated: updatedValid,
         };
     });
 };
