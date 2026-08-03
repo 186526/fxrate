@@ -25,6 +25,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # 重新构建 dist：确保镜像内 GITBUILD/BUILDTIME 与当前 tag 一致
+      # （dist 虽提交进仓库，但 GITBUILD 注入的是构建时 HEAD，tag 场景必须重建）
+      - name: Build dist
+        run: yarn build
+
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
