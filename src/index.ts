@@ -1,6 +1,17 @@
 import process from 'node:process';
 import http from 'node:http';
 
+// 生产兜底：未捕获的 rejection/异常只记录日志不退出进程，
+// 避免单个源的 playwright/网络超时拖垮整个服务（2026-08 bojs 崩溃后加）。
+process.on('unhandledRejection', (reason) => {
+    console.error(
+        `[unhandledRejection] ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}`,
+    );
+});
+process.on('uncaughtException', (error) => {
+    console.error(`[uncaughtException] ${error?.stack ?? error}`);
+});
+
 import esMain from 'es-main';
 
 import rootRouter, { handler, response } from 'handlers.js';

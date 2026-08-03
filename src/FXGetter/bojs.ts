@@ -95,17 +95,21 @@ const fetchViaChromium = async (): Promise<JSBankResponse> => {
             userAgent: process.env['HEADER_USER_AGENT'] ?? USER_AGENT,
         });
         const page = await context.newPage();
+        // waitForResponse 与 goto 必须并行走（Promise.all），
+        // 否则 goto 超时后 waitForResponse 的 promise 无人 await，
+        // 其 60s 超时 reject 会成为 unhandledRejection 导致进程崩溃（2026-08 实测）。
         const rateResponse = page.waitForResponse(
             (response) =>
                 response.url().includes('/cms/SpotQuotePrivateQry.do') &&
                 response.status() === 200,
             { timeout: 60000 },
         );
-        await page.goto(PAGE_URL, {
+        const navigationPromise = page.goto(PAGE_URL, {
             waitUntil: 'domcontentloaded',
             timeout: 60000,
         });
-        const payload: unknown = await (await rateResponse).json();
+        const [response] = await Promise.all([rateResponse, navigationPromise]);
+        const payload: unknown = await response.json();
         if (!isPayload(payload)) {
             throw new Error('chromium response contained no rates');
         }

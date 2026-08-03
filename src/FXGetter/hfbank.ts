@@ -56,11 +56,12 @@ const fetchViaChromium = async (): Promise<string> => {
                 response.status() === 200,
             { timeout: 60000 },
         );
-        await page.goto(PAGE_URL, {
+        const navigationPromise = page.goto(PAGE_URL, {
             waitUntil: 'domcontentloaded',
             timeout: 60000,
         });
-        return await (await rateResponse).text();
+        const [response] = await Promise.all([rateResponse, navigationPromise]);
+        return await response.text();
     } finally {
         await browser.close();
     }
