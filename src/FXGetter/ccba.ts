@@ -44,10 +44,7 @@ const extractGroups = (script: string): CCBAExchangeRateGroup[] => {
     let groupIndex = 0;
     const json = script
         .slice(start, end)
-        .replace(
-            /"ExR_Grp"\s*:/g,
-            () => `"ExR_Grp_${groupIndex++}":`,
-        );
+        .replace(/"ExR_Grp"\s*:/g, () => `"ExR_Grp_${groupIndex++}":`);
     const payload = JSON.parse(json) as Record<string, unknown>;
 
     return Object.entries(payload)

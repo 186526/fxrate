@@ -56,7 +56,10 @@ const sortObject = (obj: unknown): unknown => {
     return sortedObj;
 };
 
-export const useJson = (response: response<any>, request: request<any>): void => {
+export const useJson = (
+    response: response<any>,
+    request: request<any>,
+): void => {
     useBasic(response);
 
     const answer = JSON.parse(bodyToString(response.body));

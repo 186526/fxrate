@@ -1,6 +1,7 @@
 import { router, response, request, handler, interfaces } from 'handlers.js';
-import fxManager from './fxm/fxManager';
+import fxManager, { FXRateType } from './fxm/fxManager';
 import { FXRate, JSONRPCMethods, currency } from './types';
+import { loadSnapshot, saveSnapshot } from './persistence';
 
 import process from 'node:process';
 
@@ -164,6 +165,12 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
 
         this.enableList().mount();
         this.log('JSONRPC is mounted.');
+
+        // 冷启动：加载磁盘快照跳过上游全量抓取（Visa 等慢源首访 30s+）
+        const snapshot = loadSnapshot();
+        if (snapshot) {
+            this.restoreSnapshot(snapshot as never);
+        }
     }
 
     public log(str: string) {
@@ -475,6 +482,42 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     public stopAllInterval(): void {
         for (const id in this.intervalIDs) {
             clearInterval(this.intervalIDs[id].timeout);
+        }
+        // 停机前落盘汇率快照，冷启动直接加载跳过上游抓取
+        try {
+            saveSnapshot(this.dumpSnapshot());
+        } catch {
+            // 持久化失败不阻塞停机
+        }
+    }
+
+    // 返回当前内存汇率快照（仅抓取型源；mastercard/visa 数据在模块级 LRU 不在此列）
+    public dumpSnapshot(): {
+        [source: string]: { [from: string]: { [to: string]: FXRateType } };
+    } {
+        const out: {
+            [source: string]: { [from: string]: { [to: string]: FXRateType } };
+        } = {};
+        for (const source in this.fxms) {
+            const snap = this.fxms[source].snapshot?.();
+            if (snap && Object.keys(snap).length > 0) out[source] = snap;
+        }
+        return out;
+    }
+
+    // 加载快照：恢复内存汇率表并标记 ready（跳过懒加载抓取），
+    // 30 分钟定时刷新仍按 updated 时间戳守卫覆盖旧数据
+    public restoreSnapshot(snapshot: {
+        [source: string]: { [from: string]: { [to: string]: FXRateType } };
+    }): void {
+        for (const source in snapshot) {
+            const fxm = this.fxms[source];
+            if (!fxm?.restore) continue;
+            fxm.restore(snapshot[source] as never);
+            if (source in this.fxmStatus) this.fxmStatus[source] = 'ready';
+            if (this.intervalIDs[source])
+                this.intervalIDs[source].refreshDate = new Date();
+            this.log(`[persistence] restored ${source} from cache`);
         }
     }
 }

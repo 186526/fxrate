@@ -178,3 +178,7 @@ out
 dist/*
 !dist/readme.md
 !dist/index.cjs
+
+# runtime rate snapshot (persistence)
+fxrate-cache.json
+fxrate-cache.json.tmp

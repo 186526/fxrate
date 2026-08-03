@@ -17,14 +17,11 @@ const getECBFXRates = async (): Promise<FXRate[]> => {
     );
 
     const dateMatch = res.data.match(/<Cube time='([^']+)'/);
-    const date = dateMatch
-        ? new Date(`${dateMatch[1]}T00:00:00Z`)
-        : new Date();
+    const date = dateMatch ? new Date(`${dateMatch[1]}T00:00:00Z`) : new Date();
 
     const rates: FXRate[] = [];
     // 每行 <Cube currency='USD' rate='1.1485'/>，即 1 EUR = rate Ccy
-    const rowRegex =
-        /<Cube currency='([A-Z]{3})' rate='([0-9.]+)'\/>/g;
+    const rowRegex = /<Cube currency='([A-Z]{3})' rate='([0-9.]+)'\/>/g;
     let m: RegExpExecArray | null;
     while ((m = rowRegex.exec(res.data)) !== null) {
         const [, ccy, rate] = m;

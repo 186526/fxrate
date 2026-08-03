@@ -49,7 +49,16 @@ dist/                # 构建产物（esbuild 输出 dist/index.cjs），commit 
 | `CHROMIUM_PATH`                                                 | Visa 降级用的 chromium 可执行文件路径（不设则探测常见路径：`/usr/bin/chromium` 等与 playwright 缓存目录）                                                         |
 | `ENABLE_WISE=0`                                                 | 禁用 Wise 源                                                                                                                                                      |
 | `WISE_TOKEN` / `WISE_SANDBOX_API=1` / `WISE_USE_TOKEN_FROM_WEB` | Wise 抓取配置；未设 `WISE_TOKEN` 时自动置 `WISE_USE_TOKEN_FROM_WEB=1`，回退到 `FXGetter/wise.ts` 内硬编码的网页 token（**有意为之，勿删，见「约定与注意事项」**） |
-| `VERCEL=1`                                                      | Vercel 部署模式（不本地监听，走默认导出）                                                                                                                         |
+| `VERCEL=1`                                                      | Vercel 部署模式（不本地监听，走默认导出；持久化自动禁用，serverless 只读 FS 无持久性）                                                                            |
+| `FXRATE_CACHE_DIR`                                              | 汇率快照 JSON 落盘目录（默认 `process.cwd()`，文件名 `fxrate-cache.json`）                                                                                        |
+
+## 汇率快照持久化（persistence）
+
+-   **机制**：`src/persistence.ts` 在停机（SIGTERM/SIGINT → `stopAllInterval()`）时将内存汇率表 dump 为 JSON（`fxrate-cache.json`，原子写：临时文件 + rename）；冷启动构造 `fxmManager` 时 `loadSnapshot()` 读回并 `restoreSnapshot()` 恢复，源标记 `ready` 跳过懒加载上游抓取（Visa 等慢源首访可达 30s+，是 SSR 卡顿根因）。
+-   **序列化**：mathjs Fraction 的 `JSON.stringify` 输出 `{mathjs,n,d}`（实测无 s 字段），reviver 用 `fraction({n,d})` 还原；`updated` 为 Date → ISO 字符串还原。
+-   **新鲜度**：无自建过期——30 分钟定时刷新仍按 `update()` 的 updated 时间戳守卫覆盖旧数据；恢复时 `refreshDate=now` 保住 Cache-Control。
+-   **覆盖范围**：仅抓取型源（`_fxRateList`）。mastercard/visa 数据在各自模块级 LRUCache（未导出）不在快照内。
+-   **接入点**：`fxManager.snapshot()/restore()`（访问私有 `_fxRateList`）；`fxmManager.dumpSnapshot()/restoreSnapshot()`（访问私有 `fxms/fxmStatus`）；`fxmManager` 构造函数加载、`stopAllInterval()` 写回。
 
 ## 构建与运行
 

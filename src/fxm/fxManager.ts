@@ -65,6 +65,17 @@ export default class fxManager {
         this._fxRateList = value;
     }
 
+    // 持久化快照：导出/导入内存汇率表（供 JSON 落盘，冷启动跳过上游抓取）
+    public snapshot(): {
+        [from: string]: { [to: string]: FXRateType };
+    } {
+        return this._fxRateList;
+    }
+
+    public restore(value: { [from: string]: { [to: string]: FXRateType } }) {
+        this._fxRateList = value;
+    }
+
     public async getfxRateList(
         from: currency,
         to: currency,
@@ -302,10 +313,8 @@ export default class fxManager {
         // 直连判断走 Proxy get 有别名 fallback，但 BFS 的邻居枚举走 Object.keys（ownKeys）
         // 不经过 get trap，导致「目标 CNY 但图里只有 CNH」时找不到路径（2026-08 实测）。
         const isAlias = (a: currency, b: currency): boolean =>
-            (a === ('CNY' as currency.CNY) &&
-                b === ('CNH' as currency.CNH)) ||
-            (a === ('CNH' as currency.CNH) &&
-                b === ('CNY' as currency.CNY));
+            (a === ('CNY' as currency.CNY) && b === ('CNH' as currency.CNH)) ||
+            (a === ('CNH' as currency.CNH) && b === ('CNY' as currency.CNY));
 
         queue.push({ currency: from, path: [from] });
 

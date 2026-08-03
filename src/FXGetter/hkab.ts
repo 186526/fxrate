@@ -47,7 +47,9 @@ const UNIT_ONE: Record<string, number> = {
 
 // Nuxt SSR payload 是扁平数组：字段值是数组索引，13 表示 null（该货币当日无报价）。
 // 递归解引用索引得到真实值（汇率以字符串存储，如 "787.25"）。
-const extractRates = (payload: unknown[]): Record<string, { sell: number; buyTT: number; buyOD: number }> => {
+const extractRates = (
+    payload: unknown[],
+): Record<string, { sell: number; buyTT: number; buyOD: number }> => {
     const deref = (v: unknown): unknown => {
         if (typeof v === 'number' && v !== 13 && v >= 0 && v < payload.length) {
             return deref(payload[v]);
@@ -67,7 +69,8 @@ const extractRates = (payload: unknown[]): Record<string, { sell: number; buyTT:
         return Number.isFinite(n) && n > 0 ? n : undefined;
     };
 
-    const out: Record<string, { sell: number; buyTT: number; buyOD: number }> = {};
+    const out: Record<string, { sell: number; buyTT: number; buyOD: number }> =
+        {};
     for (const ccy of Object.keys(CURRENCY_MAP)) {
         const sell = toNum(deref(rateObj[`${ccy}Selling`]));
         const buyTT = toNum(deref(rateObj[`${ccy}BuyingTT`]));
@@ -92,7 +95,10 @@ const parseRateDate = (payload: unknown[]): Date => {
             typeof item === 'object' && item !== null && 'USDSelling' in item,
     );
     const raw = rateObj ? deref(rateObj['RateDate']) : undefined;
-    const date = typeof raw === 'string' ? new Date(`${raw}T00:00:00+08:00`) : new Date();
+    const date =
+        typeof raw === 'string'
+            ? new Date(`${raw}T00:00:00+08:00`)
+            : new Date();
     return Number.isNaN(date.getTime()) ? new Date() : date;
 };
 

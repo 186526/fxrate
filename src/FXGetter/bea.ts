@@ -99,9 +99,7 @@ const fetchViaChromium = async (): Promise<BEAResponse> => {
 };
 
 const parseUpdated = (value?: string): Date => {
-    const match = value?.match(
-        /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/,
-    );
+    const match = value?.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
     if (!match) return new Date();
     const updated = new Date(
         `${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}:00+08:00`,
@@ -153,7 +151,9 @@ const getBEAFXRates = async (): Promise<FXRate[]> => {
         if (rates.length > 0) return rates;
         throw new Error('response contained no valid rates');
     } catch (error) {
-        throw new Error(`BEA Hong Kong unavailable: ${(error as Error).message}`);
+        throw new Error(
+            `BEA Hong Kong unavailable: ${(error as Error).message}`,
+        );
     }
 };
 

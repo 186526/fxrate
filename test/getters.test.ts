@@ -78,7 +78,16 @@ test('all sources USD/CNY smoke', async () => {
             // ecb 只有 EUR 基准对，用 EUR/USD 抽查；cfets 是 CNY 基准用 EUR/CNY；
             // dbs 用 USD/SGD、dbs.cn 用 USD/CNY、dbs.hk 用 EUR/HKD；其余源用 USD/CNY。
             // HKD 基准港行（cncbi/ccba/cmbwl/hsb/icbca/ocbchk/bea/hkab）用 USD/HKD；ocbc 用 USD/SGD。
-            const HKD_BASED = ['cncbi', 'ccba', 'cmbwl', 'hsb', 'icbca', 'ocbchk', 'bea', 'hkab'];
+            const HKD_BASED = [
+                'cncbi',
+                'ccba',
+                'cmbwl',
+                'hsb',
+                'icbca',
+                'ocbchk',
+                'bea',
+                'hkab',
+            ];
             const path =
                 s === 'ecb'
                     ? `${s}/EUR/USD?amount=1`
@@ -143,7 +152,16 @@ test('buy/sell direction: 买入价 > 卖出价', async () => {
         if (s === 'cfets' || s === 'alipay') continue;
         // 各源基准对：hsbc.au 只有 AUD 基准；ecb 只有 EUR 基准；dbs 用 SGD、
         // dbs.cn 用 CNY、dbs.hk 用 HKD（EUR 计价）；港行（HKD 基准）与 ocbc（SGD 基准）同理。
-        const HKD_BASED = ['cncbi', 'ccba', 'cmbwl', 'hsb', 'icbca', 'ocbchk', 'bea', 'hkab'];
+        const HKD_BASED = [
+            'cncbi',
+            'ccba',
+            'cmbwl',
+            'hsb',
+            'icbca',
+            'ocbchk',
+            'bea',
+            'hkab',
+        ];
         const pair =
             s === 'hsbc.au'
                 ? ['AUD', 'CNY']

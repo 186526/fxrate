@@ -24,12 +24,12 @@
 
 ### 路由一览
 
-| 路由 | 说明 |
-| --- | --- |
-| `GET /:source` | 源信息（名称/支持货币数/更新时间） |
-| `GET /:source/:from` | 源内某基准货币对全部目标货币的汇率详情（全表） |
-| `GET /:source/:from/:to` | 单对汇率详情（买卖价/中间价 JSON） |
-| `GET /:source/:from/:to/:type/:amount` | 单对换算（返回纯数值） |
+| 路由                                   | 说明                                           |
+| -------------------------------------- | ---------------------------------------------- |
+| `GET /:source`                         | 源信息（名称/支持货币数/更新时间）             |
+| `GET /:source/:from`                   | 源内某基准货币对全部目标货币的汇率详情（全表） |
+| `GET /:source/:from/:to`               | 单对汇率详情（买卖价/中间价 JSON）             |
+| `GET /:source/:from/:to/:type/:amount` | 单对换算（返回纯数值）                         |
 
 -   `:source` 为数据源英文名（见 `/info` 的 `sources`），如 `boc`、`cmb`、`mastercard`、`visa`。
 -   `:from` / `:to` 为货币代码（自动大写），如 `USD`、`CNY`、`JPY`。
@@ -38,14 +38,14 @@
 
 ### 查询参数
 
-| 参数 | 默认 | 说明 |
-| --- | --- | --- |
-| `amount` | `100` | 换算金额（`/convert` 类路径） |
-| `precision` | `5` | 输出小数位；`-1` 表示原样不四舍五入（Fraction 高精度） |
-| `reverse` | 关 | 反向换算（`from/to` 互换语义，如 `USD/CNY?reverse` 按 1 CNY = X USD 计算） |
-| `bfs=1` | 关 | 启用交叉汇率 BFS（无直连时经中间货币折算，有累积误差，默认关闭） |
-| `fees` | `0` | 加收手续费百分比（乘 `1 + fees/100`） |
-| `pretty` | 关 | JSON 缩进输出（浏览器直接访问自动缩进） |
+| 参数        | 默认  | 说明                                                                       |
+| ----------- | ----- | -------------------------------------------------------------------------- |
+| `amount`    | `100` | 换算金额（`/convert` 类路径）                                              |
+| `precision` | `5`   | 输出小数位；`-1` 表示原样不四舍五入（Fraction 高精度）                     |
+| `reverse`   | 关    | 反向换算（`from/to` 互换语义，如 `USD/CNY?reverse` 按 1 CNY = X USD 计算） |
+| `bfs=1`     | 关    | 启用交叉汇率 BFS（无直连时经中间货币折算，有累积误差，默认关闭）           |
+| `fees`      | `0`   | 加收手续费百分比（乘 `1 + fees/100`）                                      |
+| `pretty`    | 关    | JSON 缩进输出（浏览器直接访问自动缩进）                                    |
 
 ### 响应格式
 
@@ -76,24 +76,24 @@
 
 ### 错误处理
 
-| 场景 | 表现 |
-| --- | --- |
-| 无兑换路径（默认无 BFS） | 404 + 错误信息 |
-| 源不支持全表（mastercard/visa） | `GET /:source/:from` 返回 403 |
-| 无效货币 | 404 `Invalid currency` |
-| 单对源不可用（上游 WAF/403） | 换算返回 `false`，详情 `Date` 头回落当前时间 |
+| 场景                            | 表现                                         |
+| ------------------------------- | -------------------------------------------- |
+| 无兑换路径（默认无 BFS）        | 404 + 错误信息                               |
+| 源不支持全表（mastercard/visa） | `GET /:source/:from` 返回 403                |
+| 无效货币                        | 404 `Invalid currency`                       |
+| 单对源不可用（上游 WAF/403）    | 换算返回 `false`，详情 `Date` 头回落当前时间 |
 
 ## JSON-RPC v2
 
 -   端点：`POST /v1/jsonrpc`
 -   内部复用自身 REST 路由，方法：
 
-| 方法 | 参数 | 返回 |
-| --- | --- | --- |
-| `instanceInfo` | 无 | 同 `GET /info` |
-| `listCurrencies` | 无 | 支持的全部货币列表 |
-| `listFXRates` | `from`, `precision?`, `amount?`, `bfs?` | 该货币对全部来源的汇率详情 |
-| `getFXRate` | `from`, `to`, `type?`, `precision?`, `amount?`, `fees?`, `bfs?` | 单源单对汇率详情 |
+| 方法             | 参数                                                            | 返回                       |
+| ---------------- | --------------------------------------------------------------- | -------------------------- |
+| `instanceInfo`   | 无                                                              | 同 `GET /info`             |
+| `listCurrencies` | 无                                                              | 支持的全部货币列表         |
+| `listFXRates`    | `from`, `precision?`, `amount?`, `bfs?`                         | 该货币对全部来源的汇率详情 |
+| `getFXRate`      | `from`, `to`, `type?`, `precision?`, `amount?`, `fees?`, `bfs?` | 单源单对汇率详情           |
 
 -   `listFXRates`/`getFXRate` 参数含义与 REST 一致（`type` 为 `cash`/`remit`/`middle`；`bfs` 布尔开关）。
 -   请求示例：
