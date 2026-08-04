@@ -16,6 +16,7 @@ src/
   fxmManager.ts      # 核心：JSON-RPC 方法 + 每数据源的 REST 子路由 + 定时刷新（经 RefreshScheduler）+ 懒加载
   metrics.ts         # Phase 6 零依赖 Prometheus registry：固定 family、转义/有界标签、运行时计数与耗时
   shutdownMetricsPersistence.ts # 停机 summary 的独立有界文件持久化（跨重启供 Prometheus pull）
+  persistenceWriter.ts      # Phase 5 节流异步快照 writer：O(1) enqueue + trailing 节流 + 串行后台落盘 + 停机 flush
   refreshScheduler.ts# Phase 2 全局刷新调度器：稳定相位抖动 + BoundedExecutor 有界并发 + NegativeBackoffCache 失败退避
   fxm/fxManager.ts   # 汇率存储/换算：Fraction 精度、双向汇率、BFS 找兑换路径、CNY/CNH 别名
   FXGetter/          # 每个数据源一个文件：getter 函数（返回 FXRate[]）或 FXM 类（如 mastercard/visa）
@@ -69,11 +70,12 @@ dist/                # 构建产物（esbuild 输出 dist/index.cjs），commit 
 | `FXRATE_SNAPSHOT_MAX_BYTES`                                     | 快照文件字节上限（默认 `33554432`=32 MiB）：读文件前用 `statSync` size 预检，超限整包拒绝（防 JSON.parse 阶段耗尽资源）                                                                                      |
 | `FXRATE_SNAPSHOT_FUTURE_SKEW_MS`                                | 允许的未来时钟偏差（默认 `300000`=5min）：`savedAt` 或任一 `rate.updated` 晚于 `now + 偏差` → 视为伪造/损坏快照整包拒绝                                                                                      |
 | `FXRATE_STALE_RATE_AGE_MS`                                      | 单源降级阈值（默认=快照最大年龄 `snapshotMaxAgeMs()`，跟随 `FXRATE_SNAPSHOT_MAX_AGE_MS`）：恢复时某源最新一条汇率 `updated` 早于 `now - 阈值` → 标记 degraded（Cache-Control max-age=0，成功刷新后自动解除） |
+| `FXRATE_SNAPSHOT_THROTTLE_MS`                                   | 节流异步快照 writer 的 trailing 窗口毫秒数（默认 `1000`=1s，只接受正整数）：成功刷新只 O(1) 入队，窗口结束由后台串行落盘最新状态；停机 flush 立即写一次                                                      |
 | `SHUTDOWN_DEADLINE_MS`                                          | 优雅停机硬截止毫秒数（默认 `10000`；超过该时长仍无法自然关停时强制 `exit 0`，见「优雅停机」）                                                                                                                |
 
 ## 优雅停机（graceful shutdown）
 
--   `src/shutdown.ts` 的 `installShutdown(server, manager)` 在本地 HTTP 入口（`src/index.ts`，`App.listen()` 后保留 `App.adapater.server` 句柄）安装 SIGTERM/SIGINT 处理：首次信号后① `server.close()` 停止接收新连接（Node 顺带关闭空闲 keep-alive）；② `await Manager.stopAllInterval()`——先 `refreshScheduler.stop()` 停调度器（不再接任何新刷新、排队任务以 closed 拒绝），再等全部在途刷新 settle（`refreshScheduler.drain()` + `pendingPromises` 双保险），最后才落盘汇率快照一次（不丢停机前最后一次刷新）；③ 等在途请求自然结束后（server `'close'` 事件）`exit 0`；④ 超过 `SHUTDOWN_DEADLINE_MS`（默认 10000，覆盖在途刷新 drain）强制 `exit 0`；⑤ 二次信号立即强制 `exit 0`。每个 `forceExit` 路径先观察固定 outcome（`graceful` / `deadline` / `second_signal`），同步持久化累计 summary 后再退出；持久化失败只记录日志，不阻止退出。Vercel serverless 模式不本地监听，不安装。
+-   `src/shutdown.ts` 的 `installShutdown(server, manager)` 在本地 HTTP 入口（`src/index.ts`，`App.listen()` 后保留 `App.adapater.server` 句柄）安装 SIGTERM/SIGINT 处理：首次信号后① `server.close()` 停止接收新连接（Node 顺带关闭空闲 keep-alive）；② `await Manager.stopAllInterval()`——先 `refreshScheduler.stop()` 停调度器（不再接任何新刷新、排队任务以 closed 拒绝），再等全部在途刷新 settle（`refreshScheduler.drain()` + `pendingPromises` 双保险），最后经节流 writer `flush()` 落盘汇率快照一次（重新 dump 最新状态，不丢停机前最后一次刷新）；③ 等在途请求自然结束后（server `'close'` 事件）`exit 0`；④ 超过 `SHUTDOWN_DEADLINE_MS`（默认 10000，覆盖在途刷新 drain）强制 `exit 0`；⑤ 二次信号立即强制 `exit 0`。每个 `forceExit` 路径先观察固定 outcome（`graceful` / `deadline` / `second_signal`），同步持久化累计 summary 后再退出；持久化失败只记录日志，不阻止退出。Vercel serverless 模式不本地监听，不安装。
 -   未捕获的 rejection/异常（`unhandledRejection`/`uncaughtException`，`src/index.ts` 模块级）记录日志后以非零码退出——supervisor 语义（pm2/Docker 检测退出码后重启），**不再「只记录不退出」**；曾为容忍单源 playwright/网络超时改成过 log-only（2026-08 bojs 崩溃后），该行为已移除。
 
 ## 停机指标持久化
@@ -84,12 +86,12 @@ dist/                # 构建产物（esbuild 输出 dist/index.cjs），commit 
 
 ## 汇率快照持久化（persistence）
 
--   **机制**：`src/persistence.ts` 在停机（SIGTERM/SIGINT → `installShutdown` → `Manager.stopAllInterval()`）时将内存汇率表 dump 为 JSON（`fxrate-cache.json`，原子写：临时文件 + rename）；冷启动构造 `fxmManager` 时 `loadSnapshot()` 读回并 `restoreSnapshot()` 恢复，源标记 `ready` 跳过懒加载上游抓取（Visa 等慢源首访可达 30s+，是 SSR 卡顿根因）。
+-   **机制**：`src/persistence.ts` 提供 `saveSnapshot()`（同步，兼容旧 API）与 `saveSnapshotAsync()`（fs/promises + 唯一临时文件名 + 同目录 rename，失败清理临时文件并记录错误）。日常持久化走 **节流异步 writer**（`src/persistenceWriter.ts` 的 `SnapshotWriter`，Phase 5 优化 #8）：每个 `fxmManager` 一个实例，成功刷新仅 O(1) `enqueue()`（置脏 + 重置 trailing 定时器，默认 `FXRATE_SNAPSHOT_THROTTLE_MS`=1000ms，`unref` 不阻退出），stringify/write/rename 全部在后台 drain 循环串行执行——快照数据经惰性 `producer`（`dumpSnapshot()`）在写时读取，**newest-wins**：窗口内任意多次刷新收敛为一次写、写期间再入队自动补写一次、失败保留上一份有效文件且不影响源状态。`flush()` 通过默认 `setImmediate` defer 把 producer/stringify/write 排到事件循环下一轮，信号/请求调用栈只做 O(1) 排队；首次 flush 恒写，后续没有 dirty/失败重试时不重复落盘。停机时 `stopAllInterval()` 先同步置 stopping 门闩，拒绝 `pendingPromises` 快照之后才尝试启动的请求路径刷新，再停止/排空 scheduler 与既有刷新并 `await flush()` 重 dump 最新状态；`stop()` 取消 writer 定时器并停止后续调度。VERCEL/只读 FS（`snapshotCachePath()` 返回 null）时 writer 整体 no-op。同步 `saveSnapshot` 保留供外部/测试直接调用。冷启动构造 `fxmManager` 时 `loadSnapshot()` 读回并 `restoreSnapshot()` 恢复，源标记 `ready` 跳过懒加载上游抓取（Visa 等慢源首访可达 30s+，是 SSR 卡顿根因）。
 -   **序列化**：mathjs Fraction 的 `JSON.stringify` 输出 `{mathjs,n,d}`（实测无 s 字段），reviver 用 `fraction({n,d})` 还原；`updated` 为 Date → ISO 字符串还原。
 -   **安全校验**（Phase 7）：`loadSnapshot()` 在恢复进内存前做多层防御——① **字节上限**：读文件前 `statSync` size 预检（默认 32 MiB，`FXRATE_SNAPSHOT_MAX_BYTES` 可配），超限整包拒绝；② **顶层结构**：必须是 `{version, savedAt, sources}` 普通对象，version 必须匹配，savedAt 必须是合法字符串日期；③ **源数量上限**（200）与货币代码 `^[A-Z]{3}$`；④ **每格结构**：middle/cash/remit 必须是有限正数或 `s>0` 的 mathjs Fraction（复用 `fxManager.validateFXRate` 的报价契约，畸形对象/字符串/负价/缺字段全部拒绝）、`updated` 必须是合法 Date；⑤ **未来时钟偏差**：`savedAt` 或任一 `rate.updated` 晚于 `now + FXRATE_SNAPSHOT_FUTURE_SKEW_MS`（默认 5min）→ 视为伪造/损坏整包拒绝。`fxmManager.restoreSnapshot()` 只接受经 `loadSnapshot` 校验的数据——绝不让磁盘上的任意对象直接替换内存汇率表。
 -   **新鲜度**（Phase 2）：`loadSnapshot()` 校验 `savedAt`——非法日期或超过 `FXRATE_SNAPSHOT_MAX_AGE_MS`（默认 24h）的整包快照直接忽略（走冷启动懒加载抓取）。恢复时按每源最新一条合法 `updated` 判定降级：早于 `now - FXRATE_STALE_RATE_AGE_MS`（默认=快照最大年龄，未设时跟随 `FXRATE_SNAPSHOT_MAX_AGE_MS`）或该源无任何合法记录 → 标记 **degraded**——Cache-Control 恒为 `max-age=0`（绝不对外声称新鲜），`refreshDate` 如实指向最后数据时间；30 分钟定时刷新仍按 `update()` 的 updated 时间戳守卫覆盖旧数据，**成功刷新后自动解除 degraded**。注：`updated` 是源发布时间的源（如 cfets 每日 9:15、hkma 滞后月余）恢复时可能被标 degraded，属如实反映数据陈旧度，不影响可用性。
 -   **覆盖范围**：仅抓取型源（`_fxRateList`）。mastercard/visa 数据在各自模块级 LRUCache（未导出）不在快照内。
--   **接入点**：`fxManager.snapshot()/restore()`（访问私有 `_fxRateList`）；`fxmManager.dumpSnapshot()/restoreSnapshot()`（访问私有 `fxms/fxmStatus`）；`fxmManager` 构造函数加载、停机时由 `installShutdown` 调用 `stopAllInterval()` 写回（信号监听已从 `fxmManager` 构造函数移除，统一收敛到 `src/shutdown.ts`）。
+-   **接入点**：`fxManager.snapshot()/restore()`（访问私有 `_fxRateList`）；`fxmManager.dumpSnapshot()/restoreSnapshot()`（访问私有 `fxms/fxmStatus`）；`fxmManager` 构造函数加载；成功刷新（`updateFXManager` 完成路径）经 `snapshotWriter.enqueue()` 入队；停机时由 `installShutdown` 调用 `stopAllInterval()`（drain 后 `await flush()` 写回，信号监听已从 `fxmManager` 构造函数移除，统一收敛到 `src/shutdown.ts`）。测试可经 `options.snapshotWriter` 注入 writer 或注入 `path: null` 禁用。
 
 ## 构建与运行
 
@@ -114,7 +116,7 @@ yarn format            # prettier（singleQuote、trailingComma all、tabWidth 4
 
 -   **Vercel**：`vercel.json` 将全部路由指向 `dist/index.cjs`（`@vercel/node`），buildCommand 为 `yarn build`。
 -   **Docker**：`Dockerfile`（pnpm 装依赖 + pm2-runtime 跑 `dist/index.cjs`），`pm2.json` 指定脚本与 `NODE_ENV`。
--   **CI/CD**：`.github/workflows/ci.yml` 对每个分支 push/PR 跑 `npx tsc --noEmit` + `npx eslint "{src,test}/**/*.ts"`（lint 不带 `--fix`，因 package.json 的 lint 脚本带 `--fix`，CI 不能改文件）+ `yarn test:unit --runInBand`（确定性离线单测）+ `bash scripts/check-dist-consistency.sh`（把 src/ 重建到临时目录、归一化注入的 GITBUILD/BUILDTIME 后与提交的 `dist/index.cjs` 逐字节对比，**防止源码改动忘记重建/提交 dist**，必须在 `yarn build` 之前跑）+ `yarn build`。`.github/workflows/cd.yml` 在 `release`/`main` 分支 push 或 release 发布时构建并推送 `ghcr.io/<repo>` 镜像。
+-   **CI/CD**：`.github/workflows/ci.yml` 对每个分支 push/PR 跑 `npx tsc --noEmit` + `npx eslint "{src,test}/**/*.ts"`（lint 不带 `--fix`，因 package.json 的 lint 脚本带 `--fix`，CI 不能改文件）+ `yarn test:unit --runInBand`（确定性离线单测）+ `bash scripts/check-dist-consistency.sh`（把 src/ 重建到临时目录、归一化注入的 GITBUILD/BUILDTIME 后与提交的 `dist/index.cjs` 逐字节对比，**防止源码改动忘记重建/提交 dist**，必须在 `yarn build` 之前跑）+ `yarn build`。`.github/workflows/cd.yml` 仅在 GitHub Release 发布或 push `v*` tag 时构建并推送 `ghcr.io/<repo>` 镜像，普通 `main` push 不触发。`.github/workflows/canary.yml` 是**网络 canary**（schedule 每日 06:00 UTC + `workflow_dispatch`，不进 PR/单元测试）：只跑 `RUN_NETWORK_TESTS=1 yarn test test/canary/network-canary.test.ts --runInBand --testTimeout=300000`，做真实上游健康度探针（见下）。
 -   **依赖 `handlers.js` 的类型约定**：`responder` 的 `response` 参数是**必需**的（运行时 `handler.respond` 始终传入）；`errorResponder` 是柯里化的单参中间件（`(errorCode, errorMessage?) => (request) => Promise<response>`）。当前钉 `handlers.js@0.1.6`，路由挂载已按 0.1.6 语义重写（`mountFXMRouter` 用 `use('/${source}/(.*)')` + 精确路径绑定，`bodyToString()` 处理多平台 response.body）。
     -   **0.1.6 破坏性变更适配记录（2026-08 实测）**：① `use()` 强制要求路径含未命名捕获组 `/(.*)`；② 子路由 `/(.*)` 兜底优先级高于 `/:from` 参数路由；③ handler 返回值必须是 `response` 实例（字符串返回值 404）；④ `response.body` 类型扩为多平台联合类型。已全部适配，**勿降回 0.1.3**。
     -   **import.meta patch**：`main.node.js` 的 `createRequire(import.meta.url)` 在 CJS 构建下崩溃，经 **patch-package** 改为 `createRequire(import.meta.url||"file://"+__filename)`（ESM 下走 import.meta.url，CJS 下走 **filename）；patch 文件 `patches/handlers.js+0.1.6.patch`，postinstall 自动应用。注意 jest ESM 下 `**filename` 未定义，`import.meta.url||` 前缀必须保留。
@@ -125,6 +127,7 @@ yarn format            # prettier（singleQuote、trailingComma all、tabWidth 4
 -   **代码风格**：单引号、4 空格缩进、带分号（prettier 配置）；与前端仓库（双引号/tab/无分号）不同，勿混用。
 -   **新数据源**：复制 `FXGetter/` 下现有 getter 模式——导出默认函数，用 `axios`/`cheerio` 抓取并映射为 `FXRate[]`（注意 `unit` 与 `updated`），然后在 `src/index.ts` 的 `Manager` 里注册；涉及中文名时在 `constant.ts` 补 `sourceNamesInZH`。
 -   **测试**：`test/server-status.test.ts` 有真实网络请求（每个 source 都会打），本地跑可能慢或受网络影响；`Manager.stopAllInterval()` 在 `afterAll` 清理定时器。`test/validate-rates.test.ts` 是**汇率数值断言测试**（数值合法性/买卖价关系/交叉一致性），默认跳过，设 `RUN_NETWORK_TESTS=1` 显式启用。
+-   **网络 canary（`test/canary/network-canary.test.ts`）**：真实上游健康度探针，**只在 scheduled/manual workflow 运行**（`.github/workflows/canary.yml`），默认（未设 `RUN_NETWORK_TESTS=1`）网络套件 skip 不碰公网；纯判定契约由 `test/unit/network-canary-contract.test.ts` 离线覆盖。判定契约：① 每个成功来源至少返回一条合法汇率——**每条**汇率至少有一个有限正数报价（middle/buy/sell 全缺省或非法的占位行也判无效），空数组/NaN/Infinity/非正值/非法 updated **硬失败**；② freshness 在来源声明窗口内（默认 7 天；`hkma` 月频滞后源 60 天、`mastercard` 未发布回退 7 天故 8 天），updated 晚于 `now + 5min` 视为伪造/时钟偏移同样硬失败；③ 允许的 WAF 失败（`bea`/`visa`/`mastercard`/`wise`/`ocbchk`/`icbca`）逐项记录（含错误消息），只豁免抓取错误的硬失败分类，不豁免坏数据，且仍计入总失败预算；`mastercard`/`visa` 用 `getfxRateList` 并发抽查 7 个关键货币对；timeout 后等待底层任务 settle 才释放并发槽；④ 配置集合固定断言 59 源，聚合门禁为成功来源 ≥ 48、总失败 ≤ 11。新增/调整来源时同步来源列表、`SOURCE_SPECS` 与阈值。
 -   **汇率语义**：改 `fxManager.update()`/`convert()` 前先确认方向与倒数关系，别把买/卖、from/to 弄反。
 -   **数据源语义（实测验证过，勿凭字段名想当然）**：
     -   部分银行 API 的 `Buy/Sell` 是**客户视角**（如 `hsbc.cn` 的 `*SellingRate` 映射到 buy 方向）——代码已正确翻转，勿再改。
