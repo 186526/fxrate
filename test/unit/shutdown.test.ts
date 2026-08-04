@@ -7,12 +7,19 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import http from 'node:http';
 import net from 'node:net';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+    existsSync,
+    mkdtempSync,
+    readdirSync,
+    rmSync,
+    writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { CRITICAL_SOURCES } from '../../src/fxmManager';
+import { SHUTDOWN_METRICS_FILENAME } from '../../src/shutdownMetricsPersistence';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const fixturePath = join(repoRoot, 'test', 'fixtures', 'shutdown-child.ts');
@@ -197,6 +204,72 @@ describe('shutdown (Phase 2, offline, loopback-only)', () => {
         }
     }
 
+    const shutdownMetricValue = (
+        exposition: string,
+        suffix: 'count' | 'sum',
+        outcome: string,
+    ): number => {
+        const match = new RegExp(
+            `^fxrate_shutdown_seconds_${suffix}\\{outcome="${outcome}"\\} (\\S+)$`,
+            'm',
+        ).exec(exposition);
+        const value = Number(match?.[1]);
+        if (!Number.isFinite(value)) {
+            throw new Error(
+                `missing shutdown ${suffix} sample for outcome ${outcome}`,
+            );
+        }
+        return value;
+    };
+
+    async function expectOutcomeAfterRestart(
+        outcome: 'graceful' | 'deadline',
+    ): Promise<void> {
+        const restartCacheDir = mkdtempSync(
+            join(tmpdir(), `fxrate-shutdown-restart-${outcome}-`),
+        );
+        let childA: StartedChild | undefined;
+        let childB: StartedChild | undefined;
+        let inflight: net.Socket | undefined;
+        try {
+            childA = await startChild(
+                restartCacheDir,
+                outcome === 'deadline'
+                    ? { SHUTDOWN_DEADLINE_MS: '500' }
+                    : { SHUTDOWN_DEADLINE_MS: '20000' },
+            );
+            if (outcome === 'deadline') {
+                inflight = await openPartialRequest(childA.port);
+            }
+            childA.child.kill('SIGTERM');
+            expect(await waitForExit(childA, 10000)).toBe(0);
+            expect(
+                existsSync(join(restartCacheDir, SHUTDOWN_METRICS_FILENAME)),
+            ).toBe(true);
+
+            childB = await startChild(restartCacheDir);
+            const metrics = await httpGet(childB.port, '/metrics');
+            expect(metrics.status).toBe(200);
+            expect(shutdownMetricValue(metrics.body, 'count', outcome)).toBe(1);
+            expect(
+                shutdownMetricValue(metrics.body, 'sum', outcome),
+            ).toBeGreaterThanOrEqual(0);
+            expect(shutdownMetricValue(metrics.body, 'count', 'all')).toBe(1);
+            expect(
+                readdirSync(restartCacheDir).filter(
+                    (name) =>
+                        name.startsWith(`${SHUTDOWN_METRICS_FILENAME}.`) &&
+                        name.endsWith('.tmp'),
+                ),
+            ).toEqual([]);
+        } finally {
+            inflight?.destroy();
+            if (childB) await stopChild(childB);
+            if (childA) await stopChild(childA);
+            rmSync(restartCacheDir, { recursive: true, force: true });
+        }
+    }
+
     test('harness: child starts the real app on 127.0.0.1 and serves /info', async () => {
         const started = await startChild(cacheDir);
         try {
@@ -292,4 +365,12 @@ describe('shutdown (Phase 2, offline, loopback-only)', () => {
             await stopChild(started);
         }
     }, 30000);
+
+    test('graceful shutdown summary survives a child restart and is scrapeable', async () => {
+        await expectOutcomeAfterRestart('graceful');
+    }, 60000);
+
+    test('deadline shutdown summary survives a child restart and is scrapeable', async () => {
+        await expectOutcomeAfterRestart('deadline');
+    }, 60000);
 });

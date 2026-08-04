@@ -182,3 +182,7 @@ dist/*
 # runtime rate snapshot (persistence)
 fxrate-cache.json
 fxrate-cache.json.tmp
+
+# persisted shutdown summary (independent from the rate snapshot)
+fxrate-shutdown-metrics.json
+fxrate-shutdown-metrics.json.*.tmp

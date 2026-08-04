@@ -20,6 +20,7 @@ import rootRouter, { handler, response } from 'handlers.js';
 
 import fxmManager from './fxmManager';
 import { installShutdown } from './shutdown';
+import { restoreShutdownMetricsFromDisk } from './shutdownMetricsPersistence';
 import { useBasic } from './handler/rest';
 import { installRequestBodyLimit } from './handler/limits';
 
@@ -83,6 +84,8 @@ import getBEAFXRates from './FXGetter/bea';
 import mastercardFXM from './FXGetter/mastercard';
 import visaFXM from './FXGetter/visa';
 import { RSSHandler } from './handler/rss';
+
+restoreShutdownMetricsFromDisk();
 
 const Manager = new fxmManager({
     boc: getBOCFXRatesFromBOC,

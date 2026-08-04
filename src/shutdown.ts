@@ -2,6 +2,13 @@ import http from 'node:http';
 import process from 'node:process';
 
 import type fxmManager from './fxmManager';
+import {
+    metricClockSeconds,
+    metricElapsedSeconds,
+    observeShutdown,
+    type ShutdownOutcome,
+} from './metrics';
+import { persistShutdownMetricsToDisk } from './shutdownMetricsPersistence';
 
 // Phase 2 优雅停机：本地 HTTP 服务收到首次 SIGTERM/SIGINT 后按以下顺序收尾：
 //   1) 停止接收新连接（server.close()，Node 会顺带关闭空闲 keep-alive 连接）；
@@ -30,20 +37,33 @@ export function installShutdown(
 
     let shuttingDown = false;
     let exited = false;
+    let shutdownStartedAt: number | undefined;
 
-    const forceExit = (code: number): void => {
+    const forceExit = (code: number, outcome: ShutdownOutcome): void => {
         if (exited) return;
         exited = true;
+        try {
+            if (shutdownStartedAt !== undefined) {
+                observeShutdown(
+                    outcome,
+                    metricElapsedSeconds(shutdownStartedAt),
+                );
+            }
+            persistShutdownMetricsToDisk();
+        } catch (error) {
+            console.error('[shutdown] metrics persistence failed:', error);
+        }
         process.exit(code);
     };
 
     const shutdown = (signal: NodeJS.Signals): void => {
         if (shuttingDown) {
             console.log(`[shutdown] received second ${signal}, forcing exit 0`);
-            forceExit(0);
+            forceExit(0, 'second_signal');
             return;
         }
         shuttingDown = true;
+        shutdownStartedAt = metricClockSeconds();
         console.log(
             `[shutdown] received ${signal}, stopping connections, saving snapshot, deadline ${deadlineMs}ms`,
         );
@@ -59,7 +79,7 @@ export function installShutdown(
             console.log(
                 '[shutdown] HTTP server closed and snapshot saved, exiting 0',
             );
-            forceExit(0);
+            forceExit(0, 'graceful');
         };
 
         // 可配置硬截止：覆盖 stopAllInterval 的在途刷新 drain 与在途请求等待，
@@ -68,7 +88,7 @@ export function installShutdown(
             console.error(
                 `[shutdown] hard deadline (${deadlineMs}ms) reached, forcing exit 0`,
             );
-            forceExit(0);
+            forceExit(0, 'deadline');
         }, deadlineMs);
         timer.unref?.();
 
