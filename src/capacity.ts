@@ -12,6 +12,14 @@
 // 集成约定：native fetch 与 chromium 抓取各建一个独立的 BoundedExecutor 实例
 // （见 AGENTS.md「mastercard/visa 取数实现」），避免 chromium 慢任务占满原生并发额度。
 
+import {
+    metricClockSeconds,
+    metricElapsedSeconds,
+    observeWorkQueueWait,
+    recordWorkFinished,
+    recordWorkStarted,
+} from './metrics';
+
 export type CapacityErrorCode = 'overload' | 'closed' | 'aborted';
 
 const CAPACITY_ERROR_MESSAGES: Record<CapacityErrorCode, string> = {
@@ -119,12 +127,15 @@ export interface BoundedExecutorOptions {
     limit: number;
     /** 排队等待的任务数上限（非负整数）；0 = 不允许排队，满额直接 overload。 */
     queueSize: number;
+    /** 可选观测标签；设置后上报 active 与排队等待时间。 */
+    metricsLabel?: string;
 }
 
 interface QueueEntry<T> {
     task: () => Promise<T>;
     signal?: AbortSignal;
     onAbort?: () => void;
+    queuedAt?: number;
     resolve: (value: T | PromiseLike<T>) => void;
     reject: (reason?: unknown) => void;
 }
@@ -132,13 +143,14 @@ interface QueueEntry<T> {
 export class BoundedExecutor {
     private readonly limit: number;
     private readonly queueSize: number;
+    private readonly metricsLabel?: string;
     private readonly queue: QueueEntry<unknown>[] = [];
     private activeCount = 0;
     private rejectedTotal = 0;
     private closedFlag = false;
 
     constructor(options: BoundedExecutorOptions) {
-        const { limit, queueSize } = options;
+        const { limit, queueSize, metricsLabel } = options;
         if (!Number.isInteger(limit) || limit < 1) {
             throw new TypeError(
                 `BoundedExecutor limit must be a positive integer, got ${String(limit)}`,
@@ -151,6 +163,7 @@ export class BoundedExecutor {
         }
         this.limit = limit;
         this.queueSize = queueSize;
+        this.metricsLabel = metricsLabel;
     }
 
     /** 当前执行中的任务数。 */
@@ -191,8 +204,7 @@ export class BoundedExecutor {
             );
         }
         if (this.activeCount < this.limit) {
-            this.activeCount++;
-            return this.execute(task);
+            return this.start(task);
         }
         if (this.queue.length >= this.queueSize) {
             return this.rejectOnce(
@@ -231,8 +243,25 @@ export class BoundedExecutor {
         // 无论任务成功/失败，finally 都释放并发槽位并派发下一个排队任务。
         return promise.finally(() => {
             this.activeCount--;
+            if (this.metricsLabel !== undefined) {
+                recordWorkFinished(this.metricsLabel);
+            }
             this.pump();
         });
+    }
+
+    private start<T>(task: () => Promise<T>, queuedAt?: number): Promise<T> {
+        this.activeCount++;
+        if (this.metricsLabel !== undefined) {
+            if (queuedAt !== undefined) {
+                observeWorkQueueWait(
+                    this.metricsLabel,
+                    metricElapsedSeconds(queuedAt),
+                );
+            }
+            recordWorkStarted(this.metricsLabel);
+        }
+        return this.execute(task);
     }
 
     private enqueue<T>(
@@ -244,6 +273,10 @@ export class BoundedExecutor {
                 task,
                 signal,
                 onAbort: undefined,
+                queuedAt:
+                    this.metricsLabel !== undefined
+                        ? metricClockSeconds()
+                        : undefined,
                 resolve,
                 reject,
             };
@@ -279,8 +312,7 @@ export class BoundedExecutor {
             if (entry.signal !== undefined && entry.onAbort !== undefined) {
                 entry.signal.removeEventListener('abort', entry.onAbort);
             }
-            this.activeCount++;
-            this.execute(entry.task).then(
+            this.start(entry.task, entry.queuedAt).then(
                 (value) => entry.resolve(value),
                 (error) => entry.reject(error),
             );

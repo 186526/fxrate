@@ -203,7 +203,11 @@ export class RefreshScheduler {
         this.intervalMs = roundedInterval;
         this.jitterWindowMs = roundedWindow;
         this.logger = logger;
-        this.executor = new BoundedExecutor({ limit: concurrency, queueSize });
+        this.executor = new BoundedExecutor({
+            limit: concurrency,
+            queueSize,
+            metricsLabel: 'refresh',
+        });
         this.backoff = new NegativeBackoffCache({
             ttlMs: backoffTtlMs,
             factor: backoffFactor,
