@@ -1,5 +1,8 @@
 import { makeInstance, Manager } from '../src/index';
 import { rootRouter, request, interfaces } from 'handlers.js';
+
+const originalLogLevel = process.env.LOG_LEVEL;
+process.env.LOG_LEVEL = 'error';
 const Instance = await makeInstance(new rootRouter(), Manager);
 const mk = (path: string) =>
     new request(
@@ -209,7 +212,8 @@ test('buy/sell direction: 买入价 > 卖出价', async () => {
     expect(failures).toEqual([]);
 }, 300000);
 
-afterAll((t) => {
-    Manager.stopAllInterval();
-    t();
+afterAll(async () => {
+    await Manager.stopAllInterval();
+    if (originalLogLevel === undefined) delete process.env.LOG_LEVEL;
+    else process.env.LOG_LEVEL = originalLogLevel;
 });

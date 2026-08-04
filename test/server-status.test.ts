@@ -7,14 +7,17 @@ const Instance = await makeInstance(new rootRouter(), Manager);
 describe('Server Status', () => {
     test('/info', async () => {
         const res = await useInternalRestAPI('info', Instance);
-        expect(res.status).toEqual('ok');
+        expect(res.status).toEqual('degraded');
+        expect(res.ready).toBe(false);
+        expect(res.pending.length).toBeGreaterThan(0);
     });
 
     test(
         '/:sources/',
         async () => {
             const res = await useInternalRestAPI('info', Instance);
-            expect(res.status).toEqual('ok');
+            expect(res.status).toEqual('degraded');
+            expect(res.ready).toBe(false);
 
             await Promise.all(
                 res.sources.map(async (source) => {
@@ -29,7 +32,6 @@ describe('Server Status', () => {
     );
 });
 
-afterAll((t) => {
-    Manager.stopAllInterval();
-    t();
+afterAll(async () => {
+    await Manager.stopAllInterval();
 });
