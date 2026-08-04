@@ -1,0 +1,34 @@
+# 网络 canary：定时 + 手工触发的真实上游健康度探针。
+# 只运行 test/canary/network-canary.test.ts（见 plan §10.8）——不进入 PR/CI 单元测试
+# （test/unit 全离线，canary 依赖真实公网上游）。任何来源全部/过多失败、空数组或
+# freshness 超限都会让 job 失败（网络 canary 是发现上游变更的哨兵，不进发布门禁）。
+name: Network canary
+
+on:
+  schedule:
+    # 每日 06:00 UTC（北京时间 14:00）：各银行日频牌价发布后巡检
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run network canary
+        run: RUN_NETWORK_TESTS=1 yarn test test/canary/network-canary.test.ts --runInBand --testTimeout=300000
