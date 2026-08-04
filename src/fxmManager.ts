@@ -64,7 +64,12 @@ export const useInternalRestAPI = async (url: string, router: router) => {
     try {
         return JSON.parse(bodyToString(restResponse.body));
     } catch (_e) {
-        return restResponse;
+        // 单类型换算（/:from/:to/:type）的响应体是纯文本而非 JSON：
+        // precision=-1 时可能是循环小数串（如 "14.(285714)"），JSON.parse 必然失败。
+        // 此时把 body 字符串本身作为 JSON-RPC result 返回（与 REST 纯文本语义一致），
+        // 不能回落返回整个 response 实例——否则 result 变成 {status, headers, body}
+        // 的响应对象，破坏 wire schema（前端 getFXRate 会误判为 fxRateResponse）。
+        return bodyToString(restResponse.body);
     }
 };
 
@@ -519,7 +524,11 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         this.intervalIDs[source] = {
             refreshDate: refreshDate,
         };
-        this.refreshScheduler.register(source);
+        // Deterministic smoke/tests may disable periodic refresh without disabling
+        // on-demand getter requests. Production keeps scheduling unless explicitly off.
+        if (process.env.FXRATE_DISABLE_REFRESH !== '1') {
+            this.refreshScheduler.register(source);
+        }
     }
 
     public registerFXM(source: string, fxManager: fxManager): void {

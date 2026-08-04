@@ -7,6 +7,9 @@ on:
   push:
     branches: ['**']
   pull_request:
+  # Phase 6 发布门禁：CD workflow 以 reusable workflow 方式调用本 CI，
+  # 保证 tag/release 发版前必须通过同一组 lint/typecheck/test/build/dist 门禁。
+  workflow_call:
 
 jobs:
   gates:

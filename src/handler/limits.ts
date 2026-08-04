@@ -1,6 +1,8 @@
 import http from 'node:http';
 import { request, response, interfaces } from 'handlers.js';
 
+import { recordRpcRejection } from '../metrics';
+
 // Phase 1 RPC 入口硬限制。
 //
 // 一、HTTP body 上限（256 KiB）：handlers.js NodePlatformAdapter 的 handleRequest
@@ -174,12 +176,14 @@ export const installRequestBodyLimit = (
         return makeRequest(nativeRequest, body);
     };
 
-    // 标记请求在进入路由（router.respond / _respond）之前就变成 413/400 响应。
+    // 标记请求在进入路由（router.respond / _respond）之前就变成 413/400 响应，
+    // 并在此统一汇合点记录 body 阶段拒绝指标（Phase 6）。
     adapter.router.respond = async (
         rpcRequest: request<any>,
     ): Promise<response<any>> => {
         const reason = rpcRequest.custom?.requestRejected;
         if (reason === 'limit-exceeded') {
+            recordRpcRejection('body_limit_exceeded');
             const limitResponse = new response<any>('Payload Too Large\n', 413);
             limitResponse.headers.set(
                 'Content-Type',
@@ -188,6 +192,7 @@ export const installRequestBodyLimit = (
             return limitResponse;
         }
         if (reason === 'read-failed') {
+            recordRpcRejection('body_read_failed');
             return new response<any>('', 400);
         }
         return originalRespond(rpcRequest);

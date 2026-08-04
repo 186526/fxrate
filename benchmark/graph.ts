@@ -1,6 +1,9 @@
 // 合成汇率图构建：details-bfs / list-rates 共用。
 // 星形（star）：BASE 直连全部叶子，叶子间必须经过 BASE（BFS 深度 2）。
 // 网格（mesh）：任意两节点直连（稠密边）。
+// 分层（layered）：LAYERS 层 × W 宽，仅相邻层完全二分连通（双向）——第 0 层到第
+//   LAYERS-1 层的 BFS 必须逐层遍历全部节点，且同层多个父节点会重复入队同一目标，
+//   是朴素 BFS（出队标记 + 入队复制 path）从 O(n) 退化到 O(n²) 的典型拓扑。
 // 全部为内存数据，绝不访问网络。
 
 import fxManager from '../src/fxm/fxManager';
@@ -9,7 +12,10 @@ import type { FXRate } from '../src/types.d';
 export const BASE = 'USD';
 export const UPDATED = new Date('2026-08-03T00:00:00Z');
 
-export type Topology = 'star' | 'mesh';
+export type Topology = 'star' | 'mesh' | 'layered';
+
+// layered 层数；buildGraph 内每层宽 W = floor((nodeCount - 1) / LAYERS)
+export const LAYERS = 4;
 
 function fxRate(from: string, to: string, middle: number): FXRate {
     return {
@@ -18,6 +24,11 @@ function fxRate(from: string, to: string, middle: number): FXRate {
         unit: 1,
         updated: UPDATED,
     };
+}
+
+// 分层宽：与 buildGraph('layered') 的推导保持一致，供 details-bfs 生成跨层查询对。
+export function layeredWidth(nodeCount: number): number {
+    return Math.max(1, Math.floor((nodeCount - 1) / LAYERS));
 }
 
 export function buildGraph(nodeCount: number, topology: Topology): fxManager {
@@ -30,7 +41,44 @@ export function buildGraph(nodeCount: number, topology: Topology): fxManager {
             `A${String.fromCharCode(65 + Math.floor(i / 26))}${String.fromCharCode(65 + (i % 26))}`,
     );
     const rates: FXRate[] = [];
-    if (topology === 'mesh') {
+    if (topology === 'layered') {
+        const W = layeredWidth(nodeCount);
+        // 合法 3 位大写货币代码：层字母（A/B/C/D）+ 两位 base-26 序号（AA..ZZ），
+        // 满足 fxManager.validateFXRate 的 ^[A-Z]{3}$ 契约，否则 update 会整批拒绝。
+        const base26 = (n: number, width: number): string => {
+            let s = '';
+            let v = n;
+            do {
+                s = String.fromCharCode(65 + (v % 26)) + s;
+                v = Math.floor(v / 26);
+            } while (v > 0);
+            return s.padStart(width, 'A');
+        };
+        const layerNames: string[][] = [];
+        for (let l = 0; l < LAYERS; l += 1) {
+            layerNames.push(
+                Array.from(
+                    { length: W },
+                    (_, w) => `${String.fromCharCode(65 + l)}${base26(w, 2)}`,
+                ),
+            );
+        }
+        for (let l = 0; l + 1 < LAYERS; l += 1) {
+            for (const a of layerNames[l]) {
+                for (const b of layerNames[l + 1]) {
+                    rates.push(
+                        fxRate(
+                            a,
+                            b,
+                            1 +
+                                ((a.charCodeAt(1) + b.charCodeAt(1)) % 10) *
+                                    0.01,
+                        ),
+                    );
+                }
+            }
+        }
+    } else if (topology === 'mesh') {
         const nodes = [BASE, ...leaves];
         for (let i = 0; i < nodes.length; i += 1) {
             for (let j = 0; j < nodes.length; j += 1) {
@@ -49,5 +97,10 @@ export function buildGraph(nodeCount: number, topology: Topology): fxManager {
 }
 
 export function edgeCount(nodeCount: number, topology: Topology): number {
-    return topology === 'mesh' ? nodeCount * (nodeCount - 1) : nodeCount - 1;
+    if (topology === 'mesh') return nodeCount * (nodeCount - 1);
+    if (topology === 'layered') {
+        const W = layeredWidth(nodeCount);
+        return (LAYERS - 1) * W * W * 2;
+    }
+    return nodeCount - 1;
 }

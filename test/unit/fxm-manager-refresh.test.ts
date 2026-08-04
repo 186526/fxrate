@@ -25,6 +25,7 @@ const servers: Server[] = [];
 let cacheDir: string;
 
 beforeEach(() => {
+    delete process.env.FXRATE_DISABLE_REFRESH;
     cacheDir = mkdtempSync(join(tmpdir(), 'fxrate-fxm-refresh-'));
     cacheDirs.push(cacheDir);
     process.env.FXRATE_CACHE_DIR = cacheDir;
@@ -38,6 +39,7 @@ afterAll(() => {
 });
 
 afterEach(async () => {
+    delete process.env.FXRATE_DISABLE_REFRESH;
     jest.restoreAllMocks();
     for (const server of servers) server.close();
     servers.length = 0;
@@ -171,6 +173,19 @@ const httpGet = (
     });
 
 describe('fxmManager refresh scheduler wiring', () => {
+    test('FXRATE_DISABLE_REFRESH skips periodic scheduling but keeps the source registered', () => {
+        process.env.FXRATE_DISABLE_REFRESH = '1';
+        const manager = new fxmManager(
+            { fake: async () => [] },
+            { scheduler: { intervalMs: 1, jitterWindowMs: 1 } },
+        );
+        managers.push(manager);
+
+        expect(manager.has('fake')).toBe(true);
+        expect(manager.getStatus('fake')).toBe('pending');
+        expect(manager.refreshScheduler.timerCount).toBe(0);
+    });
+
     test('registerGetter schedules a stable-phase timer and stopAllInterval clears it', () => {
         const manager = new fxmManager(
             { fake: async () => [] },

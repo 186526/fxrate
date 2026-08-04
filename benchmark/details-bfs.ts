@@ -6,7 +6,14 @@
 import esMain from 'es-main';
 import { parseArgs } from 'node:util';
 import fxManager from '../src/fxm/fxManager';
-import { buildGraph, edgeCount, BASE, type Topology } from './graph';
+import {
+    buildGraph,
+    edgeCount,
+    layeredWidth,
+    LAYERS,
+    BASE,
+    type Topology,
+} from './graph';
 import {
     environment,
     forceGc,
@@ -43,7 +50,12 @@ export function parseOptions(args: string[]): DetailsBfsOptions {
     return {
         nodes: parseCsvNumbers(String(values.nodes ?? '12,64,180')),
         samples: Number(values.samples) || 1000,
-        topology: values.topology === 'mesh' ? 'mesh' : 'star',
+        topology:
+            values.topology === 'mesh'
+                ? 'mesh'
+                : values.topology === 'layered'
+                  ? 'layered'
+                  : 'star',
         seed: Number(values.seed) || 20260804,
         output: typeof values.output === 'string' ? values.output : '',
         candidate: values['candidate'] === true,
@@ -143,15 +155,34 @@ export async function run(opts: DetailsBfsOptions) {
         }
 
         const directPairs: Array<[string, string]> = [];
-        for (let i = 0; i < opts.samples; i += 1) {
-            directPairs.push([BASE, leaves[randomInt(rng, 0, leaves.length)]]);
-        }
         const bfsPairs: Array<[string, string]> = [];
-        for (let i = 0; i < opts.samples; i += 1) {
-            const a = randomInt(rng, 0, leaves.length);
-            let b = randomInt(rng, 0, leaves.length);
-            while (b === a) b = randomInt(rng, 0, leaves.length);
-            bfsPairs.push([leaves[a], leaves[b]]);
+        if (opts.topology === 'layered') {
+            // 分层图：direct 场景取第 0 层 → 第 1 层（真实直连边）；
+            // bfs 场景取第 0 层 → 最后一层（必须逐层遍历，无直连）。
+            const W = layeredWidth(nodeCount);
+            for (let i = 0; i < opts.samples; i += 1) {
+                directPairs.push([
+                    leaves[randomInt(rng, 0, W)],
+                    leaves[W + randomInt(rng, 0, W)],
+                ]);
+                bfsPairs.push([
+                    leaves[randomInt(rng, 0, W)],
+                    leaves[(LAYERS - 1) * W + randomInt(rng, 0, W)],
+                ]);
+            }
+        } else {
+            for (let i = 0; i < opts.samples; i += 1) {
+                directPairs.push([
+                    BASE,
+                    leaves[randomInt(rng, 0, leaves.length)],
+                ]);
+            }
+            for (let i = 0; i < opts.samples; i += 1) {
+                const a = randomInt(rng, 0, leaves.length);
+                let b = randomInt(rng, 0, leaves.length);
+                while (b === a) b = randomInt(rng, 0, leaves.length);
+                bfsPairs.push([leaves[a], leaves[b]]);
+            }
         }
 
         const direct = await measureScenario(manager, directPairs, false, 100);

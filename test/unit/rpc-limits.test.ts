@@ -28,6 +28,7 @@ import {
     RPC_MAX_EXPENSIVE_CARD_ITEMS,
     type RPCBudgetError,
 } from '../../src/handler/limits';
+import { getMetricsSnapshot, resetMetricsForTests } from '../../src/metrics';
 
 interface HttpResponse {
     status: number;
@@ -212,6 +213,18 @@ const expectBudgetError = (
     expect(body.error).toEqual(expected);
 };
 
+// 读取 fxrate_rpc_rejected_total 聚合序列（reason 标签任意值）的累计值。
+const rejectedTotal = (): number => {
+    const family = getMetricsSnapshot().find(
+        (candidate) => candidate.name === 'fxrate_rpc_rejected_total',
+    );
+    return (
+        family?.samples.find((sample) =>
+            Object.values(sample.labels).every((value) => value === 'all'),
+        )?.value ?? 0
+    );
+};
+
 const rpcItem = (
     method: string,
     id: number | string,
@@ -359,6 +372,49 @@ describe('RPC body limit (256 KiB, real NodePlatformAdapter)', () => {
         });
         expect(res.status).toBe(413);
         expect(singleResponderSpy).not.toHaveBeenCalled();
+    });
+
+    test('over-limit body increments fxrate_rpc_rejected_total{reason="body_limit_exceeded"}', async () => {
+        resetMetricsForTests();
+        const { app, getHandlerCalls } = buildEchoApp();
+        const port = await listenApp(app);
+        const res = await httpRequest(
+            port,
+            {
+                method: 'POST',
+                path: '/echo',
+                headers: {
+                    'Content-Length': String(MAX_REQUEST_BODY_BYTES + 1),
+                },
+            },
+            (req) => req.end('x'.repeat(100)),
+        );
+        expect(res.status).toBe(413);
+        expect(getHandlerCalls()).toBe(0);
+        expect(rejectedTotal()).toBe(1);
+        const family = getMetricsSnapshot().find(
+            (candidate) => candidate.name === 'fxrate_rpc_rejected_total',
+        );
+        expect(
+            family?.samples.some(
+                (sample) =>
+                    sample.name === 'fxrate_rpc_rejected_total' &&
+                    sample.labels['reason'] === 'body_limit_exceeded' &&
+                    sample.value === 1,
+            ),
+        ).toBe(true);
+    });
+
+    test('chunked body overflow also records the body rejection metric', async () => {
+        resetMetricsForTests();
+        const { app } = buildEchoApp();
+        const port = await listenApp(app);
+        const res = await postChunked(port, '/echo', [
+            'a'.repeat(200000),
+            'b'.repeat(62145),
+        ]);
+        expect(res.status).toBe(413);
+        expect(rejectedTotal()).toBe(1);
     });
 });
 

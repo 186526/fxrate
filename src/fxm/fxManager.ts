@@ -395,9 +395,6 @@ export default class fxManager {
         if (!allowBFS) {
             throw new Error(`No FX path found between ${from} and ${to}`);
         }
-        const queue: { currency: currency; path: currency[] }[] = [];
-        const visited: currency[] = [];
-
         // CNY/CNH 互为别名（update 时只写入其一，如 DBS/OCBC 用 CNH 报价）。
         // 直连判断走 Proxy get 有别名 fallback，但 BFS 的邻居枚举走 Object.keys（ownKeys）
         // 不经过 get trap，导致「目标 CNY 但图里只有 CNH」时找不到路径（2026-08 实测）。
@@ -405,35 +402,52 @@ export default class fxManager {
             (a === ('CNY' as currency.CNY) && b === ('CNH' as currency.CNH)) ||
             (a === ('CNH' as currency.CNH) && b === ('CNY' as currency.CNY));
 
-        queue.push({ currency: from, path: [from] });
+        // Phase 5 BFS 优化（语义与朴素版本等价，见 fx-manager-golden.test.ts 语义锁）：
+        // ① 队列用索引游标（head++）替代 queue.shift()——出队摊还 O(1)，消除每轮 O(n) 平移；
+        // ② visited 数组（includes 每次 O(n)）换成前驱 Map（has/set 均 O(1)），同时兼作
+        //    路径重构表——命中目标时按前驱链一次性回放完整路径，替代入队时逐节点复制
+        //    path 数组（O(n²) 分配 → O(路径长度)）；
+        // ③ 访问标记从「出队」提前到「入队」：BFS 的 FIFO 顺序保证两者的首个发现顺序与
+        //    最短路径完全一致（同一层父节点谁先被出队谁先发现目标，平局规则不变）。
+        const queue: currency[] = [from];
+        let head = 0;
+        const prev = new Map<currency, currency>();
+        prev.set(from, from);
 
-        while (queue.length > 0) {
-            const { currency, path } = queue.shift()!;
-            visited.push(currency);
+        while (head < queue.length) {
+            const current = queue[head];
+            head += 1;
 
-            if (currency === to || isAlias(currency, to)) {
+            if (current === to || isAlias(current, to)) {
+                // 按前驱链回放完整路径（含起点 from），与朴素版本入队时的累积 path 一致。
+                const path: currency[] = [];
+                let node: currency = current;
+                while (node !== from) {
+                    path.push(node);
+                    node = prev.get(node) as currency;
+                }
+                path.push(from);
+                path.reverse();
                 // 命中别名目标时，路径末节点归一为目标货币（CNH → CNY），
                 // 保证 convert 按用户请求的 to 输出且 path 展示不含别名噪音。
                 const normalized =
-                    isAlias(currency, to) && currency !== to
+                    isAlias(current, to) && current !== to
                         ? [...path.slice(0, -1), to]
                         : path;
                 FXPath.path = normalized;
                 // 记录实际使用的别名货币，供 API 响应提示（X-FXRate-Alias header / result.alias）
-                if (currency !== to) FXPath.alias = currency;
+                if (current !== to) FXPath.alias = current;
                 return FXPath;
             }
 
             const neighbors = Object.keys(
-                this.fxRateList[currency],
+                this.fxRateList[current],
             ) as currency[];
             for (const neighbor of neighbors) {
-                if (neighbor === currency) continue;
-                if (!visited.includes(neighbor)) {
-                    queue.push({
-                        currency: neighbor,
-                        path: [...path, neighbor],
-                    });
+                if (neighbor === current) continue;
+                if (!prev.has(neighbor)) {
+                    prev.set(neighbor, current);
+                    queue.push(neighbor);
                 }
             }
         }
