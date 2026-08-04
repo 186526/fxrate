@@ -7,7 +7,8 @@ import {
     statSync,
     writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { FXRateType } from './fxm/fxManager';
 
 // 汇率快照持久化：冷启动从本地 JSON 直接加载内存汇率表，
@@ -116,6 +117,12 @@ function cachePath(): string | null {
     } catch {
         return null;
     }
+}
+
+// 供异步快照 writer 在构造期一次性解析缓存文件路径（与同步 saveSnapshot 的
+// cachePath() 同规则：VERCEL=1 或目录不可用 → null，此时 writer 整体禁用）。
+export function snapshotCachePath(): string | null {
+    return cachePath();
 }
 
 // JSON reviver：mathjs Fraction 序列化为 {mathjs,n,d}（实测无 s 字段），Date 序列化为 ISO 字符串
@@ -331,5 +338,43 @@ export function saveSnapshot(sources: SnapshotData): void {
         renameSync(tmp, path);
     } catch (e) {
         console.error('[persistence] save failed:', e);
+    }
+}
+
+// 异步原子写（供 throttled SnapshotWriter 后台路径使用）：fs/promises + 唯一
+// 临时文件名 + 同目录 rename。失败保留上一份有效文件，尽力清理临时文件，
+// 记录错误后向上抛（调用方决定重试/忽略）。explicitPath 注入测试用路径；
+// 默认走 cachePath()（VERCEL/目录不可用 → null 时静默跳过）。
+let asyncTempSequence = 0;
+
+export async function saveSnapshotAsync(
+    sources: SnapshotData,
+    explicitPath?: string | null,
+): Promise<void> {
+    const path = explicitPath !== undefined ? explicitPath : cachePath();
+    if (!path) return;
+    const snapshot: SnapshotFile = {
+        version: SNAPSHOT_VERSION,
+        savedAt: new Date().toISOString(),
+        sources,
+    };
+    const tmp = `${path}.${process.pid}.${Date.now()}.${asyncTempSequence++}.tmp`;
+    try {
+        // 与同步 saveSnapshot 的 cachePath() 等价：写前确保目录存在
+        // （缓存目录被删/未挂载时写前重建，避免陈旧预解析路径 ENOENT）。
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(tmp, JSON.stringify(snapshot), 'utf-8');
+        await rename(tmp, path);
+    } catch (e) {
+        console.error('[persistence] async save failed:', e);
+        try {
+            await rm(tmp, { force: true });
+        } catch (cleanupError) {
+            console.error(
+                '[persistence] async save temporary file cleanup failed:',
+                cleanupError,
+            );
+        }
+        throw e;
     }
 }
