@@ -23,17 +23,25 @@ import {
     NegativeBackoffCache,
     type FailureRecord,
 } from '../capacity';
+import {
+    metricClockSeconds,
+    metricElapsedSeconds,
+    observeSourceFetch,
+    recordCacheHit,
+} from '../metrics';
 
 /** 卡组织原生 fetch 共享 executor：limit 8，bounded FIFO 队列 512。 */
 export const CARD_NATIVE_EXECUTOR = new BoundedExecutor({
     limit: 8,
     queueSize: 512,
+    metricsLabel: 'card_native',
 });
 
 /** 卡组织 headless chromium 降级 executor（visa 专用）：limit 1，bounded FIFO 队列 32。 */
 export const CARD_CHROMIUM_EXECUTOR = new BoundedExecutor({
     limit: 1,
     queueSize: 32,
+    metricsLabel: 'card_chromium',
 });
 
 /** 负缓存默认参数：10s 起、x2 指数退避、单窗口上限 60s、最多 500 条。 */
@@ -120,10 +128,12 @@ export class CardCoordinator<TPayload> {
         const cacheKey = this.cacheKey(from, to);
 
         if (this.options.positive.has(cacheKey)) {
+            recordCacheHit('card_positive', this.options.source);
             return;
         }
         const blocked = this.options.negative.blocked(key);
         if (blocked !== undefined) {
+            recordCacheHit('card_negative', this.options.source);
             throw this.blockedError(blocked);
         }
 
@@ -132,10 +142,12 @@ export class CardCoordinator<TPayload> {
             async () => {
                 // factory 重查两个缓存：同一归一化 key 可能已被并发路径填充/退避。
                 if (this.options.positive.has(cacheKey)) {
+                    recordCacheHit('card_positive', this.options.source);
                     return;
                 }
                 const reblocked = this.options.negative.blocked(key);
                 if (reblocked !== undefined) {
+                    recordCacheHit('card_negative', this.options.source);
                     throw this.blockedError(reblocked);
                 }
 
@@ -170,9 +182,17 @@ export class CardCoordinator<TPayload> {
     /** 完整工作流经相关 executor 调度：native 失败（非容量错误）且配置了 chromium 时降级。 */
     private async runWorkflow(from: string, to: string): Promise<TPayload> {
         try {
-            return await this.nativeExecutor.run(() =>
-                this.options.nativeWorkflow(from, to),
-            );
+            return await this.nativeExecutor.run(async () => {
+                const startedAt = metricClockSeconds();
+                try {
+                    return await this.options.nativeWorkflow(from, to);
+                } finally {
+                    observeSourceFetch(
+                        this.options.source,
+                        metricElapsedSeconds(startedAt),
+                    );
+                }
+            });
         } catch (nativeError) {
             const chromiumWorkflow = this.options.chromiumWorkflow;
             if (
@@ -183,9 +203,17 @@ export class CardCoordinator<TPayload> {
                 throw nativeError;
             }
             try {
-                return await this.chromiumExecutor.run(() =>
-                    chromiumWorkflow(from, to),
-                );
+                return await this.chromiumExecutor.run(async () => {
+                    const startedAt = metricClockSeconds();
+                    try {
+                        return await chromiumWorkflow(from, to);
+                    } finally {
+                        observeSourceFetch(
+                            this.options.source,
+                            metricElapsedSeconds(startedAt),
+                        );
+                    }
+                });
             } catch (chromiumError) {
                 if (chromiumError instanceof CapacityError) {
                     throw chromiumError;

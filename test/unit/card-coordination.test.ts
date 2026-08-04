@@ -20,6 +20,7 @@ import {
     CARD_NATIVE_EXECUTOR,
     CARD_NEGATIVE_TTL_MS,
 } from '../../src/FXGetter/cardCapacity';
+import { getMetricsSnapshot, resetMetricsForTests } from '../../src/metrics';
 
 interface Deferred<T> {
     promise: Promise<T>;
@@ -128,6 +129,23 @@ function makeHarness(
         negative,
     };
 }
+
+function sourceFetchCount(source = 'card'): number {
+    const family = getMetricsSnapshot().find(
+        (candidate) => candidate.name === 'fxrate_source_fetch_seconds',
+    );
+    return (
+        family?.samples.find(
+            (sample) =>
+                sample.name === 'fxrate_source_fetch_seconds_count' &&
+                sample.labels['source'] === source,
+        )?.value ?? 0
+    );
+}
+
+beforeEach(() => {
+    resetMetricsForTests();
+});
 
 describe('CardCoordinator ordering (positive LRU -> negative blocked -> single-flight)', () => {
     test('positive cache hit short-circuits with zero upstream work', async () => {
@@ -243,12 +261,15 @@ describe('CardCoordinator capacity errors do not poison negative cache', () => {
         const overflow = h.coordinator.get('EUR', 'CNY');
         // 第一条已占用唯一槽位，第二条排队，第三条 native 队列满 → overload。
         await expect(overflow).rejects.toMatchObject({ code: 'overload' });
+        expect(h.nativeExecutor.queued).toBe(1);
+        expect(sourceFetchCount()).toBe(0);
         expect(h.nativeWorkflow).not.toHaveBeenCalled();
         expect(h.negative.blocked('card:USD:CNY')).toBeUndefined();
         expect(h.negative.blocked('card:EUR:CNY')).toBeUndefined();
         blocker.resolve();
         await occupying;
         await waiting;
+        expect(sourceFetchCount()).toBe(1);
     });
 
     test('closed executor rejects with CapacityError and skips negative cache', async () => {
@@ -259,6 +280,7 @@ describe('CardCoordinator capacity errors do not poison negative cache', () => {
         });
         expect(h.nativeWorkflow).not.toHaveBeenCalled();
         expect(h.negative.size).toBe(0);
+        expect(sourceFetchCount()).toBe(0);
     });
 
     test('pre-aborted waiter rejects with aborted and starts no workflow', async () => {
@@ -272,6 +294,7 @@ describe('CardCoordinator capacity errors do not poison negative cache', () => {
         });
         expect(h.nativeWorkflow).not.toHaveBeenCalled();
         expect(h.negative.size).toBe(0);
+        expect(sourceFetchCount()).toBe(0);
     });
 
     test('chromium overload skips negative cache too', async () => {
@@ -303,6 +326,7 @@ describe('CardCoordinator chromium fallback (visa-style)', () => {
         });
         await h.coordinator.get('USD', 'CNY');
         expect(h.chromiumWorkflow).toHaveBeenCalledTimes(1);
+        expect(sourceFetchCount()).toBe(2);
         expect(h.coordinator.positive.get('USDCNY')).toBe(
             JSON.stringify({ value: 'chromium' }),
         );

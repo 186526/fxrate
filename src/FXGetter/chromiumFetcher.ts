@@ -1,5 +1,7 @@
 import { existsSync } from 'node:fs';
 
+import { recordChromiumFinished, recordChromiumStarted } from '../metrics';
+
 // headless chromium 直连（Cloudflare 拦非浏览器客户端时启用）。
 // 动态 import：没有安装 playwright-core / chromium 的环境（如 Vercel serverless）降级走 fetch。
 type ChromiumPage = {
@@ -14,6 +16,7 @@ type ChromiumBrowser = {
         newPage: () => Promise<ChromiumPage>;
     }>;
     close: () => Promise<void>;
+    isConnected?: () => boolean;
 };
 type ChromiumLauncher = {
     launch: (opts: object) => Promise<ChromiumBrowser>;
@@ -99,6 +102,7 @@ export async function fetchTextViaChromium(
         headless: true,
         args: ['--no-sandbox', '--disable-blink-features=AutomationControlled'],
     });
+    recordChromiumStarted();
     try {
         // 必须用非 headless 标识的 UA：Cloudflare 会拦截 Playwright 默认的
         // "HeadlessChrome" UA（实测 403），newContext 设置 UA 才能改网络层请求头。
@@ -124,6 +128,28 @@ export async function fetchTextViaChromium(
             `chromium: none of ${urls.length} URLs returned 200 (last status: ${urls.length > 0 ? 'n/a' : 'empty'})`,
         );
     } finally {
-        await browser.close();
+        let closeSucceeded = false;
+        try {
+            await browser.close();
+            closeSucceeded = true;
+        } catch (error) {
+            console.error('[chromium] browser close failed:', error);
+        }
+
+        let closureConfirmed = closeSucceeded;
+        if (browser.isConnected !== undefined) {
+            try {
+                closureConfirmed = !browser.isConnected();
+            } catch (error) {
+                closureConfirmed = false;
+                console.error(
+                    '[chromium] browser connection check failed:',
+                    error,
+                );
+            }
+        }
+        if (closureConfirmed) {
+            recordChromiumFinished();
+        }
     }
 }
