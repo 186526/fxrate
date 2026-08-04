@@ -3,11 +3,11 @@ import fxManager, { FXRateType } from './fxm/fxManager';
 import { FXRate, JSONRPCMethods, currency } from './types';
 import {
     loadSnapshot,
-    saveSnapshot,
     latestUpdatedAt,
     staleRateAgeMs,
     type SnapshotData,
 } from './persistence';
+import { SnapshotWriter } from './persistenceWriter';
 import {
     RefreshScheduler,
     type RefreshSchedulerConfig,
@@ -131,6 +131,11 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     // Phase 2 全局刷新调度器：稳定抖动 + 有界并发 + 失败退避（见 refreshScheduler.ts）。
     public readonly refreshScheduler: RefreshScheduler;
 
+    // 节流异步快照 writer（Phase 5 优化 #8）：成功刷新 enqueue，后台 trailing
+    // 落盘；停机 flush 在 drain 后重新 dump 最新状态。可经构造选项注入（测试）。
+    public readonly snapshotWriter: SnapshotWriter;
+    private stopping = false;
+
     protected rpcHandlers = {
         instanceInfo: () => useInternalRestAPI('info', this),
 
@@ -208,7 +213,10 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
 
     constructor(
         sources: { [source: string]: () => Promise<FXRate[]> },
-        options: { scheduler?: RefreshSchedulerConfig } = {},
+        options: {
+            scheduler?: RefreshSchedulerConfig;
+            snapshotWriter?: SnapshotWriter;
+        } = {},
     ) {
         super();
 
@@ -326,6 +334,14 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         this.enableList().mount();
         this.log('JSONRPC is mounted.');
 
+        // 节流异步快照 writer：成功刷新只 O(1) enqueue，后台 trailing 落盘，
+        // 不阻塞请求/刷新路径。producer 在写时惰性 dump 当前状态（newest-wins）。
+        this.snapshotWriter =
+            options.snapshotWriter ??
+            new SnapshotWriter({
+                producer: () => this.dumpSnapshot(),
+            });
+
         // 冷启动：加载磁盘快照跳过上游全量抓取（Visa 等慢源首访 30s+）
         const snapshot = loadSnapshot();
         if (snapshot) {
@@ -379,6 +395,9 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     public async updateFXManager(source: string): Promise<void> {
         const currentPromise = this.pendingPromises[source];
         if (currentPromise) return currentPromise;
+        if (this.stopping) {
+            throw new Error('fxmManager is stopping');
+        }
 
         const pendingPromise = (async () => {
             try {
@@ -397,6 +416,8 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                 this.intervalIDs[source].refreshDate = new Date();
                 this.refreshScheduler.recordSuccess(source);
                 this.unmarkDegraded(source);
+                // 仅完整成功的刷新入队节流 writer（失败/空结果不落盘）。
+                this.snapshotWriter.enqueue();
                 this.log(`${source} is updated, now is ready.`);
             } catch (error) {
                 // 刷新失败记录退避（请求路径不再每次全量重抓）。
@@ -430,6 +451,9 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     }
 
     public async requestFXManager(source: string): Promise<fxManager> {
+        if (this.stopping) {
+            throw new Error('fxmManager is stopping');
+        }
         if (this.fxmStatus[source] === 'pending') {
             // 惰性 FXM 源（mastercard/visa）没有注册 getter：不在这里触发 updateFXManager
             // （fxRateGetter 为 undefined），它的预热由请求路径经覆写的 async
@@ -510,6 +534,11 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         // 成功返回（网络拉取写缓存）才算「已加载可用数据」。
         const originalGetfxRateList = fxManager.getfxRateList.bind(fxManager);
         fxManager.getfxRateList = async (from, to) => {
+            // requestFXManager 返回后到实际 Card I/O 前仍可能跨一个 await；在真正
+            // 网络入口再次检查，防止 shutdown 门闩后晚启动 MasterCard/Visa 工作。
+            if (this.stopping) {
+                throw new Error('fxmManager is stopping');
+            }
             const rate = await originalGetfxRateList(from, to);
             if (this.fxmStatus[source] !== 'ready') {
                 this.fxmStatus[source] = 'ready';
@@ -742,6 +771,9 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     }
 
     public async stopAllInterval(): Promise<void> {
+        // 同步置闩：server.close() 与本方法并行等待时，已经进入 HTTP handler 但
+        // 尚未触发懒加载的请求不得在 pendingPromises 快照之后新建刷新。
+        this.stopping = true;
         // 停机契约：先停掉调度器（取消全部定时器 + 关闭执行器，不再接任何新刷新，
         // 排队任务以 closed 拒绝），随后等待所有在途刷新 settle（refreshScheduler.drain
         // 覆盖经调度器启动的刷新；pendingPromises 兜底请求路径直接启动的懒加载），
@@ -753,11 +785,13 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                 (p): p is Promise<void> => p !== undefined,
             ),
         ]);
-        try {
-            saveSnapshot(this.dumpSnapshot());
-        } catch {
-            // 持久化失败不阻塞停机
-        }
+        // 停机落盘交给节流 writer 的 flush：惰性 producer 重新 dump 当前最新
+        // 状态（drain 后不丢最后一次刷新）；flush 永不 reject（后台错误内部
+        // 捕获并记录），直接 await 即可，持久化失败不阻塞停机。
+        await this.snapshotWriter.flush();
+        // flush 后再 stop：停机尾部可能仍有请求路径触发的懒加载 enqueue，
+        // stop 取消定时器并拒绝后续调度，杜绝停机窗口内残留定时器/多余写。
+        this.snapshotWriter.stop();
     }
 
     // 返回当前内存汇率快照（仅抓取型源；mastercard/visa 数据在模块级 LRU 不在此列）

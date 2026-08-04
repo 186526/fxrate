@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import fxmManager from '../../src/fxmManager';
+import fxManager from '../../src/fxm/fxManager';
 import { FXRate } from '../../src/types';
 import type { SnapshotData, SourceRates } from '../../src/persistence';
 
@@ -36,11 +37,14 @@ afterAll(() => {
     for (const dir of cacheDirs) rmSync(dir, { recursive: true, force: true });
 });
 
-afterEach(() => {
+afterEach(async () => {
     jest.restoreAllMocks();
     for (const server of servers) server.close();
     servers.length = 0;
-    for (const manager of managers) manager.stopAllInterval();
+    // 停机落盘已异步化（throttled SnapshotWriter）：必须 await 所有 manager 的
+    // stopAllInterval 完成 flush 后才允许 afterAll 删除临时目录，否则后台写与
+    // rmSync 并发竞争（libuv 线程池在途 fs 操作 vs 同步删目录）会产生杂散 ENOENT。
+    await Promise.allSettled(managers.map((m) => m.stopAllInterval()));
     managers.length = 0;
 });
 
@@ -531,6 +535,49 @@ describe('fxmManager shutdown drain (no lost last refresh)', () => {
         expect(new Date(cell.updated).getTime()).toBeGreaterThan(
             Date.now() - 5000,
         );
+    });
+
+    test('stopAllInterval rejects refreshes started after shutdown begins', async () => {
+        const getter = jest.fn(async () => [makeRate()]);
+        const manager = new fxmManager(
+            { fake: getter },
+            { scheduler: { intervalMs: 3_600_000 } },
+        );
+        managers.push(manager);
+
+        const shutdownPromise = manager.stopAllInterval();
+        await expect(manager.updateFXManager('fake')).rejects.toThrow(
+            'fxmManager is stopping',
+        );
+        await shutdownPromise;
+
+        expect(getter).not.toHaveBeenCalled();
+        expect(manager.getStatus('fake')).toBe('pending');
+    });
+
+    test('shutdown latch blocks lazy Card I/O even when the request already holds the FXM', async () => {
+        const manager = new fxmManager(
+            {},
+            {
+                scheduler: { intervalMs: 3_600_000 },
+            },
+        );
+        managers.push(manager);
+        const card = new fxManager([]);
+        const getRate = jest.spyOn(card, 'getfxRateList');
+        manager.registerFXM('card', card);
+
+        const heldCard = await manager.requestFXManager('card');
+        const shutdownPromise = manager.stopAllInterval();
+
+        await expect(
+            heldCard.getfxRateList('USD' as never, 'CNY' as never),
+        ).rejects.toThrow('fxmManager is stopping');
+        await expect(manager.requestFXManager('card')).rejects.toThrow(
+            'fxmManager is stopping',
+        );
+        await shutdownPromise;
+        expect(getRate).not.toHaveBeenCalled();
     });
 });
 
