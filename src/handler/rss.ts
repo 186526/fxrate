@@ -40,8 +40,11 @@ export class RSSHandler extends router {
                         this.fxmManager,
                     );
 
+                    // 卖出侧 = 反向报价：getDetails(from, to) = 1/卖出价（如 100 CNY = X USD）。
+                    // 注意不能加 `&reverse`：reverse 会把路径反转回 to→from（买入侧），
+                    // 与上方 buy 请求等价，非对称点差下买卖价会完全相同（2026-08 实测修复）。
                     const sellPrices = await useInternalRestAPI(
-                        `${source}/${from}/${to}/?precision=4&fees=0&amount=100&reverse`,
+                        `${source}/${from}/${to}/?precision=4&fees=0&amount=100`,
                         this.fxmManager,
                     );
 

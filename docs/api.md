@@ -3,22 +3,36 @@
 > fxrate 后端对外提供三种接口：**REST API v1**、**JSON-RPC v2** 与 **RSS/Atom**。
 > 数据版权归各来源所有（见 `LICENSE.DATA`）。所有 GET 接口均支持 CORS（`ENABLE_CORS` 时，默认 `*`）。
 >
-> 更新时间：2026-08-03
+> 更新时间：2026-08-04
 
 ## 基础信息
 
 -   线上地址：`https://fxrate.sunoaki.net`
 -   根路径 `GET /`：返回服务简介
--   实例信息 `GET /info`：返回版本（`fxrate@<GITBUILD> <BUILDTIME>`）、全部 source 列表与后端状态
+-   实例信息 `GET /info`：返回版本（`fxrate@<GITBUILD> <BUILDTIME>`）、全部 source 列表与就绪状态
 
 `/info` 响应示例：
 
 ```json
 {
+    "status": "ok",
+    "ready": true,
+    "degraded": [],
+    "missing": [],
+    "pending": [],
+    "sources": ["boc", "cmb", "mastercard", "visa", "..."],
     "version": "fxrate@1a2b3c4 2026-08-03T10:00:00+08:00",
-    "sources": ["boc", "cmb", "mastercard", "visa", "..."]
+    "apiVersion": "v1",
+    "environment": "production"
 }
 ```
+
+-   `status`：`ok`（就绪）或 `degraded`（未就绪）。
+-   `ready`：就绪布尔值，等价于 `status === "ok"`。
+-   `degraded`：已降级的数据源列表（快照恢复数据过期 / 刷新失败，Cache-Control `max-age=0`）。
+-   `missing`：未注册的关键数据源列表（`CRITICAL_SOURCES` 大陆大行 + 央行/交易中心 + 卡组织）。
+-   `pending`：已注册但尚未加载有效数据的关键源列表（未完成首次刷新/快照恢复，或惰性 FXM 未预热——仅注册不算就绪）。
+-   **HTTP 语义**：`ready=true` 时返回 **200**；任一降级源、关键源缺失或 pending 时返回 **503**（供监控/负载均衡探针，CDN/反向代理缓存 503 会掩盖故障恢复，故 `/info` 恒带 `Cache-Control: no-store`）。503 不影响 JSON-RPC `instanceInfo`（复用同一内部路由但只看 body 不看状态码）。
 
 ## REST API v1
 

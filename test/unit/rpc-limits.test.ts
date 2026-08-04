@@ -438,7 +438,9 @@ describe('RPC budget (real fxmManager + real routing)', () => {
         expect(Array.isArray(body)).toBe(true);
         expect(body).toHaveLength(RPC_MAX_BATCH_SIZE);
         expect(singleResponderSpy).toHaveBeenCalledTimes(RPC_MAX_BATCH_SIZE);
-        expect(body[0].result?.status).toBe('ok');
+        // readiness 门禁：本测试 manager 只注册了非关键源 fake，关键源缺失 →
+        // /info status 为 degraded（instanceInfo 经内部 REST 复用同一 /info）。
+        expect(body[0].result?.status).toBe('degraded');
         expect(body[body.length - 1].id).toBe(`id-${RPC_MAX_BATCH_SIZE - 1}`);
     });
 
@@ -547,7 +549,8 @@ describe('RPC budget (real fxmManager + real routing)', () => {
             result?: { status?: string };
         };
         expect(singleBody.id).toBe('single-1');
-        expect(singleBody.result?.status).toBe('ok');
+        // 同上：最小 manager 关键源缺失，readiness 门禁下 status 为 degraded。
+        expect(singleBody.result?.status).toBe('degraded');
 
         const cardError = await postJson(port, '/v1/jsonrpc', {
             jsonrpc: '2.0',

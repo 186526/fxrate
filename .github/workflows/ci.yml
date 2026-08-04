@@ -1,4 +1,6 @@
-# Type-check and lint gate for the fxrate backend.
+# CI 门禁：非变更性 lint + 类型检查 + 确定性单测 + 构建 + dist 一致性。
+# dist/index.cjs 是提交进仓库的部署产物（Vercel/Docker 直接用它），源码变更但忘记
+# 「yarn build 并提交 dist」时一致性检查会失败（详见 scripts/check-dist-consistency.sh）。
 name: CI
 
 on:
@@ -7,7 +9,7 @@ on:
   pull_request:
 
 jobs:
-  typecheck-lint:
+  gates:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -26,6 +28,18 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-      # package.json's lint script passes --fix; CI must not modify files.
+      # package.json 的 lint 脚本带 --fix，CI 必须用非变更性形式（绝不改文件）。
       - name: Lint
         run: npx eslint "{src,test}/**/*.ts"
+
+      # 确定性单测：test/unit 全部离线（零公网依赖），--runInBand 串行执行保证稳定顺序。
+      - name: Unit tests (offline, deterministic)
+        run: yarn test:unit --runInBand
+
+      # dist 一致性必须在 build 之前运行：检查对象是仓库里提交的 dist/index.cjs，
+      # 先验证它与 src/ 一致，再跑构建（build 会重建 dist 覆盖工作区副本）。
+      - name: Verify committed dist matches sources
+        run: bash scripts/check-dist-consistency.sh
+
+      - name: Build
+        run: yarn build

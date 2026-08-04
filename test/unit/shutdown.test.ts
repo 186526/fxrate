@@ -7,13 +7,40 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import http from 'node:http';
 import net from 'node:net';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { CRITICAL_SOURCES } from '../../src/fxmManager';
+
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const fixturePath = join(repoRoot, 'test', 'fixtures', 'shutdown-child.ts');
+
+// Phase 7 readiness 语义：仅注册不算就绪，关键源须已加载有效数据。子进程的 Manager
+// 冷启动时 loadSnapshot() 读回该快照 → 全部关键源 restore 为 ready 且新鲜（非 degraded），
+// /info 才能 200 status=ok。
+function seedSnapshot(cacheDir: string): void {
+    const now = new Date().toISOString();
+    const sources: Record<string, unknown> = {};
+    for (const source of CRITICAL_SOURCES) {
+        sources[source] = {
+            USD: {
+                CNY: {
+                    middle: 7,
+                    cash: 6.9,
+                    remit: 6.95,
+                    updated: now,
+                },
+            },
+        };
+    }
+    writeFileSync(
+        join(cacheDir, 'fxrate-cache.json'),
+        JSON.stringify({ version: '1', savedAt: now, sources }),
+        'utf-8',
+    );
+}
 
 function httpGet(
     port: number,
@@ -116,6 +143,7 @@ async function startChild(
     cacheDir: string,
     extraEnv: Record<string, string> = {},
 ): Promise<StartedChild> {
+    seedSnapshot(cacheDir);
     let stdout = '';
     let exited = false;
     const child = spawn(process.execPath, ['--import', 'tsx', fixturePath], {
@@ -201,6 +229,29 @@ describe('shutdown (Phase 2, offline, loopback-only)', () => {
             await expectConnectionRefused(started.port);
         } finally {
             inflight.destroy();
+            await stopChild(started);
+        }
+    }, 30000);
+
+    test('SIGTERM: process stays alive until both server.close and stopAllInterval finish', async () => {
+        // 原阻断时序：无在途连接时 server.close() 几乎瞬间完成，而 stopAllInterval
+        // （在途刷新 drain + 快照落盘）仍在进行——此时必须等待两者都完成才能退出，
+        // 否则会在快照落盘前 process.exit 丢数据。fixture 用 SHUTDOWN_STOP_DELAY_MS
+        // 注入 1500ms 的慢侧；deadline 20s 远大于延迟，不会被兜底提前退出。
+        const started = await startChild(cacheDir, {
+            SHUTDOWN_DEADLINE_MS: '20000',
+            SHUTDOWN_STOP_DELAY_MS: '1500',
+        });
+        try {
+            started.child.kill('SIGTERM');
+            // server.close 无在途连接会立刻回调，但 stopAllInterval 被延迟 1500ms，
+            // 700ms 处进程必须仍存活（若 coordination 缺失早已 exit 0）。
+            await new Promise((resolveSleep) => setTimeout(resolveSleep, 700));
+            expect(started.exited()).toBe(false);
+            // 延迟结束后 stopAllInterval 完成 → 两者都满足 → 进程以 0 退出。
+            const code = await waitForExit(started, 8000);
+            expect(code).toBe(0);
+        } finally {
             await stopChild(started);
         }
     }, 30000);

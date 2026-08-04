@@ -1,7 +1,17 @@
 import { router, response, request, handler, interfaces } from 'handlers.js';
 import fxManager, { FXRateType } from './fxm/fxManager';
 import { FXRate, JSONRPCMethods, currency } from './types';
-import { loadSnapshot, saveSnapshot } from './persistence';
+import {
+    loadSnapshot,
+    saveSnapshot,
+    latestUpdatedAt,
+    staleRateAgeMs,
+    type SnapshotData,
+} from './persistence';
+import {
+    RefreshScheduler,
+    type RefreshSchedulerConfig,
+} from './refreshScheduler';
 
 import process from 'node:process';
 
@@ -50,6 +60,37 @@ export const useInternalRestAPI = async (url: string, router: router) => {
     }
 };
 
+/** 关键数据源集合（readiness 判定「缺失」用）：大陆大行牌价 + 央行/交易中心基准 +
+ * 卡组织（unionpay）构成服务核心价值；港行/外资行/第三方缺失只影响覆盖面，不阻断就绪。
+ * mastercard/visa 是**按需惰性加载**的 WAF 源（首访预热可能 403/慢，冷启动无数据），
+ * 不在默认关键列表——否则冷启动/无请求预热时就绪探针会永久 503。若部署方希望它们
+ * 参与就绪门禁，可传自定义关键列表给 readiness()（届时按 hasUsableData 契约判定）。 */
+export const CRITICAL_SOURCES = [
+    'boc',
+    'icbc',
+    'ccb',
+    'abc',
+    'bocom',
+    'cmb',
+    'psbc',
+    'pboc',
+    'cfets',
+    'unionpay',
+] as const;
+
+export interface ReadinessReport {
+    /** 是否完全就绪：无降级源、关键源无缺失、关键源均已加载有效数据 */
+    ready: boolean;
+    /** 数据已降级（快照恢复过期 / 刷新失败，Cache-Control max-age=0）的源 */
+    degraded: string[];
+    /** 缺失的关键源（未注册 / 未初始化） */
+    missing: string[];
+    /** 已注册但尚未加载有效数据（pending，未完成首次刷新/快照恢复）的关键源 */
+    pending: string[];
+    /** 本次判定使用的关键源列表 */
+    criticalSources: string[];
+}
+
 class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     private fxms: {
         [source: string]: fxManager;
@@ -68,8 +109,15 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     } = {};
 
     public intervalIDs: {
-        [source: string]: { timeout: NodeJS.Timeout; refreshDate: Date };
+        [source: string]: { timeout?: NodeJS.Timeout; refreshDate: Date };
     } = {};
+
+    // 快照恢复时按实际数据新鲜度标记的降级源集合（见 restoreSnapshot）：
+    // 降级源的 Cache-Control 恒为 max-age=0，绝不对外声称新鲜；成功刷新后自动解除。
+    private degradedSources = new Set<string>();
+
+    // Phase 2 全局刷新调度器：稳定抖动 + 有界并发 + 失败退避（见 refreshScheduler.ts）。
+    public readonly refreshScheduler: RefreshScheduler;
 
     protected rpcHandlers = {
         instanceInfo: () => useInternalRestAPI('info', this),
@@ -146,8 +194,22 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         },
     };
 
-    constructor(sources: { [source: string]: () => Promise<FXRate[]> }) {
+    constructor(
+        sources: { [source: string]: () => Promise<FXRate[]> },
+        options: { scheduler?: RefreshSchedulerConfig } = {},
+    ) {
         super();
+
+        this.refreshScheduler = new RefreshScheduler({
+            refreshFn: (source: string) => this.updateFXManager(source),
+            onSchedule: (source: string, timer: NodeJS.Timeout) => {
+                const entry = this.intervalIDs[source];
+                if (entry) entry.timeout = timer;
+            },
+            logger: (message: string) => this.log(message),
+            ...options.scheduler,
+        });
+
         for (const source in sources) {
             this.registerGetter(source, sources[source]);
         }
@@ -189,15 +251,27 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         this.binding(
             '/info',
             this.create('GET', async (request: request<any>) => {
-                const rep = new response<any>('', 200);
+                // Phase 6 readiness 门禁：任何降级源或关键源缺失时不再报告 ok——
+                // 返回 503 + status=degraded（详见 readiness()），供监控/负载均衡探针使用。
+                // 注意 503 不影响 JSON-RPC instanceInfo（useInternalRestAPI 只看 body 不看状态码）。
+                const report = this.readiness();
+                const rep = new response<any>('', report.ready ? 200 : 503);
                 rep.body = JSON.stringify({
-                    status: 'ok',
+                    status: report.ready ? 'ok' : 'degraded',
+                    ready: report.ready,
+                    degraded: report.degraded,
+                    missing: report.missing,
+                    pending: report.pending,
                     sources: Object.keys(this.fxms),
                     version: `fxrate@${globalThis.GITBUILD || 'git'} ${globalThis.BUILDTIME || 'devlopment'}`,
                     apiVersion: 'v1',
                     environment: process.env.NODE_ENV || 'development',
                 });
                 useJson(rep, request);
+                // useBasic（useJson 内部）会把 status 强制回 200，且就绪探针响应
+                // 不可缓存（CDN/反向代理缓存 503 会掩盖故障恢复）——两处都放在 useJson 之后。
+                if (!report.ready) rep.status = 503;
+                rep.headers.set('Cache-Control', 'no-store');
                 return rep;
             }),
         );
@@ -260,12 +334,29 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                 }
                 this.log(`${source} is updating...`);
                 const fxRates = await this.fxRateGetter[source](this);
+                // 空结果视为刷新失败：数据没有更新却把 refreshDate 推到 now 等于伪造新鲜度。
+                // 走 catch → 记录退避，已 ready 的源继续服务旧数据。
+                if (!fxRates || fxRates.length === 0) {
+                    throw new Error(`${source} getter returned no rates`);
+                }
                 fxRates.forEach((f) => this.fxms[source].update(f));
                 this.fxmStatus[source] = 'ready';
                 this.intervalIDs[source].refreshDate = new Date();
+                this.refreshScheduler.recordSuccess(source);
+                this.unmarkDegraded(source);
                 this.log(`${source} is updated, now is ready.`);
             } catch (error) {
-                this.fxmStatus[source] = 'pending';
+                // 刷新失败记录退避（请求路径不再每次全量重抓）。
+                // 已 ready 的源保持 ready 继续服务旧数据（否则单次刷新失败会让
+                // 下一个请求重新触发懒加载），但标记 degraded——Cache-Control 降为
+                // max-age=0、readiness 不再 ok，直到后续一次成功刷新 unmarkDegraded。
+                // 只有从未成功加载过的源回到 pending（从未服务过数据，无降级语义）。
+                if (this.fxmStatus[source] === 'ready') {
+                    this.markDegraded(source);
+                } else {
+                    this.fxmStatus[source] = 'pending';
+                }
+                this.refreshScheduler.recordFailure(source, error);
                 this.log(
                     `${source} update failed: ${
                         error instanceof Error ? error.message : String(error)
@@ -287,22 +378,39 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
 
     public async requestFXManager(source: string): Promise<fxManager> {
         if (this.fxmStatus[source] === 'pending') {
+            // 惰性 FXM 源（mastercard/visa）没有注册 getter：不在这里触发 updateFXManager
+            // （fxRateGetter 为 undefined），它的预热由请求路径经覆写的 async
+            // getfxRateList 自行完成（registerFXM 已包装它在成功后置 ready）。
+            if (!this.fxRateGetter[source]) {
+                return this.fxms[source];
+            }
+            // 刷新失败后处于退避期：不再每次请求都触发全量重抓，直接返回当前（空）实例，
+            // 由定时器在退避窗口结束后再重试。
+            if (this.refreshScheduler.blocked(source) !== undefined) {
+                this.log(`${source} in backoff, serving current state`);
+                return this.fxms[source];
+            }
             // 懒加载抓取可能很慢（Visa 等上游 10s+ 超时）。
             // 5s 内没就绪则快速失败返回空实例，避免拖住整个 batch / 首屏 SSR。
             const p =
                 this.pendingPromises[source] ?? this.updateFXManager(source);
+            let timeout: NodeJS.Timeout | undefined;
             try {
                 await Promise.race([
                     p,
-                    new Promise((_, reject) =>
-                        setTimeout(
+                    new Promise((_, reject) => {
+                        timeout = setTimeout(
                             () => reject(new Error(`${source} load timeout`)),
                             5000,
-                        ),
-                    ),
+                        );
+                    }),
                 ]);
             } catch {
                 this.log(`${source} load timed out, serving empty`);
+            } finally {
+                // 竞态已 settle 即取消超时定时器，避免每次懒加载都残留一个 5s
+                // 空转定时器（全量测试下产生 open handle / 事件循环噪音）。
+                if (timeout) clearTimeout(timeout);
             }
         }
         return this.fxms[source];
@@ -320,18 +428,33 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
 
         const refreshDate = new Date();
 
+        // 刷新定时器统一交给 RefreshScheduler：稳定相位抖动 + 全局有界并发 + 失败退避。
+        // intervalIDs 保留 refreshDate（Cache-Control 用）与当前定时器句柄（可观测）。
         this.intervalIDs[source] = {
-            timeout: setInterval(
-                () => this.updateFXManager(source).catch(() => undefined),
-                1000 * 60 * 30,
-            ),
             refreshDate: refreshDate,
         };
+        this.refreshScheduler.register(source);
     }
 
     public registerFXM(source: string, fxManager: fxManager): void {
         this.fxms[source] = fxManager;
-        this.fxmStatus[source] = 'ready';
+        // 惰性 FXM 源（mastercard/visa）注册时通常还没预热任何数据：初始状态按
+        // hasUsableData 判定——预加载实例（构造时已带数据）直接 ready，空 lazy 源
+        // 保持 pending（readiness 不会把无数据的卡源误判为已就绪）。
+        this.fxmStatus[source] = fxManager.hasUsableData()
+            ? 'ready'
+            : 'pending';
+        // 首次 getfxRateList 成功预热后置 ready：把原型方法包一层（绑定原方法防递归），
+        // 成功返回（网络拉取写缓存）才算「已加载可用数据」。
+        const originalGetfxRateList = fxManager.getfxRateList.bind(fxManager);
+        fxManager.getfxRateList = async (from, to) => {
+            const rate = await originalGetfxRateList(from, to);
+            if (this.fxmStatus[source] !== 'ready') {
+                this.fxmStatus[source] = 'ready';
+                this.log(`${source} warmed up, now is ready.`);
+            }
+            return rate;
+        };
         this.mountFXMRouter(source);
         this.log(`Registered ${source}.`);
     }
@@ -360,23 +483,24 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         const fxmRouter = new router();
 
         const useCache = (response: response<any>) => {
-            response.headers.set(
-                'Cache-Control',
-                `public, max-age=${
-                    30 * 60 -
-                    Math.round(
-                        Math.abs(
-                            ((
-                                this.intervalIDs[source] ?? {
-                                    refreshDate: new Date(),
-                                }
-                            ).refreshDate.getTime() -
-                                new Date().getTime()) /
-                                1000,
-                        ) % 1800,
-                    )
-                }`,
-            );
+            const secs = this.refreshScheduler.intervalSecs;
+            // 降级源（恢复时数据已过期）绝不发新鲜 Cache-Control：恒为 max-age=0，
+            // 直到一次成功刷新把它解除降级。
+            const ageSecs = this.isDegraded(source)
+                ? 0
+                : secs -
+                  Math.round(
+                      Math.abs(
+                          ((
+                              this.intervalIDs[source] ?? {
+                                  refreshDate: new Date(),
+                              }
+                          ).refreshDate.getTime() -
+                              new Date().getTime()) /
+                              1000,
+                      ) % secs,
+                  );
+            response.headers.set('Cache-Control', `public, max-age=${ageSecs}`);
         };
 
         const handlerSourceInfo = async (
@@ -555,11 +679,18 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         return fxmRouter;
     }
 
-    public stopAllInterval(): void {
-        for (const id in this.intervalIDs) {
-            clearInterval(this.intervalIDs[id].timeout);
-        }
-        // 停机前落盘汇率快照，冷启动直接加载跳过上游抓取
+    public async stopAllInterval(): Promise<void> {
+        // 停机契约：先停掉调度器（取消全部定时器 + 关闭执行器，不再接任何新刷新，
+        // 排队任务以 closed 拒绝），随后等待所有在途刷新 settle（refreshScheduler.drain
+        // 覆盖经调度器启动的刷新；pendingPromises 兜底请求路径直接启动的懒加载），
+        // 最后才落盘快照——否则在途刷新刚写回的新数据会被漏掉（「不能漏最后刷新」）。
+        this.refreshScheduler.stop();
+        await Promise.allSettled([
+            this.refreshScheduler.drain(),
+            ...Object.values(this.pendingPromises).filter(
+                (p): p is Promise<void> => p !== undefined,
+            ),
+        ]);
         try {
             saveSnapshot(this.dumpSnapshot());
         } catch {
@@ -581,20 +712,87 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         return out;
     }
 
-    // 加载快照：恢复内存汇率表并标记 ready（跳过懒加载抓取），
-    // 30 分钟定时刷新仍按 updated 时间戳守卫覆盖旧数据
-    public restoreSnapshot(snapshot: {
-        [source: string]: { [from: string]: { [to: string]: FXRateType } };
-    }): void {
+    // 加载快照：恢复内存汇率表并标记 ready（跳过懒加载抓取）。
+    // 按实际数据新鲜度标记降级：某源最新一条汇率的 updated 早于 now - 阈值 → degraded
+    // （Cache-Control max-age=0，refreshDate 如实指向最后数据时间，不伪装新鲜）；
+    // 30 分钟定时刷新仍按 updated 时间戳守卫覆盖旧数据，成功后自动解除降级。
+    public restoreSnapshot(
+        snapshot: SnapshotData,
+        options: { staleRateAgeMs?: number; now?: number } = {},
+    ): void {
+        const staleAgeMs = options.staleRateAgeMs ?? staleRateAgeMs();
+        const now = options.now ?? Date.now();
         for (const source in snapshot) {
             const fxm = this.fxms[source];
             if (!fxm?.restore) continue;
             fxm.restore(snapshot[source] as never);
             if (source in this.fxmStatus) this.fxmStatus[source] = 'ready';
-            if (this.intervalIDs[source])
-                this.intervalIDs[source].refreshDate = new Date();
-            this.log(`[persistence] restored ${source} from cache`);
+            const latest = latestUpdatedAt(snapshot[source]);
+            const degraded =
+                latest === null || now - latest.getTime() > staleAgeMs;
+            if (this.intervalIDs[source]) {
+                this.intervalIDs[source].refreshDate =
+                    degraded && latest ? latest : new Date();
+            }
+            if (degraded) this.markDegraded(source);
+            this.log(
+                `[persistence] restored ${source} from cache${degraded ? ' (degraded)' : ''}`,
+            );
         }
+    }
+
+    // —— 降级/状态观测（供测试与运维断言）——
+
+    public isDegraded(source: string): boolean {
+        return this.degradedSources.has(source);
+    }
+
+    public getDegradedSources(): string[] {
+        return [...this.degradedSources];
+    }
+
+    public getStatus(source: string): 'ready' | 'pending' {
+        return this.fxmStatus[source];
+    }
+
+    // —— Phase 6 readiness 就绪门禁 ——
+
+    public readiness(
+        criticalSources: readonly string[] = CRITICAL_SOURCES,
+    ): ReadinessReport {
+        const degraded = this.getDegradedSources();
+        const missing = criticalSources.filter((source) => !this.has(source));
+        // 已注册但尚未加载有效数据的关键源不算就绪：
+        // ① status 非 ready（未完成首次刷新/快照恢复）——仅检查注册（has）会让
+        //    冷启动未拉数阶段被探针误判 ok；
+        // ② status ready 但实例没有可用数据（hasUsableData 同步契约，如惰性 FXM
+        //    尚未预热缓存）同样视为 pending。
+        const pending = criticalSources.filter((source) => {
+            if (!this.has(source)) return false;
+            if (this.getStatus(source) !== 'ready') return true;
+            const fxm = this.fxms[source];
+            return typeof fxm.hasUsableData === 'function'
+                ? !fxm.hasUsableData()
+                : false;
+        });
+        return {
+            ready:
+                degraded.length === 0 &&
+                missing.length === 0 &&
+                pending.length === 0,
+            degraded,
+            missing,
+            pending,
+            criticalSources: [...criticalSources],
+        };
+    }
+
+    private markDegraded(source: string): void {
+        this.degradedSources.add(source);
+    }
+
+    private unmarkDegraded(source: string): void {
+        this.degradedSources.delete(source);
     }
 }
 

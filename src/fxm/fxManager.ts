@@ -76,6 +76,19 @@ export default class fxManager {
         this._fxRateList = value;
     }
 
+    // 同步可用数据判定（readiness 契约，Phase 7）：实例是否已加载过至少一条
+    // 有效非 self 报价。直接读私有 _fxRateList（不经 fxRateList Proxy getter——
+    // 惰性 FXM 子类的 Proxy 每次访问都会物化 51k 单元格，绝不能在就绪探针里触发）；
+    // 结构判定即可：update() 原子提交/restore() 快照校验保证非 self 单元格必然完整合法。
+    public hasUsableData(): boolean {
+        for (const from of Object.keys(this._fxRateList)) {
+            for (const to of Object.keys(this._fxRateList[from])) {
+                if (from !== to) return true;
+            }
+        }
+        return false;
+    }
+
     public async getfxRateList(
         from: currency,
         to: currency,
@@ -463,5 +476,32 @@ export default class fxManager {
             throw new Error(`FX Path from ${from} to ${to} not found`);
         }
         return (await this.fxRateList[from][to]).updated;
+    }
+
+    // BFS 多段换算的更新时间：取路径上所有相邻边 updated 的最小值（最旧）。
+    // 交叉汇率是多段折算，任一段陈旧都代表整条路径陈旧，直连报价仍用自身 updated。
+    // 边读取走 fxRateList Proxy get trap，CNY/CNH 别名目标（如 HKD→CNY 实际为
+    // HKD→CNH 行）同样正确解析；路径无有效时间戳时抛错由调用方兜底。
+    public async getPathUpdatedDate(path: currency[]): Promise<Date> {
+        let oldest: Date | undefined;
+        for (let i = 0; i + 1 < path.length; i += 1) {
+            const edge = await this.fxRateList[path[i]][path[i + 1]];
+            const timestamp =
+                edge?.updated instanceof Date
+                    ? edge.updated.getTime()
+                    : Number.NaN;
+            if (
+                !Number.isNaN(timestamp) &&
+                (!oldest || timestamp < oldest.getTime())
+            ) {
+                oldest = edge.updated;
+            }
+        }
+        if (!oldest) {
+            throw new Error(
+                `No updated timestamp found on FX path ${path.join(' → ')}`,
+            );
+        }
+        return oldest;
     }
 }

@@ -132,14 +132,33 @@ export const getDetails = async (
     // ?bfs=1 时回传实际经过的兑换路径（直连时也返回直连对，便于前端展示）。
     // 路径命中 CNY/CNH 别名（如图里只有 CNH 而目标为 CNY）时，result.alias 记录实际别名货币，
     // REST handler 据此设置 X-FXRate-Alias header（见 fxmManager），前端可提示「经 CNH 折算」。
+    // hasPath 记录「存在可用路径（直连或 BFS）」，供下方价格计算判定——无直连报价
+    // 但 BFS 可达时也要计算 cash/remit/middle，不能因为 rate undefined 就跳过。
+    let hasPath = false;
     if (
         request.query.get('bfs') === '1' ||
         request.query.get('bfs') === 'true'
     ) {
         try {
             const fxp = await fxManager.getFXPath(from, to, true);
+            hasPath = fxp.path.length > 0;
             result.path = fxp.path.map(String);
             if (fxp.alias) result.alias = String(fxp.alias);
+            // 多段 BFS 路径（path 含 from，长度 > 1）时 updated 取路径上最旧边的
+            // 更新时间；直连（path=[to]，长度 1）保持自身 updated（上方 rate 分支已设置）。
+            if (fxp.path.length > 1) {
+                try {
+                    result.updated = (
+                        await fxManager.getPathUpdatedDate(
+                            fxp.path[0] === from
+                                ? fxp.path
+                                : [from, ...fxp.path],
+                        )
+                    ).toUTCString();
+                } catch (_e) {
+                    // 路径边时间戳异常时保留默认 updated（当前时间）兜底
+                }
+            }
         } catch (_e) {
             result.path = [];
         }
@@ -147,10 +166,11 @@ export const getDetails = async (
     // 预热失败（Card 源上游 403/WAF/网络错误）时不再为每个 type 重复预热同一 pair：
     // 各 type 降级为 false 保持响应形状不变，避免单次 type=all 请求对该 pair 发起多次网络抓取。
     // from===to 自换算不需要汇率条目（convert 直接返回 amount），保留原行为。
+    // BFS 可达（hasPath）时即使无直连 rate 也尝试按路径折算三价。
     result.cash = false;
     result.remit = false;
     result.middle = false;
-    if (rate !== undefined || from === to) {
+    if (rate !== undefined || from === to || hasPath) {
         for (const type of ['cash', 'remit', 'middle']) {
             try {
                 result[type] = await getConvert(

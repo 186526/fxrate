@@ -374,6 +374,13 @@ export default class visaFXM extends fxManager {
         super([]);
     }
 
+    // 同步可用数据判定：数据在模块级 LRU cache（不触碰 _fxRateList / fxRateList
+    // Proxy——物化 51k 单元格或读未预热矩阵都会误判）；缓存里有任何成功拉取的
+    // 记录即视为已加载可用数据。
+    public hasUsableData(): boolean {
+        return cache.size > 0;
+    }
+
     public update(): void {
         throw new Error('Method is deprecated');
     }

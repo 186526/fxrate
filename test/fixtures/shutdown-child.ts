@@ -25,6 +25,20 @@ const server = http.createServer((req, res) => {
     });
 });
 
+// 可注入的停机慢侧：SHUTDOWN_STOP_DELAY_MS > 0 时给 stopAllInterval() 加固定延迟，
+// 模拟「在途刷新 drain / 快照落盘」较慢的中间态——server.close() 无在途连接时几乎
+// 瞬间完成，此时正是验证「任一单独完成都不能 exit，须等两者都完成」的关键时序。
+const stopDelayMs = Number(process.env.SHUTDOWN_STOP_DELAY_MS) || 0;
+if (stopDelayMs > 0) {
+    const originalStop = Manager.stopAllInterval.bind(Manager);
+    Manager.stopAllInterval = async () => {
+        await new Promise((resolveSleep) =>
+            setTimeout(resolveSleep, stopDelayMs),
+        );
+        await originalStop();
+    };
+}
+
 server.listen(port, '127.0.0.1', () => {
     const address = server.address() as net.AddressInfo;
     console.log(`SHUTDOWN_CHILD_READY ${address.port} ${address.address}`);
