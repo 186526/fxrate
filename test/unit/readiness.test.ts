@@ -39,11 +39,13 @@ afterAll(() => {
     for (const dir of cacheDirs) rmSync(dir, { recursive: true, force: true });
 });
 
-afterEach(() => {
+afterEach(async () => {
     jest.restoreAllMocks();
     for (const server of servers) server.close();
     servers.length = 0;
-    for (const manager of managers) manager.stopAllInterval();
+    // stopAllInterval 现经节流异步 writer flush 落盘：须 await 完成才能让 afterAll
+    // 删除临时目录，否则后台 fs 写与 rmSync 并发产生杂散 ENOENT。
+    await Promise.allSettled(managers.map((m) => m.stopAllInterval()));
     managers.length = 0;
 });
 
