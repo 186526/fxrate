@@ -32,6 +32,14 @@ import {
     RPC_MAX_EXPENSIVE_CARD_ITEMS,
     type RPCBudgetError,
 } from './handler/limits';
+import {
+    metricClockSeconds,
+    metricElapsedSeconds,
+    observeRpcBatchItems,
+    observeSourceFetch,
+    recordRpcRejection,
+    renderMetrics,
+} from './metrics';
 
 export const useInternalRestAPI = async (url: string, router: router) => {
     const restResponse = await router
@@ -87,6 +95,10 @@ export interface ReadinessReport {
     missing: string[];
     /** 已注册但尚未加载有效数据（pending，未完成首次刷新/快照恢复）的关键源 */
     pending: string[];
+    /** 已加载有效数据且未降级的源 */
+    readySources: string[];
+    /** 数据陈旧或刷新失败的源（与 degraded 同源，供专用探针直读） */
+    staleSources: string[];
     /** 本次判定使用的关键源列表 */
     criticalSources: string[];
 }
@@ -276,6 +288,41 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             }),
         );
 
+        this.binding(
+            '/readyz',
+            this.create('GET', async (request: request<any>) => {
+                const report = this.readiness();
+                const rep = new response<any>('', report.ready ? 200 : 503);
+                rep.body = JSON.stringify({
+                    status: report.ready ? 'ok' : 'degraded',
+                    ready: report.ready,
+                    readySources: report.readySources,
+                    staleSources: report.staleSources,
+                    degraded: report.degraded,
+                    missing: report.missing,
+                    pending: report.pending,
+                });
+                useJson(rep, request);
+                rep.status = report.ready ? 200 : 503;
+                rep.headers.set('Cache-Control', 'no-store');
+                return rep;
+            }),
+        );
+
+        this.binding(
+            '/metrics',
+            this.create('GET', async () => {
+                const rep = new response<any>(renderMetrics(), 200);
+                useBasic(rep);
+                rep.headers.set(
+                    'Content-Type',
+                    'text/plain; version=0.0.4; charset=utf-8',
+                );
+                rep.headers.set('Cache-Control', 'no-store');
+                return rep;
+            }),
+        );
+
         this.enableList().mount();
         this.log('JSONRPC is mounted.');
 
@@ -303,16 +350,22 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             return null;
         }
         if (Array.isArray(parsed)) {
-            if (parsed.length > RPC_MAX_BATCH_SIZE) return RPC_BATCH_TOO_LARGE;
+            observeRpcBatchItems(parsed.length);
+            if (parsed.length > RPC_MAX_BATCH_SIZE) {
+                recordRpcRejection('batch_too_large');
+                return RPC_BATCH_TOO_LARGE;
+            }
             if (
                 countExpensiveCardItems(parsed) > RPC_MAX_EXPENSIVE_CARD_ITEMS
             ) {
+                recordRpcRejection('expensive_card_limit');
                 return RPC_EXPENSIVE_CARD_LIMIT;
             }
         } else if (parsed !== null && typeof parsed === 'object') {
             if (
                 countExpensiveCardItems([parsed]) > RPC_MAX_EXPENSIVE_CARD_ITEMS
             ) {
+                recordRpcRejection('expensive_card_limit');
                 return RPC_EXPENSIVE_CARD_LIMIT;
             }
         }
@@ -333,7 +386,7 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                     throw new Error('Source not found');
                 }
                 this.log(`${source} is updating...`);
-                const fxRates = await this.fxRateGetter[source](this);
+                const fxRates = await this.fetchSourceRates(source);
                 // 空结果视为刷新失败：数据没有更新却把 refreshDate 推到 now 等于伪造新鲜度。
                 // 走 catch → 记录退避，已 ready 的源继续服务旧数据。
                 if (!fxRates || fxRates.length === 0) {
@@ -414,6 +467,15 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             }
         }
         return this.fxms[source];
+    }
+
+    private async fetchSourceRates(source: string): Promise<FXRate[]> {
+        const startedAt = metricClockSeconds();
+        try {
+            return await this.fxRateGetter[source](this);
+        } finally {
+            observeSourceFetch(source, metricElapsedSeconds(startedAt));
+        }
     }
 
     public registerGetter(
@@ -761,6 +823,7 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         criticalSources: readonly string[] = CRITICAL_SOURCES,
     ): ReadinessReport {
         const degraded = this.getDegradedSources();
+        const staleSources = [...degraded];
         const missing = criticalSources.filter((source) => !this.has(source));
         // 已注册但尚未加载有效数据的关键源不算就绪：
         // ① status 非 ready（未完成首次刷新/快照恢复）——仅检查注册（has）会让
@@ -775,6 +838,14 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                 ? !fxm.hasUsableData()
                 : false;
         });
+        const readySources = Object.keys(this.fxms).filter((source) => {
+            if (this.getStatus(source) !== 'ready') return false;
+            if (this.isDegraded(source)) return false;
+            const fxm = this.fxms[source];
+            return typeof fxm.hasUsableData === 'function'
+                ? fxm.hasUsableData()
+                : true;
+        });
         return {
             ready:
                 degraded.length === 0 &&
@@ -783,6 +854,8 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             degraded,
             missing,
             pending,
+            readySources,
+            staleSources,
             criticalSources: [...criticalSources],
         };
     }
