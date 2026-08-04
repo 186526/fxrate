@@ -18,6 +18,8 @@ src/
   FXGetter/          # 每个数据源一个文件：getter 函数（返回 FXRate[]）或 FXM 类（如 mastercard/visa）
   client/index.ts    # 给前端用的 JSON-RPC client（支持 batch 批量请求）
   handler/rss.ts     # RSS/Atom feed
+  handler/limits.ts  # Phase 1 RPC 入口硬限制：受限 body 读取（256 KiB）+ JSON-RPC v2 批量/昂贵条目预算
+  handler/rest.ts    # 内部 REST 工具（useInternalRestAPI / useJson / bodyToString 等）
   types.d.ts         # currency 枚举、FXRate、FXPath、JSONRPCMethods
   constant.ts        # sourceNamesInZH：数据源英文名 → 中文名
 test/                # jest 测试（会真实请求各数据源，注意网络依赖与超时）
@@ -38,6 +40,9 @@ dist/                # 构建产物（esbuild 输出 dist/index.cjs），commit 
 -   **路由与缓存**：`handlers.js` 按 `/`、`/:from`、`/:from/:to`、`/:from/:to/:type(/:amount)` 绑定；响应 JSON 经 `sortObject` 按键排序（**注意数组不参与排序**——`result.path` 等有顺序语义，曾因 `obj.sort()` 字典序打乱 BFS 路径），`?pretty` 或浏览器直接访问（`Sec-Fetch-Dest: document`）时缩进输出；`Cache-Control: public, max-age` 与下次刷新时间挂钩（30 分钟周期内递减）。
 -   **版本注入**：构建时 esbuild `--define` 注入 `globalThis.GITBUILD`（git short HEAD）与 `globalThis.BUILDTIME`，`/info` 返回 `fxrate@<GITBUILD> <BUILDTIME>`。
 -   **JSON-RPC**（endpoint `/v1/jsonrpc`）：方法 `instanceInfo` / `listCurrencies` / `listFXRates` / `getFXRate`，内部通过 `useInternalRestAPI` 复用自身 REST 路由。
+-   **RPC 入口硬限制**（`src/handler/limits.ts`，Phase 1）：
+    -   **HTTP body 上限 256 KiB**（`MAX_REQUEST_BODY_BYTES`）：handlers.js 的 `handleRequest` 原本无上限读 body（其 `bodyLimit` 中间件是「读完再查」，防不住），`installRequestBodyLimit(adapter)` 在 `makeInstance` 内 `useMappingAdapter()` 之后、`listen`/dispatch 之前替换 adapter 实例的 `handleRequest` 为受限读取器——Content-Length 预检（> 上限未读即拒）+ 流式字节计数（chunked 溢出即停），监听 `aborted`/`error`/`close` 保证读取 Promise 必 settle；超限请求以标记 `request.custom.requestRejected` 返回，被包装的 `router.respond` 在进入路由/数据源之前转成 **HTTP 413**（`handleResponse` 同时强制 `Connection: close` + `shouldKeepAlive=false` 丢弃未读字节，且连接已销毁时跳过写响应）。本地监听与 Vercel 默认 handler 共用同一 adapter，故两路都覆盖。
+    -   **JSON-RPC v2 预算**：`fxmManager` 构造函数捕获基类 `v2RPCresponder` 再包一层——批量条数 > `RPC_MAX_BATCH_SIZE`（100）或昂贵卡组织条目（`getFXRate` 且 `params.source` ∈ visa/mastercard）> `RPC_MAX_EXPENSIVE_CARD_ITEMS`（20）时，在逐条 dispatch 之前返回单条 JSON-RPC 错误（HTTP 200）：`-32000`（batch 超限）/`-32001`（昂贵条目超限），零 RPC handler / 内部 REST / 抓取工作。非 JSON body 仍由下游输出 `-32700`；单请求/notification/error 形状与 `?content=` 查询路径不变。`/jsonrpc` 与 `/v1/jsonrpc`（经 `use` 转发）都走被包装的 responder。测试见 `test/unit/rpc-limits.test.ts`（真实 adapter/路由，验证精确边界成功、超限零工作、chunked 溢出 413、abort settle、`--detectOpenHandles` 无泄漏）。
 
 ## 环境变量
 

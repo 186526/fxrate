@@ -7,7 +7,7 @@ type ChromiumPage = {
         url: string,
         opts: object,
     ) => Promise<{ status: () => number } | null>;
-    evaluate: <T>(fn: () => T) => Promise<T>;
+    evaluate: (fn: () => string) => Promise<string>;
 };
 type ChromiumBrowser = {
     newContext: (opts: object) => Promise<{
@@ -15,11 +15,23 @@ type ChromiumBrowser = {
     }>;
     close: () => Promise<void>;
 };
-let chromiumLauncher:
-    | (() => Promise<{ launch: (opts: object) => Promise<ChromiumBrowser> }>)
-    | null = null;
+type ChromiumLauncher = {
+    launch: (opts: object) => Promise<ChromiumBrowser>;
+};
+let chromiumLauncher: (() => Promise<ChromiumLauncher>) | null = null;
 let chromiumInitError: Error | null = null;
-async function getChromium() {
+
+// 测试专用注入 seam：不启动真实浏览器即可驱动 chromium 降级路径（确定性离线测试）。
+// 传 null 恢复真实 playwright 路径；进程内修改，生产路径默认不受影响。
+let injectedLauncher: ChromiumLauncher | null = null;
+export function __setChromiumLauncherForTests(
+    launcher: ChromiumLauncher | null,
+): void {
+    injectedLauncher = launcher;
+}
+
+async function getChromium(): Promise<ChromiumLauncher> {
+    if (injectedLauncher) return injectedLauncher;
     if (chromiumInitError) throw chromiumInitError;
     if (!chromiumLauncher) {
         try {
@@ -27,6 +39,10 @@ async function getChromium() {
             chromiumLauncher = () =>
                 Promise.resolve({
                     launch: async (opts: object) => {
+                        const executablePath = chromiumExecutable();
+                        if (!executablePath) {
+                            throw new Error('chromium executable not found');
+                        }
                         const browser = await (
                             mod as unknown as {
                                 chromium: {
@@ -76,14 +92,10 @@ export async function fetchTextViaChromium(
         navigationTimeoutMs?: number;
     },
 ): Promise<string> {
-    const executablePath = chromiumExecutable();
-    if (!executablePath) {
-        throw new Error('chromium executable not found');
-    }
+    // executable 探测在真实（非注入）launch 路径内做，测试注入 launcher 时无需真实浏览器。
     const launcher = await getChromium();
 
     const browser = await launcher.launch({
-        executablePath,
         headless: true,
         args: ['--no-sandbox', '--disable-blink-features=AutomationControlled'],
     });

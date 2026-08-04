@@ -14,6 +14,14 @@ import {
     getDetails,
     bodyToString,
 } from './handler/rest';
+import {
+    countExpensiveCardItems,
+    RPC_BATCH_TOO_LARGE,
+    RPC_EXPENSIVE_CARD_LIMIT,
+    RPC_MAX_BATCH_SIZE,
+    RPC_MAX_EXPENSIVE_CARD_ITEMS,
+    type RPCBudgetError,
+} from './handler/limits';
 
 export const useInternalRestAPI = async (url: string, router: router) => {
     const restResponse = await router
@@ -144,6 +152,40 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             this.registerGetter(source, sources[source]);
         }
 
+        // Phase 1 RPC 入口硬预算：在 JSON-RPC v2 逐条 dispatch 之前做「静态结构」校验
+        // （批量条数 + 昂贵卡组织条目数），超限返回稳定 JSON-RPC 错误（HTTP 200），
+        // 不触发任何 RPC handler / 内部 REST / 数据抓取。捕获基类 responder 再包一层。
+        const baseV2RPCresponder = this.v2RPCresponder;
+        this.v2RPCresponder = async (
+            rpcRequest: request<any>,
+            rpcResponse?: response<any>,
+        ): Promise<response<any>> => {
+            if (!rpcResponse) rpcResponse = new response<any>('');
+            const budgetError = this.rpcBudgetViolation(
+                rpcRequest.query.get('content') ?? rpcRequest.body,
+            );
+            if (budgetError) {
+                rpcResponse.status = 200;
+                rpcResponse.headers.set(
+                    'Content-Type',
+                    'application/json; charset=utf-8',
+                );
+                rpcResponse.body = JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: null,
+                    error: budgetError,
+                });
+                return rpcResponse;
+            }
+            const dispatched = await baseV2RPCresponder.call(
+                this,
+                rpcRequest,
+                rpcResponse,
+                () => undefined,
+            );
+            return dispatched instanceof response ? dispatched : rpcResponse;
+        };
+
         this.binding(
             '/info',
             this.create('GET', async (request: request<any>) => {
@@ -175,6 +217,32 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         setTimeout(() => {
             console.log(`[${new Date().toUTCString()}] [fxmManager] ${str}`);
         }, 0);
+    }
+
+    // JSON-RPC v2 预算校验（Phase 1）：仅做静态结构检查，超限返回错误对象、合法返回 null。
+    // 非 JSON body 不在此拦截，交给下游 responder 输出 -32700 Parse error。
+    private rpcBudgetViolation(receivedJSONRPC: string): RPCBudgetError | null {
+        let parsed: unknown;
+        try {
+            parsed = JSON.parse(receivedJSONRPC);
+        } catch {
+            return null;
+        }
+        if (Array.isArray(parsed)) {
+            if (parsed.length > RPC_MAX_BATCH_SIZE) return RPC_BATCH_TOO_LARGE;
+            if (
+                countExpensiveCardItems(parsed) > RPC_MAX_EXPENSIVE_CARD_ITEMS
+            ) {
+                return RPC_EXPENSIVE_CARD_LIMIT;
+            }
+        } else if (parsed !== null && typeof parsed === 'object') {
+            if (
+                countExpensiveCardItems([parsed]) > RPC_MAX_EXPENSIVE_CARD_ITEMS
+            ) {
+                return RPC_EXPENSIVE_CARD_LIMIT;
+            }
+        }
+        return null;
     }
 
     public has(source: string): boolean {
@@ -397,22 +465,14 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             }
             response.body = JSON.stringify(result);
             useJson(response, request);
-            try {
-                response.headers.set(
-                    'Date',
-                    (
-                        await (
-                            await this.requestFXManager(source)
-                        ).getUpdatedDate(
-                            from as unknown as currency,
-                            to as unknown as currency,
-                        )
-                    ).toUTCString(),
-                );
-            } catch (_e) {
-                // 源不可用（如上游 403/WAF）时 Date 头回落为当前时间，避免整个请求 500。
-                response.headers.set('Date', new Date().toUTCString());
-            }
+            // Date 头复用 getDetails 已计算的 updated（UTC 字符串），
+            // 不再对同一 pair 二次 getUpdatedDate——避免 Card 源预热失败时重复网络抓取。
+            response.headers.set(
+                'Date',
+                typeof result.updated === 'string'
+                    ? result.updated
+                    : new Date().toUTCString(),
+            );
             useCache(response);
 
             return response;
@@ -445,21 +505,25 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             }
             response.body = result.toString();
             useBasic(response);
-            try {
-                response.headers.set(
-                    'Date',
-                    (
-                        await (
-                            await this.requestFXManager(source)
-                        ).getUpdatedDate(
-                            from as unknown as currency.unknown,
-                            to as unknown as currency.unknown,
-                        )
-                    ).toUTCString(),
-                );
-            } catch (_e) {
-                // 源不可用（如上游 403/WAF）时 Date 头回落为当前时间，避免整个请求 500。
-                response.headers.set('Date', new Date().toUTCString());
+            // 仅当换算成功（缓存已预热）才读 updated 设置 Date 头：
+            // 失败时跳过 getUpdatedDate，避免对同一 pair 再次网络预热（Card 源 403/WAF 时重复抓取）。
+            if (result !== false) {
+                try {
+                    response.headers.set(
+                        'Date',
+                        (
+                            await (
+                                await this.requestFXManager(source)
+                            ).getUpdatedDate(
+                                from as unknown as currency.unknown,
+                                to as unknown as currency.unknown,
+                            )
+                        ).toUTCString(),
+                    );
+                } catch (_e) {
+                    // 源不可用（如上游 403/WAF）时 Date 头回落为当前时间，避免整个请求 500。
+                    response.headers.set('Date', new Date().toUTCString());
+                }
             }
             useCache(response);
 

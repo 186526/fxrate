@@ -4,6 +4,8 @@ import { fraction, divide } from 'mathjs';
 import { LRUCache } from 'lru-cache';
 import { currency } from 'src/types.d';
 
+import { CardCoordinator, createCardNegativeCache } from './cardCapacity';
+
 const cache = new LRUCache<string, string>({
     max: 500,
     ttl: 1000 * 60 * 30,
@@ -21,6 +23,86 @@ const BROWSER_UA_POOL = [
 ];
 const BROWSER_UA =
     BROWSER_UA_POOL[Math.floor(Math.random() * BROWSER_UA_POOL.length)];
+
+type MastercardPayload = { data: Record<string, string> };
+
+const normalizeCode = (code: string): string => (code === 'CNH' ? 'CNY' : code);
+
+// 完整 7 日回退工作流（native fetch 路径）：从 UTC 今天向前最多 7 天，第一个 200 即返回；
+// 401/404 视为「当日尚未发布」继续回退；其他状态码（403/5xx）视为真实失败立即抛错。
+async function fetchMastercardRate(
+    from: string,
+    to: string,
+): Promise<MastercardPayload> {
+    for (let offset = 0; offset < 7; offset++) {
+        const date = new Date();
+        date.setUTCDate(date.getUTCDate() - offset);
+        const exchangeDate = date.toISOString().slice(0, 10);
+
+        // 请求方向沿用旧 API 语义：transCurr=to、crdhldBillCurr=from，
+        // 返回的 conversionRate 是「1 to = X from」，Proxy 取倒数得到「1 from = X to」。
+        const url =
+            `https://www.mastercard.com/marketingservices/public/mccom-services/currency-conversions/conversion-rates` +
+            `?exchange_date=${exchangeDate}` +
+            `&transaction_currency=${to}` +
+            `&cardholder_billing_currency=${from}` +
+            `&bank_fee=0&transaction_amount=1`;
+
+        let res: Response;
+        try {
+            res = await fetch(url, {
+                signal: AbortSignal.timeout(10000),
+                headers: {
+                    accept: 'application/json, text/plain, */*',
+                    // 必须带浏览器 UA（见 BROWSER_UA_POOL 注释）：Node 的 undici 默认 UA
+                    // 会被 Akamai 识别为机器人返回 403，带浏览器 UA 后 200。
+                    'user-agent': BROWSER_UA,
+                },
+            });
+        } catch (_e) {
+            // 网络错误直接放弃回退（与日期无关，重试没有意义）。
+            throw new Error(
+                `MasterCard network error for ${from}/${to}: ${(_e as Error).message}`,
+            );
+        }
+
+        if (res.status === 200) {
+            const data = (await res.json()) as MastercardPayload;
+            if (!data.data?.conversionRate) {
+                throw new Error(
+                    `MasterCard response missing conversionRate for ${from}/${to}`,
+                );
+            }
+            return data;
+        }
+
+        // 401/404 = 该日期尚未发布或超出范围，继续向前回退；
+        // 其他状态码（403/5xx）视为真实失败，立即报错避免静默重试。
+        if (res.status !== 401 && res.status !== 404) {
+            throw new Error(
+                `MasterCard API ${res.status} for ${from}/${to} (${exchangeDate})`,
+            );
+        }
+    }
+
+    throw new Error(
+        `MasterCard no published rate in last 7 days for ${from}/${to}`,
+    );
+}
+
+export const mastercardCoordinator = new CardCoordinator<MastercardPayload>({
+    source: 'mastercard',
+    positive: cache,
+    negative: createCardNegativeCache(),
+    normalize: normalizeCode,
+    nativeWorkflow: fetchMastercardRate,
+    validate: (data) => {
+        if (!data.data?.conversionRate) {
+            throw new Error('MasterCard response missing conversionRate');
+        }
+    },
+    serialize: (data) => JSON.stringify(data),
+});
 
 const currenciesList: string[] = [
     'AFN',
@@ -237,9 +319,6 @@ export default class mastercardFXM extends fxManager {
     }
 
     public async getfxRateList(from: currency, to: currency) {
-        const _from = from == 'CNH' ? 'CNY' : from;
-        const _to = to == 'CNH' ? 'CNY' : to;
-
         if (
             !(
                 currenciesList.includes(from as string) &&
@@ -249,74 +328,8 @@ export default class mastercardFXM extends fxManager {
             throw new Error('Currency not supported');
         }
 
-        if (cache.has(`${_from}${_to}`)) {
-            return this.fxRateList[from][to];
-        }
-
-        // MasterCard 每日（美东时间）发布一次当日结算汇率。
-        // 当天汇率尚未发布时接口返回 401（{ data: { errorCode, errorMessage } }），
-        // 从 UTC 今天向前最多回退 7 天取最近一个已发布日期。
-        // 注意：必须用 Node 原生 fetch（undici TLS/HTTP2 指纹），
-        // axios/curl 的指纹会被 Akamai 403 拒绝。
-        let data: { data: Record<string, string> } | null = null;
-        for (let offset = 0; offset < 7; offset++) {
-            const date = new Date();
-            date.setUTCDate(date.getUTCDate() - offset);
-            const exchangeDate = date.toISOString().slice(0, 10);
-
-            // 请求方向沿用旧 API 语义：transCurr=to、crdhldBillCurr=from，
-            // 返回的 conversionRate 是「1 to = X from」，Proxy 取倒数得到「1 from = X to」。
-            const url =
-                `https://www.mastercard.com/marketingservices/public/mccom-services/currency-conversions/conversion-rates` +
-                `?exchange_date=${exchangeDate}` +
-                `&transaction_currency=${_to}` +
-                `&cardholder_billing_currency=${_from}` +
-                `&bank_fee=0&transaction_amount=1`;
-
-            let res: Response;
-            try {
-                res = await fetch(url, {
-                    signal: AbortSignal.timeout(10000),
-                    headers: {
-                        accept: 'application/json, text/plain, */*',
-                        // 必须带浏览器 UA：Node 26（Docker node:alpine 镜像）的 undici
-                        // 默认 UA 会被 Akamai 识别为机器人返回 403；带浏览器 UA 后 200
-                        // （2026-08 生产实测，本地 Node 24 不带 UA 也能过，统一带上更稳）。
-                        // 进程启动时从常见浏览器 UA 池随机固定一个（不逐请求换，避免
-                        // Akamai 的 UA 漂移检测），与真实用户指纹一致。
-                        'user-agent': BROWSER_UA,
-                    },
-                });
-            } catch (_e) {
-                // 网络错误直接放弃回退（与日期无关，重试没有意义）。
-                throw new Error(
-                    `MasterCard network error for ${_from}/${_to}: ${(_e as Error).message}`,
-                );
-            }
-
-            if (res.status === 200) {
-                data = (await res.json()) as { data: Record<string, string> };
-                if (!data.data?.conversionRate) {
-                    throw new Error(
-                        `MasterCard response missing conversionRate for ${_from}/${_to}`,
-                    );
-                }
-                cache.set(`${_from}${_to}`, JSON.stringify(data));
-                return this.fxRateList[from][to];
-            }
-
-            // 401/404 = 该日期尚未发布或超出范围，继续向前回退；
-            // 其他状态码（403/5xx）视为真实失败，立即报错避免静默重试。
-            if (res.status !== 401 && res.status !== 404) {
-                throw new Error(
-                    `MasterCard API ${res.status} for ${_from}/${_to} (${exchangeDate})`,
-                );
-            }
-        }
-
-        throw new Error(
-            `MasterCard no published rate in last 7 days for ${_from}/${_to}`,
-        );
+        await mastercardCoordinator.get(from as string, to as string);
+        return this.fxRateList[from][to];
     }
 
     public async getUpdatedDate(from: currency, to: currency): Promise<Date> {

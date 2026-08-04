@@ -5,6 +5,7 @@ import { LRUCache } from 'lru-cache';
 import { currency } from 'src/types.d';
 
 import { fetchTextViaChromium } from './chromiumFetcher';
+import { CardCoordinator, createCardNegativeCache } from './cardCapacity';
 
 const cache = new LRUCache<string, string>({
     max: 500,
@@ -270,6 +271,23 @@ async function fetchVisaRateViaChromium(
     return payload;
 }
 
+const normalizeCode = (code: string): string => (code === 'CNH' ? 'CNY' : code);
+
+export const visaCoordinator = new CardCoordinator<VisaPayload>({
+    source: 'visa',
+    positive: cache,
+    negative: createCardNegativeCache(),
+    normalize: normalizeCode,
+    nativeWorkflow: fetchVisaRate,
+    chromiumWorkflow: fetchVisaRateViaChromium,
+    validate: (payload) => {
+        if (!payload.originalValues?.fxRateVisa) {
+            throw new Error('Visa response missing fxRateVisa');
+        }
+    },
+    serialize: (payload) => JSON.stringify(payload),
+});
+
 export default class visaFXM extends fxManager {
     ableToGetAllFXRate: boolean = false;
 
@@ -330,9 +348,6 @@ export default class visaFXM extends fxManager {
     }
 
     public async getfxRateList(from: currency, to: currency) {
-        const _from = (from == 'CNH' ? 'CNY' : from) as string;
-        const _to = (to == 'CNH' ? 'CNY' : to) as string;
-
         if (
             !(
                 currenciesList.includes(from as string) &&
@@ -342,25 +357,7 @@ export default class visaFXM extends fxManager {
             throw new Error('Currency not supported');
         }
 
-        if (cache.has(`${_from}${_to}`)) {
-            return this.fxRateList[from][to];
-        }
-
-        let payload: VisaPayload;
-        try {
-            payload = await fetchVisaRate(_from, _to);
-        } catch (fetchErr) {
-            try {
-                payload = await fetchVisaRateViaChromium(_from, _to);
-            } catch (chromiumErr) {
-                throw new Error(
-                    `Visa ${_from}/${_to} unavailable: ${(fetchErr as Error).message}; ` +
-                        `chromium fallback failed: ${(chromiumErr as Error).message}`,
-                );
-            }
-        }
-        cache.set(`${_from}${_to}`, JSON.stringify(payload));
-
+        await visaCoordinator.get(from as string, to as string);
         return this.fxRateList[from][to];
     }
 

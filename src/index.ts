@@ -21,6 +21,7 @@ import rootRouter, { handler, response } from 'handlers.js';
 import fxmManager from './fxmManager';
 import { installShutdown } from './shutdown';
 import { useBasic } from './handler/rest';
+import { installRequestBodyLimit } from './handler/limits';
 
 import getBOCFXRatesFromBOC from './FXGetter/boc';
 import getBOCHKFxRates from './FXGetter/bochk';
@@ -172,6 +173,11 @@ export const makeInstance = async (App: rootRouter, Manager: fxmManager) => {
     );
 
     App.useMappingAdapter();
+
+    // Phase 1 RPC 入口硬限制：本地监听与 Vercel 默认 handler 共用同一 adapter 实例，
+    // 在 listen/dispatch 之前装上受限 body 读取器（256 KiB 预检 + 流式溢出），
+    // 超限请求在进入 router/getter 之前直接 413。
+    installRequestBodyLimit(App.adapater);
 
     App.binding(
         '/',

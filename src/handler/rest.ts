@@ -1,5 +1,5 @@
 import { request, response } from 'handlers.js';
-import fxManager from '../fxm/fxManager';
+import fxManager, { type FXRateType } from '../fxm/fxManager';
 import { currency } from '../types';
 import { round, multiply, Fraction } from 'mathjs';
 
@@ -117,12 +117,17 @@ export const getDetails = async (
     } = {
         updated: new Date().toUTCString(),
     };
+    // 预热一次：getfxRateList 缓存命中时零网络；miss 时网络拉取写缓存
+    // （mastercard/visa 等 Card 源），成功后 cash/remit/middle/updated
+    // 全部复用已预热的 Proxy 数据，updated 取该 rate 的时间戳。
+    let rate: FXRateType | undefined;
     try {
-        result.updated = (
-            await fxManager.getUpdatedDate(from, to)
-        ).toUTCString();
+        rate = await fxManager.getfxRateList(from, to);
     } catch (_e) {
-        // 源不可用时（如上游 403/WAF）不 500，保留默认 updated 时间，具体汇率由下方 type 循环降级为 false。
+        rate = undefined;
+    }
+    if (rate?.updated instanceof Date) {
+        result.updated = rate.updated.toUTCString();
     }
     // ?bfs=1 时回传实际经过的兑换路径（直连时也返回直连对，便于前端展示）。
     // 路径命中 CNY/CNH 别名（如图里只有 CNH 而目标为 CNY）时，result.alias 记录实际别名货币，
@@ -139,11 +144,25 @@ export const getDetails = async (
             result.path = [];
         }
     }
-    for (const type of ['cash', 'remit', 'middle']) {
-        try {
-            result[type] = await getConvert(from, to, type, fxManager, request);
-        } catch (_e) {
-            result[type] = false;
+    // 预热失败（Card 源上游 403/WAF/网络错误）时不再为每个 type 重复预热同一 pair：
+    // 各 type 降级为 false 保持响应形状不变，避免单次 type=all 请求对该 pair 发起多次网络抓取。
+    // from===to 自换算不需要汇率条目（convert 直接返回 amount），保留原行为。
+    result.cash = false;
+    result.remit = false;
+    result.middle = false;
+    if (rate !== undefined || from === to) {
+        for (const type of ['cash', 'remit', 'middle']) {
+            try {
+                result[type] = await getConvert(
+                    from,
+                    to,
+                    type,
+                    fxManager,
+                    request,
+                );
+            } catch (_e) {
+                result[type] = false;
+            }
         }
     }
     return result;
