@@ -4,6 +4,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import os from 'node:os';
+import { monitorEventLoopDelay, type IntervalHistogram } from 'node:perf_hooks';
 
 export interface BenchmarkEnvironment {
     node: string;
@@ -106,4 +107,37 @@ export function forceGc(): boolean {
         return true;
     }
     return false;
+}
+
+export interface EventLoopLagStats {
+    samples: number;
+    maxMs: number;
+    p95Ms: number;
+}
+
+// 事件循环延迟探针：node:perf_hooks 的 monitorEventLoopDelay（零依赖，内核 timer 采样），
+// 在 start()/stop() 窗口内累计事件循环被同步工作（如后台 snapshot stringify）阻塞的时长。
+// 返回毫秒统计（内核按纳秒累计，这里统一换算为 ms，与其余 benchmark 指标同单位）。
+export function createEventLoopLagProbe(): {
+    start: () => void;
+    stop: () => EventLoopLagStats;
+} {
+    let histogram: IntervalHistogram | null = null;
+    return {
+        start() {
+            histogram = monitorEventLoopDelay({ resolution: 1 });
+            histogram.enable();
+        },
+        stop() {
+            if (histogram === null) return { samples: 0, maxMs: 0, p95Ms: 0 };
+            histogram.disable();
+            const stats: EventLoopLagStats = {
+                samples: histogram.count,
+                maxMs: histogram.max / 1e6,
+                p95Ms: histogram.percentile(95) / 1e6,
+            };
+            histogram = null;
+            return stats;
+        },
+    };
 }

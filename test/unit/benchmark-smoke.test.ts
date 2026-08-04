@@ -9,6 +9,11 @@ import { main as rpcLoadMain } from '../../benchmark/rpc-load';
 import { main as detailsBfsMain } from '../../benchmark/details-bfs';
 import { main as listRatesMain } from '../../benchmark/list-rates';
 import { main as cardHeapMain } from '../../benchmark/card-heap';
+import {
+    budgetFailures as persistenceWriterBudgetFailures,
+    main as persistenceWriterMain,
+    type ScenarioResult as PersistenceWriterScenarioResult,
+} from '../../benchmark/persistence-writer';
 
 type FetchFn = typeof fetch;
 
@@ -159,6 +164,72 @@ describe('Phase 0 benchmark harness (offline smoke)', () => {
         expect(data.build.mastercardCells).toBeGreaterThan(0);
         expect(data.access.cells).toBe(400);
         expect(data.access.opsPerSec).toBeGreaterThan(0);
+    });
+
+    test('persistence-writer records enqueue/write/lag/flush and covers plan thresholds', async () => {
+        const out = join(dir, 'persistence-writer.json');
+        await persistenceWriterMain([
+            '--updates=100',
+            '--snapshot-bytes=65536,262144',
+            '--throttle-ms=50',
+            '--flush-deadline-ms=2000',
+            `--output=${out}`,
+        ]);
+        assertValidBaseline(out, 'persistence-writer');
+        const data = JSON.parse(readFileSync(out, 'utf-8')) as {
+            results: PersistenceWriterScenarioResult[];
+        };
+        expect(data.results.length).toBe(2);
+        for (const row of data.results) {
+            expect(row.actualBytes).toBeGreaterThan(0);
+            // enqueue p95<=1ms 是完整 benchmark 的验收阈值；smoke 与整套 Jest
+            // 并跑时墙钟会受 CPU/GC 抢占，这里只校验结构，避免亚毫秒 flaky gate。
+            expect(row.enqueue.p95).toBeGreaterThanOrEqual(row.enqueue.p50);
+            expect(typeof row.enqueueWithinBudget).toBe('boolean');
+            // plan 阈值：窗口内 1000 次更新实际写入<=2 次（此处 100 次全在一个窗口 → 1 次）
+            expect(row.writesInWindow).toBe(1);
+            expect(row.writesWithinBudget).toBe(true);
+            expect(row.write.count).toBeGreaterThan(0);
+            expect(row.write.p95).toBeGreaterThanOrEqual(row.write.p50);
+            // event-loop lag：写入期间采样结构完整（无真实上游、纯合成快照）
+            expect(row.eventLoopLag.baselineMs.maxMs).toBeGreaterThanOrEqual(0);
+            expect(row.eventLoopLag.duringWriteMs.maxMs).toBeGreaterThanOrEqual(
+                0,
+            );
+            // 请求路径候选：记录 p95 退化百分比；10% 阈值属计时敏感，
+            // 只在完整 benchmark（1/10MiB）里做硬断言，smoke 只校验结构。
+            expect(row.requestPath.degradationPct).toBeGreaterThanOrEqual(0);
+            expect(row.requestPath.candidateMs.p95).toBeGreaterThanOrEqual(
+                row.requestPath.candidateMs.p50,
+            );
+            expect(typeof row.requestPath.withinBudget).toBe('boolean');
+            // plan 阈值：shutdown flush 在 deadline 内、文件可解析、无残留临时文件
+            expect(row.flushMs).toBeGreaterThan(0);
+            expect(row.flushWithinDeadline).toBe(true);
+            expect(row.finalFileParseable).toBe(true);
+            expect(row.residualTempFiles).toBe(0);
+        }
+
+        const failed = {
+            ...data.results[0]!,
+            writesWithinBudget: false,
+            enqueueWithinBudget: false,
+            requestPath: {
+                ...data.results[0]!.requestPath,
+                withinBudget: false,
+            },
+            flushWithinDeadline: false,
+            finalFileParseable: false,
+            residualTempFiles: 1,
+        };
+        expect(persistenceWriterBudgetFailures([failed])).toEqual([
+            `${failed.actualBytes} byte snapshot: writesInWindow>2`,
+            `${failed.actualBytes} byte snapshot: enqueue.p95>1ms`,
+            `${failed.actualBytes} byte snapshot: requestPath.degradation>10%`,
+            `${failed.actualBytes} byte snapshot: flush deadline exceeded`,
+            `${failed.actualBytes} byte snapshot: final file is not parseable`,
+            `${failed.actualBytes} byte snapshot: residual temp files`,
+        ]);
     });
 
     test('no benchmark artifacts leak into the repo working directory', () => {
