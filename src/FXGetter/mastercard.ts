@@ -1,12 +1,18 @@
 import fxManager, { FXRateType } from '../fxm/fxManager';
-import { fraction, divide } from 'mathjs';
+import { fraction, divide, type Fraction } from 'mathjs';
 
 import { LRUCache } from 'lru-cache';
 import { currency } from 'src/types.d';
 
-import { CardCoordinator, createCardNegativeCache } from './cardCapacity';
+import {
+    CardCoordinator,
+    createCardNegativeCache,
+    createCardSparseMatrix,
+    type CardRate,
+    type CardSparseStats,
+} from './cardCapacity';
 
-const cache = new LRUCache<string, string>({
+const cache = new LRUCache<string, CardRate>({
     max: 500,
     ttl: 1000 * 60 * 30,
     ttlAutopurge: true,
@@ -90,7 +96,10 @@ async function fetchMastercardRate(
     );
 }
 
-export const mastercardCoordinator = new CardCoordinator<MastercardPayload>({
+export const mastercardCoordinator = new CardCoordinator<
+    MastercardPayload,
+    CardRate
+>({
     source: 'mastercard',
     positive: cache,
     negative: createCardNegativeCache(),
@@ -101,7 +110,20 @@ export const mastercardCoordinator = new CardCoordinator<MastercardPayload>({
             throw new Error('MasterCard response missing conversionRate');
         }
     },
-    serialize: (data) => JSON.stringify(data),
+    // 上游响应写缓存时一次性解析为类型化 CardRate（Proxy 读取零 JSON.parse）：
+    // conversionRate 7.5 表示「1 CNY = 7.5 USD」，取倒数 → 1 USD = 1/7.5 CNY。
+    serialize: (data) => {
+        const rate = divide(
+            fraction(data.data.transAmt),
+            fraction(data.data.conversionRate),
+        ) as Fraction;
+        return {
+            middle: rate,
+            cash: rate,
+            remit: rate,
+            updated: new Date(data.data.fxDate),
+        };
+    },
 });
 
 const currenciesList: string[] = [
@@ -262,60 +284,34 @@ const currenciesList: string[] = [
 export default class mastercardFXM extends fxManager {
     ableToGetAllFXRate: boolean = false;
 
-    // 懒构建的汇率矩阵：currenciesList 是固定的，只需构建一次。
-    // Proxy 只作为 cache 的同步读取器，网络请求统一走 async getfxRateList。
-    private _lazyMatrix: {
+    // 稀疏汇率矩阵（Phase 5）：行/单元格按需物化，绝不全量构建 N² 个 Proxy cell；
+    // 单元格是 typed 正缓存（CardRate）的 live getter 视图，字段读取零 JSON.parse。
+    private _sparseMatrix: {
         [from: string]: { [to: string]: FXRateType };
     } | null = null;
 
+    private readonly sparseStats: CardSparseStats = { rows: 0, cells: 0 };
+
+    /** 已物化的稀疏行数（测试/基准可观测）。 */
+    public get sparseRows(): number {
+        return this.sparseStats.rows;
+    }
+
+    /** 已物化的稀疏单元格数（测试/基准可观测）。 */
+    public get sparseCells(): number {
+        return this.sparseStats.cells;
+    }
+
     public get fxRateList() {
-        if (this._lazyMatrix) return this._lazyMatrix;
-
-        const fxRateList: fxManager['_fxRateList'] = {};
-
-        currenciesList.forEach((from) => {
-            const _from = from == 'CNH' ? 'CNY' : from;
-
-            fxRateList[from] = {};
-            currenciesList.forEach((to) => {
-                const _to = to == 'CNH' ? 'CNY' : to;
-
-                const currency = new Proxy({} as FXRateType, {
-                    get: (_obj, prop) => {
-                        if (
-                            !['cash', 'remit', 'middle', 'updated'].includes(
-                                prop.toString(),
-                            )
-                        ) {
-                            return undefined;
-                        }
-
-                        const cached = cache.get(`${_from}${_to}`);
-                        // 未缓存时返回 undefined，由 getfxRateList 异步拉取并预热缓存。
-                        if (!cached) return undefined;
-
-                        if (
-                            ['cash', 'remit', 'middle'].includes(
-                                prop.toString(),
-                            )
-                        ) {
-                            const data = JSON.parse(cached);
-                            return divide(
-                                fraction(data.data.transAmt),
-                                fraction(data.data.conversionRate),
-                            );
-                        } else {
-                            const data = JSON.parse(cached);
-                            return new Date(data.data.fxDate);
-                        }
-                    },
-                });
-                fxRateList[from][to] = currency;
-            });
-        });
-
-        this._lazyMatrix = fxRateList;
-        return fxRateList;
+        if (!this._sparseMatrix) {
+            this._sparseMatrix = createCardSparseMatrix(
+                currenciesList,
+                cache,
+                normalizeCode,
+                this.sparseStats,
+            );
+        }
+        return this._sparseMatrix;
     }
 
     public async getfxRateList(from: currency, to: currency) {
@@ -345,9 +341,8 @@ export default class mastercardFXM extends fxManager {
         super([]);
     }
 
-    // 同步可用数据判定：数据在模块级 LRU cache（不触碰 _fxRateList / fxRateList
-    // Proxy——物化 51k 单元格或读未预热矩阵都会误判）；缓存里有任何成功拉取的
-    // 记录即视为已加载可用数据。
+    // 同步可用数据判定：数据在模块级 typed LRU cache（不触碰 fxRateList 稀疏矩阵）；
+    // 缓存里有任何成功拉取的记录即视为已加载可用数据。
     public hasUsableData(): boolean {
         return cache.size > 0;
     }

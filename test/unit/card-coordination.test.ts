@@ -54,7 +54,7 @@ function fakeClock(startMs = 0): {
 type Payload = { value: string };
 
 interface Harness {
-    coordinator: CardCoordinator<Payload>;
+    coordinator: CardCoordinator<Payload, string>;
     nativeWorkflow: ReturnType<typeof jest.fn>;
     chromiumWorkflow?: ReturnType<typeof jest.fn>;
     validate: ReturnType<typeof jest.fn>;
@@ -103,7 +103,7 @@ function makeHarness(
         maxSize: 500,
         clock: opts.clock,
     });
-    const coordinator = new CardCoordinator<Payload>({
+    const coordinator = new CardCoordinator<Payload, string>({
         source: 'card',
         positive: new LRUCache<string, string>({
             max: 500,

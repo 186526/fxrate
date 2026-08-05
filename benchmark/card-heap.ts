@@ -1,15 +1,22 @@
-// card-heap：Card（Visa/MasterCard）Proxy 矩阵与属性读取堆/吞吐基准。
-// build：实例化真实 visa/mastercard 类并强制构建 lazy matrix（约 168² + 152² 个 Proxy cell），
-//        GC 后测 retained heap（需要 --expose-gc；缺失时 gcAvailable=false、结果降级为非精确）。
-// access：以同样的「LRU 缓存 JSON 字符串 + Proxy 属性读取即 JSON.parse」模式合成镜像数据
-//        （不访问上游），测量逐 cell 属性读取吞吐与物化堆开销——对应 JSON.parse 热点。
+// card-heap：Card（Visa/MasterCard）稀疏类型化缓存 vs 旧密集 Proxy 矩阵的堆/吞吐基准。
+// baseline：重建 Phase 1/4 旧实现形态——LRU 存 JSON 字符串 + 全量 N² Proxy cell，
+//           字段读取即 JSON.parse；build 测 N² 单元格物化堆开销，access 测逐 cell 读取吞吐。
+// candidate：当前实现——稀疏矩阵（行/单元格按需物化，绝不全量构建）+ typed CardRate LRU
+//           （写缓存时一次性解析，字段读取零 JSON.parse）；build 测按需物化堆开销，
+//           access 用真实 createCardRateCell 读取 typed LRU。
 // 用法：node --expose-gc ./node_modules/.bin/tsx benchmark/card-heap.ts --pairs=500 --output=/tmp/fxrate-benchmark/heap-baseline.json
 
 import esMain from 'es-main';
 import { parseArgs } from 'node:util';
 import { LRUCache } from 'lru-cache';
+import { fraction } from 'mathjs';
 import visaFXM from '../src/FXGetter/visa';
 import mastercardFXM from '../src/FXGetter/mastercard';
+import {
+    createCardRateCellFactory,
+    type CardRate,
+} from '../src/FXGetter/cardCapacity';
+import type { FXRateType } from '../src/fxm/fxManager';
 import {
     environment,
     forceGc,
@@ -41,27 +48,117 @@ export function parseOptions(args: string[]): CardHeapOptions {
     };
 }
 
-function measureBuild() {
-    const visa = new visaFXM();
-    const mastercard = new mastercardFXM();
+interface DenseBuildResult {
+    cells: number;
+    gcAvailable: boolean;
+    retainedHeapMb: number;
+}
+
+// 旧实现单元格形态：N 个「LRU 存 JSON 字符串 + Proxy 字段读取即 JSON.parse」cell，全部保留引用。
+function measureDenseCells(count: number): DenseBuildResult {
+    const cache = new LRUCache<string, string>({ max: count });
+    const payload = JSON.stringify({ data: { fxRateVisa: '7.25' } });
+    for (let i = 0; i < count; i += 1) {
+        cache.set(`K${i}`, payload);
+    }
     const gcAvailable = forceGc();
     const heapBeforeMb = heapUsedMb();
-    const visaCells = Object.keys(visa.fxRateList).length ** 2;
-    const mastercardCells = Object.keys(mastercard.fxRateList).length ** 2;
+    const grid: Array<{ middle: number | undefined }> = [];
+    for (let i = 0; i < count; i += 1) {
+        const key = `K${i}`;
+        grid.push(
+            new Proxy({} as Record<string, number | undefined>, {
+                get: (_obj, prop) => {
+                    if (prop !== 'middle') return undefined;
+                    const cached = cache.get(key);
+                    if (!cached) return undefined;
+                    return Number(JSON.parse(cached).data.fxRateVisa);
+                },
+            }) as { middle: number | undefined },
+        );
+    }
     forceGc();
     const heapAfterMb = heapUsedMb();
+    cache.clear();
+    grid.length = 0;
     return {
+        cells: count,
         gcAvailable,
-        visaCells,
-        mastercardCells,
-        totalCells: visaCells + mastercardCells,
-        heapBeforeMb,
-        heapAfterMb,
         retainedHeapMb: heapAfterMb - heapBeforeMb,
     };
 }
 
-function measureAccess(pairs: number) {
+interface SparseBuildResult {
+    theoreticalCells: number;
+    touchedRows: number;
+    touchedCells: number;
+    touched: number;
+    gcAvailable: boolean;
+    retainedHeapMb: number;
+}
+
+// 当前实现：稀疏矩阵按需物化，仅触碰 pairs 个 pair 的堆开销。
+function measureSparseBuild(
+    fxm: visaFXM | mastercardFXM,
+    pairs: number,
+): SparseBuildResult {
+    const list = fxm.fxRateList;
+    const currencies = Object.keys(list);
+    const theoreticalCells = currencies.length ** 2;
+    const rows0 = fxm.sparseRows;
+    const cells0 = fxm.sparseCells;
+    const gcAvailable = forceGc();
+    const heapBeforeMb = heapUsedMb();
+    let touched = 0;
+    for (let i = 0; i < pairs; i += 1) {
+        const from = currencies[i % currencies.length];
+        const to = currencies[(i * 7 + 3) % currencies.length];
+        if (from === to) continue;
+        if (list[from][to] !== undefined) touched += 1;
+    }
+    forceGc();
+    const heapAfterMb = heapUsedMb();
+    return {
+        theoreticalCells,
+        touchedRows: fxm.sparseRows - rows0,
+        touchedCells: fxm.sparseCells - cells0,
+        touched,
+        gcAvailable,
+        retainedHeapMb: heapAfterMb - heapBeforeMb,
+    };
+}
+
+// 候选单元格形态：N 个「typed CardRate LRU + createCardRateCell live getter」cell，全部保留引用。
+function measureSparseCells(count: number): DenseBuildResult {
+    const cache = new LRUCache<string, CardRate>({ max: count });
+    const rate: CardRate = {
+        middle: fraction('7.25'),
+        cash: fraction('7.25'),
+        remit: fraction('7.25'),
+        updated: new Date(),
+    };
+    for (let i = 0; i < count; i += 1) {
+        cache.set(`K${i}`, rate);
+    }
+    const cellForKey = createCardRateCellFactory(cache);
+    const gcAvailable = forceGc();
+    const heapBeforeMb = heapUsedMb();
+    const grid: FXRateType[] = [];
+    for (let i = 0; i < count; i += 1) {
+        grid.push(cellForKey(`K${i}`));
+    }
+    forceGc();
+    const heapAfterMb = heapUsedMb();
+    cache.clear();
+    grid.length = 0;
+    return {
+        cells: count,
+        gcAvailable,
+        retainedHeapMb: heapAfterMb - heapBeforeMb,
+    };
+}
+
+function measureJsonParseAccess(pairs: number) {
     const cellCount = pairs * pairs;
     const cache = new LRUCache<string, string>({ max: cellCount });
     const payload = JSON.stringify({ data: { fxRateVisa: '7.25' } });
@@ -113,7 +210,77 @@ function measureAccess(pairs: number) {
     };
 }
 
+function measureTypedAccess(pairs: number) {
+    const cellCount = pairs * pairs;
+    const cache = new LRUCache<string, CardRate>({ max: cellCount });
+    const rate: CardRate = {
+        middle: fraction('7.25'),
+        cash: fraction('7.25'),
+        remit: fraction('7.25'),
+        updated: new Date(),
+    };
+    for (let i = 0; i < pairs; i += 1) {
+        for (let j = 0; j < pairs; j += 1) {
+            cache.set(`K${i}-K${j}`, rate);
+        }
+    }
+    const cellForKey = createCardRateCellFactory(cache);
+    const grid: FXRateType[] = [];
+    for (let i = 0; i < pairs; i += 1) {
+        for (let j = 0; j < pairs; j += 1) {
+            grid.push(cellForKey(`K${i}-K${j}`));
+        }
+    }
+    const gcAvailable = forceGc();
+    const heapBeforeMb = heapUsedMb();
+    const latencies: number[] = [];
+    let acc = 0;
+    const start = process.hrtime.bigint();
+    for (const cell of grid) {
+        const t0 = process.hrtime.bigint();
+        acc += Number(cell.middle) || 0;
+        latencies.push(Number(process.hrtime.bigint() - t0) / 1e6);
+    }
+    const wallMs = Number(process.hrtime.bigint() - start) / 1e6;
+    forceGc();
+    const heapAfterMb = heapUsedMb();
+    cache.clear();
+    return {
+        cells: cellCount,
+        gcAvailable,
+        heapBeforeMb,
+        heapAfterMb,
+        materializeHeapMb: heapAfterMb - heapBeforeMb,
+        wallMs,
+        opsPerSec: cellCount / (wallMs / 1000),
+        stats: summarize(latencies),
+        acc,
+    };
+}
+
 export async function run(opts: CardHeapOptions) {
+    const visa = new visaFXM();
+    const mastercard = new mastercardFXM();
+    const visaCells = Object.keys(visa.fxRateList).length ** 2;
+    const mastercardCells = Object.keys(mastercard.fxRateList).length ** 2;
+
+    const sparseCellVisa = measureSparseCells(visaCells);
+    const sparseCellMastercard = measureSparseCells(mastercardCells);
+    const sparseVisa = measureSparseBuild(visa, opts.pairs);
+    const sparseMastercard = measureSparseBuild(mastercard, opts.pairs);
+    const denseVisa = measureDenseCells(visaCells);
+    const denseMastercard = measureDenseCells(mastercardCells);
+
+    const baselineAccess = measureJsonParseAccess(opts.pairs);
+    const candidateAccess = measureTypedAccess(opts.pairs);
+
+    const denseMatrixHeapMb =
+        denseVisa.retainedHeapMb + denseMastercard.retainedHeapMb;
+    const sparseCellShapeHeapMb =
+        sparseCellVisa.retainedHeapMb + sparseCellMastercard.retainedHeapMb;
+    const sparseOnDemandHeapMb =
+        sparseVisa.retainedHeapMb + sparseMastercard.retainedHeapMb;
+
     return {
         name: 'card-heap',
         args: {
@@ -121,8 +288,50 @@ export async function run(opts: CardHeapOptions) {
             candidate: opts.candidate,
         },
         environment: environment(),
-        build: measureBuild(),
-        access: measureAccess(opts.pairs),
+        build: {
+            gcAvailable: sparseVisa.gcAvailable,
+            visaCells,
+            mastercardCells,
+            totalCells: visaCells + mastercardCells,
+            sparse: {
+                rows: sparseVisa.touchedRows + sparseMastercard.touchedRows,
+                cells: sparseVisa.touchedCells + sparseMastercard.touchedCells,
+            },
+            retainedHeapMb: sparseOnDemandHeapMb,
+        },
+        access: candidateAccess,
+        baseline: {
+            build: {
+                visa: denseVisa,
+                mastercard: denseMastercard,
+                totalRetainedHeapMb: denseMatrixHeapMb,
+            },
+            access: baselineAccess,
+        },
+        comparison: {
+            denseMatrixHeapMb,
+            sparseCellShapeHeapMb,
+            sparseOnDemandHeapMb,
+            cellShapeSavingMb: denseMatrixHeapMb - sparseCellShapeHeapMb,
+            cellShapeSavingPct:
+                denseMatrixHeapMb > 0
+                    ? (100 * (denseMatrixHeapMb - sparseCellShapeHeapMb)) /
+                      denseMatrixHeapMb
+                    : 0,
+            onDemandSavingMb: denseMatrixHeapMb - sparseOnDemandHeapMb,
+            onDemandSavingPct:
+                denseMatrixHeapMb > 0
+                    ? (100 * (denseMatrixHeapMb - sparseOnDemandHeapMb)) /
+                      denseMatrixHeapMb
+                    : 0,
+            baselineAccessOpsPerSec: baselineAccess.opsPerSec,
+            candidateAccessOpsPerSec: candidateAccess.opsPerSec,
+            accessSpeedupX:
+                baselineAccess.opsPerSec > 0
+                    ? candidateAccess.opsPerSec / baselineAccess.opsPerSec
+                    : 0,
+            parseEliminated: true,
+        },
     };
 }
 

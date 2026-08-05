@@ -5,9 +5,15 @@ import { LRUCache } from 'lru-cache';
 import { currency } from 'src/types.d';
 
 import { fetchTextViaChromium } from './chromiumFetcher';
-import { CardCoordinator, createCardNegativeCache } from './cardCapacity';
+import {
+    CardCoordinator,
+    createCardNegativeCache,
+    createCardSparseMatrix,
+    type CardRate,
+    type CardSparseStats,
+} from './cardCapacity';
 
-const cache = new LRUCache<string, string>({
+const cache = new LRUCache<string, CardRate>({
     max: 500,
     ttl: 1000 * 60 * 30,
     ttlAutopurge: true,
@@ -273,7 +279,7 @@ async function fetchVisaRateViaChromium(
 
 const normalizeCode = (code: string): string => (code === 'CNH' ? 'CNY' : code);
 
-export const visaCoordinator = new CardCoordinator<VisaPayload>({
+export const visaCoordinator = new CardCoordinator<VisaPayload, CardRate>({
     source: 'visa',
     positive: cache,
     negative: createCardNegativeCache(),
@@ -285,66 +291,53 @@ export const visaCoordinator = new CardCoordinator<VisaPayload>({
             throw new Error('Visa response missing fxRateVisa');
         }
     },
-    serialize: (payload) => JSON.stringify(payload),
+    // 上游响应写缓存时一次性解析为类型化 CardRate（Proxy 读取零 JSON.parse）：
+    // fxRateVisa 即「1 from = X to」（实测响应 originalValues.fromCurrency == from）。
+    serialize: (payload) => {
+        const value = fraction(Number(payload.originalValues?.fxRateVisa));
+        const updated = new Date(
+            (payload.originalValues?.lastUpdatedVisaRate ?? 0) * 1000,
+        );
+        return {
+            middle: value,
+            cash: value,
+            remit: value,
+            updated: Number.isFinite(updated.getTime()) ? updated : new Date(),
+        };
+    },
 });
 
 export default class visaFXM extends fxManager {
     ableToGetAllFXRate: boolean = false;
 
-    private _lazyMatrix: {
+    // 稀疏汇率矩阵（Phase 5）：行/单元格按需物化，绝不全量构建 N² 个 Proxy cell；
+    // 单元格是 typed 正缓存（CardRate）的 live getter 视图，字段读取零 JSON.parse。
+    private _sparseMatrix: {
         [from: string]: { [to: string]: FXRateType };
     } | null = null;
 
+    private readonly sparseStats: CardSparseStats = { rows: 0, cells: 0 };
+
+    /** 已物化的稀疏行数（测试/基准可观测）。 */
+    public get sparseRows(): number {
+        return this.sparseStats.rows;
+    }
+
+    /** 已物化的稀疏单元格数（测试/基准可观测）。 */
+    public get sparseCells(): number {
+        return this.sparseStats.cells;
+    }
+
     public get fxRateList() {
-        if (this._lazyMatrix) return this._lazyMatrix;
-
-        const fxRateList: fxManager['_fxRateList'] = {};
-
-        currenciesList.forEach((from) => {
-            fxRateList[from] = {};
-            currenciesList.forEach((to) => {
-                const _from = from == 'CNH' ? 'CNY' : from;
-                const _to = to == 'CNH' ? 'CNY' : to;
-
-                const currency = new Proxy({} as FXRateType, {
-                    get: (_obj, prop) => {
-                        if (
-                            !['cash', 'remit', 'middle', 'updated'].includes(
-                                prop.toString(),
-                            )
-                        ) {
-                            return undefined;
-                        }
-
-                        const cached = cache.get(`${_from}${_to}`);
-                        if (!cached) return undefined;
-
-                        const data = JSON.parse(cached) as VisaPayload;
-                        if (
-                            ['cash', 'remit', 'middle'].includes(
-                                prop.toString(),
-                            )
-                        ) {
-                            // fxRateVisa 即「1 from = X to」（实测响应 originalValues.fromCurrency == from）。
-                            return fraction(
-                                Number(data.originalValues?.fxRateVisa),
-                            );
-                        }
-                        const updated = new Date(
-                            (data.originalValues?.lastUpdatedVisaRate ?? 0) *
-                                1000,
-                        );
-                        return Number.isFinite(updated.getTime())
-                            ? updated
-                            : new Date();
-                    },
-                });
-                fxRateList[from][to] = currency;
-            });
-        });
-
-        this._lazyMatrix = fxRateList;
-        return fxRateList;
+        if (!this._sparseMatrix) {
+            this._sparseMatrix = createCardSparseMatrix(
+                currenciesList,
+                cache,
+                normalizeCode,
+                this.sparseStats,
+            );
+        }
+        return this._sparseMatrix;
     }
 
     public async getfxRateList(from: currency, to: currency) {
@@ -374,9 +367,8 @@ export default class visaFXM extends fxManager {
         super([]);
     }
 
-    // 同步可用数据判定：数据在模块级 LRU cache（不触碰 _fxRateList / fxRateList
-    // Proxy——物化 51k 单元格或读未预热矩阵都会误判）；缓存里有任何成功拉取的
-    // 记录即视为已加载可用数据。
+    // 同步可用数据判定：数据在模块级 typed LRU cache（不触碰 fxRateList 稀疏矩阵）；
+    // 缓存里有任何成功拉取的记录即视为已加载可用数据。
     public hasUsableData(): boolean {
         return cache.size > 0;
     }
