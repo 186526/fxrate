@@ -464,9 +464,32 @@ export default class fxManager {
         allowBFS: boolean = false,
     ): Promise<Fraction> {
         const FXPath = await this.getFXPath(from, to, allowBFS);
-        const path =
-            FXPath.path[0] === from ? FXPath.path : [from, ...FXPath.path];
-        const conversionPath = reverse ? [...path].reverse() : path;
+        return this.convertAlongPath(
+            from,
+            to,
+            type,
+            amount,
+            FXPath.path,
+            reverse,
+        );
+    }
+
+    // 复用已解析路径的换算（Phase 5 优化 #1 的核心 API）：getDetails 对
+    // cash/remit/middle 三次换算共用同一条 getFXPath 结果，不再由每次 convert
+    // 各自重新解析路径（单对请求路径解析次数 4 → 1）。
+    // path 为 getFXPath 返回的原始 path：直连=[to]、from===to=[from]、
+    // BFS 含 from（[from, ..., to]）；本方法按 convert 的既有归一规则补全
+    // from 前缀并处理 reverse 反转，逐段换算逻辑与 convert 完全一致。
+    async convertAlongPath(
+        from: currency,
+        to: currency,
+        type: 'cash' | 'remit' | 'middle',
+        amount: number,
+        path: currency[],
+        reverse: boolean = false,
+    ): Promise<Fraction> {
+        const normalized = path[0] === from ? path : [from, ...path];
+        const conversionPath = reverse ? [...normalized].reverse() : normalized;
 
         let current = conversionPath[0];
         let result = fraction(amount);

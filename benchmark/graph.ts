@@ -31,6 +31,34 @@ export function layeredWidth(nodeCount: number): number {
     return Math.max(1, Math.floor((nodeCount - 1) / LAYERS));
 }
 
+// 分层图各层节点名（与 buildGraph('layered') 的推导完全一致，单一事实来源）：
+// 第 l 层节点为 `${层字母}${base26(w, 2)}`（合法 3 位大写货币代码）。
+// details-bfs 用它精确采样 layer0→layer1（真实直连边）与 layer0→最后一层
+// （必须逐层遍历）——Object.keys 的插入序会跨层交错，不能拿来当层索引。
+function layerBase26(n: number, width: number): string {
+    let s = '';
+    let v = n;
+    do {
+        s = String.fromCharCode(65 + (v % 26)) + s;
+        v = Math.floor(v / 26);
+    } while (v > 0);
+    return s.padStart(width, 'A');
+}
+
+export function layerNodeNames(nodeCount: number): string[][] {
+    const W = layeredWidth(nodeCount);
+    const layerNames: string[][] = [];
+    for (let l = 0; l < LAYERS; l += 1) {
+        layerNames.push(
+            Array.from(
+                { length: W },
+                (_, w) => `${String.fromCharCode(65 + l)}${layerBase26(w, 2)}`,
+            ),
+        );
+    }
+    return layerNames;
+}
+
 export function buildGraph(nodeCount: number, topology: Topology): fxManager {
     if (nodeCount < 2) {
         throw new Error('nodeCount must be >= 2');
@@ -42,27 +70,8 @@ export function buildGraph(nodeCount: number, topology: Topology): fxManager {
     );
     const rates: FXRate[] = [];
     if (topology === 'layered') {
-        const W = layeredWidth(nodeCount);
-        // 合法 3 位大写货币代码：层字母（A/B/C/D）+ 两位 base-26 序号（AA..ZZ），
-        // 满足 fxManager.validateFXRate 的 ^[A-Z]{3}$ 契约，否则 update 会整批拒绝。
-        const base26 = (n: number, width: number): string => {
-            let s = '';
-            let v = n;
-            do {
-                s = String.fromCharCode(65 + (v % 26)) + s;
-                v = Math.floor(v / 26);
-            } while (v > 0);
-            return s.padStart(width, 'A');
-        };
-        const layerNames: string[][] = [];
-        for (let l = 0; l < LAYERS; l += 1) {
-            layerNames.push(
-                Array.from(
-                    { length: W },
-                    (_, w) => `${String.fromCharCode(65 + l)}${base26(w, 2)}`,
-                ),
-            );
-        }
+        // 各层节点名来自共享的 layerNodeNames（与 details-bfs 采样同一推导）。
+        const layerNames = layerNodeNames(nodeCount);
         for (let l = 0; l + 1 < LAYERS; l += 1) {
             for (const a of layerNames[l]) {
                 for (const b of layerNames[l + 1]) {

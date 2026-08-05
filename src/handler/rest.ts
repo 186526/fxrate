@@ -1,6 +1,6 @@
 import { request, response } from 'handlers.js';
 import fxManager, { type FXRateType } from '../fxm/fxManager';
-import { currency } from '../types';
+import { currency, type FXPath } from '../types';
 import { round, multiply, Fraction } from 'mathjs';
 
 import process from 'node:process';
@@ -85,15 +85,31 @@ export const getConvert = async (
     request: request<any>,
     amount: number = 100,
     fees: number = 0,
+    path?: currency[],
 ) => {
-    let answer = await fxManager.convert(
-        from,
-        to,
-        type as 'cash' | 'remit' | 'middle',
-        Number(request.query.get('amount')) || amount || 100,
-        request.query.has('reverse'),
-        request.query.get('bfs') === '1' || request.query.get('bfs') === 'true',
-    );
+    const amountValue = Number(request.query.get('amount')) || amount || 100;
+    const reverse = request.query.has('reverse');
+    const allowBFS =
+        request.query.get('bfs') === '1' || request.query.get('bfs') === 'true';
+    // path 由 getDetails 传入时走 convertAlongPath 复用已解析路径（不再重复 BFS）；
+    // 未传时保持原行为：convert 内部自行 getFXPath 解析。
+    let answer = path
+        ? await fxManager.convertAlongPath(
+              from,
+              to,
+              type as 'cash' | 'remit' | 'middle',
+              amountValue,
+              path,
+              reverse,
+          )
+        : await fxManager.convert(
+              from,
+              to,
+              type as 'cash' | 'remit' | 'middle',
+              amountValue,
+              reverse,
+              allowBFS,
+          );
     answer = multiply(
         answer,
         1 + (Number(request.query.get('fees')) || fees) / 100,
@@ -134,13 +150,16 @@ export const getDetails = async (
     // REST handler 据此设置 X-FXRate-Alias header（见 fxmManager），前端可提示「经 CNH 折算」。
     // hasPath 记录「存在可用路径（直连或 BFS）」，供下方价格计算判定——无直连报价
     // 但 BFS 可达时也要计算 cash/remit/middle，不能因为 rate undefined 就跳过。
+    // 路径在此只解析一次（Phase 5 优化 #1）：下方 cash/remit/middle 经 getConvert
+    // 传入 fxp.path 走 convertAlongPath 复用，不再由每次 convert 各自重新解析。
+    const allowBFS =
+        request.query.get('bfs') === '1' || request.query.get('bfs') === 'true';
+
+    let fxp: FXPath | undefined;
     let hasPath = false;
-    if (
-        request.query.get('bfs') === '1' ||
-        request.query.get('bfs') === 'true'
-    ) {
+    if (allowBFS) {
         try {
-            const fxp = await fxManager.getFXPath(from, to, true);
+            fxp = await fxManager.getFXPath(from, to, true);
             hasPath = fxp.path.length > 0;
             result.path = fxp.path.map(String);
             if (fxp.alias) result.alias = String(fxp.alias);
@@ -162,6 +181,15 @@ export const getDetails = async (
         } catch (_e) {
             result.path = [];
         }
+    } else if (rate !== undefined || from === to) {
+        // 非 bfs：仅当有直连报价或自换算时才需要路径（价格计算门）——同样解析
+        // 一次供三价复用；无路径（或 Card 源预热失败）时回落旧行为，价格降级 false。
+        try {
+            fxp = await fxManager.getFXPath(from, to, false);
+            hasPath = fxp.path.length > 0;
+        } catch (_e) {
+            fxp = undefined;
+        }
     }
     // 预热失败（Card 源上游 403/WAF/网络错误）时不再为每个 type 重复预热同一 pair：
     // 各 type 降级为 false 保持响应形状不变，避免单次 type=all 请求对该 pair 发起多次网络抓取。
@@ -179,6 +207,9 @@ export const getDetails = async (
                     type,
                     fxManager,
                     request,
+                    undefined,
+                    undefined,
+                    fxp?.path,
                 );
             } catch (_e) {
                 result[type] = false;
