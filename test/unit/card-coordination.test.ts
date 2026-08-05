@@ -59,6 +59,7 @@ interface Harness {
     chromiumWorkflow?: ReturnType<typeof jest.fn>;
     validate: ReturnType<typeof jest.fn>;
     serialize: ReturnType<typeof jest.fn>;
+    validateStored?: (stored: string) => void;
     nativeExecutor: BoundedExecutor;
     chromiumExecutor?: BoundedExecutor;
     negative: NegativeBackoffCache;
@@ -72,6 +73,7 @@ function makeHarness(
         chromiumLimit?: number;
         chromiumQueue?: number;
         clock?: BackoffClock;
+        validateStored?: (stored: string) => void;
     } = {},
 ): Harness {
     const nativeWorkflow = jest.fn(
@@ -115,6 +117,7 @@ function makeHarness(
         chromiumWorkflow: opts.withChromium ? chromiumWorkflow : undefined,
         validate,
         serialize,
+        validateStored: opts.validateStored,
         nativeExecutor,
         chromiumExecutor,
     });
@@ -124,6 +127,7 @@ function makeHarness(
         chromiumWorkflow,
         validate,
         serialize,
+        validateStored: opts.validateStored,
         nativeExecutor,
         chromiumExecutor,
         negative,
@@ -188,6 +192,59 @@ describe('CardCoordinator ordering (positive LRU -> negative blocked -> single-f
             JSON.stringify({ value: 'native' }),
         );
         expect(h.negative.size).toBe(0);
+    });
+
+    test('success path runs validateStored on the serialized value after serialize', async () => {
+        const fc = fakeClock(1_000_000);
+        const h = makeHarness({
+            clock: fc.clock,
+            validateStored: jest.fn(() => undefined),
+        });
+        await h.coordinator.get('USD', 'CNY');
+        expect(h.serialize).toHaveBeenCalledTimes(1);
+        expect(h.validateStored).toHaveBeenCalledTimes(1);
+        expect(h.validateStored).toHaveBeenCalledWith(
+            JSON.stringify({ value: 'native' }),
+        );
+        expect(h.coordinator.positive.get('USDCNY')).toBe(
+            JSON.stringify({ value: 'native' }),
+        );
+        expect(h.negative.size).toBe(0);
+    });
+
+    test('validateStored failure records negative and never writes positive', async () => {
+        const h = makeHarness({
+            validateStored: jest.fn(() => {
+                throw new Error('invalid stored rate');
+            }),
+        });
+        await expect(h.coordinator.get('USD', 'CNY')).rejects.toThrow(
+            'invalid stored rate',
+        );
+        expect(h.coordinator.positive.has('USDCNY')).toBe(false);
+        expect(h.negative.blocked('card:USD:CNY')).toBeDefined();
+        expect(
+            (h.negative.blocked('card:USD:CNY')?.lastError as Error).message,
+        ).toBe('invalid stored rate');
+    });
+
+    test('validateStored failure does not poison the negative cache across different keys', async () => {
+        const h = makeHarness({
+            validateStored: jest.fn((stored: string) => {
+                if (stored.includes('bad')) {
+                    throw new Error('invalid stored rate');
+                }
+            }),
+        });
+        h.nativeWorkflow.mockImplementationOnce(async () => ({ value: 'bad' }));
+        await expect(h.coordinator.get('USD', 'CNY')).rejects.toThrow(
+            'invalid stored rate',
+        );
+        await h.coordinator.get('EUR', 'CNY'); // 正常值不受影响
+        expect(h.coordinator.positive.get('EURCNY')).toBe(
+            JSON.stringify({ value: 'native' }),
+        );
+        expect(h.coordinator.positive.has('USDCNY')).toBe(false);
     });
 
     test('failed workflow records negative and rethrows the same error', async () => {

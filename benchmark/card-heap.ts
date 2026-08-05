@@ -3,7 +3,9 @@
 //           字段读取即 JSON.parse；build 测 N² 单元格物化堆开销，access 测逐 cell 读取吞吐。
 // candidate：当前实现——稀疏矩阵（行/单元格按需物化，绝不全量构建）+ typed CardRate LRU
 //           （写缓存时一次性解析，字段读取零 JSON.parse）；build 测按需物化堆开销，
-//           access 用真实 createCardRateCell 读取 typed LRU。
+//           access 用真实 createCardRateCell 读取 typed LRU（每次读取克隆 Fraction/Date）。
+// denseTyped：FXRATE_CARD_DENSE_MATRIX=1 回退的全量 typed 密集矩阵（一次性物化 N² 个
+//           live typed 单元格）——量化回退旗标的堆成本。
 // 用法：node --expose-gc ./node_modules/.bin/tsx benchmark/card-heap.ts --pairs=500 --output=/tmp/fxrate-benchmark/heap-baseline.json
 
 import esMain from 'es-main';
@@ -13,6 +15,7 @@ import { fraction } from 'mathjs';
 import visaFXM from '../src/FXGetter/visa';
 import mastercardFXM from '../src/FXGetter/mastercard';
 import {
+    createCardDenseMatrix,
     createCardRateCellFactory,
     type CardRate,
 } from '../src/FXGetter/cardCapacity';
@@ -158,6 +161,32 @@ function measureSparseCells(count: number): DenseBuildResult {
     };
 }
 
+interface DenseTypedBuildResult {
+    rows: number;
+    cells: number;
+    gcAvailable: boolean;
+    retainedHeapMb: number;
+}
+
+// 回退实现（FXRATE_CARD_DENSE_MATRIX=1）：全量 N×N typed 密集矩阵，行/格一次性物化。
+function measureDenseTypedBuild(
+    currencies: readonly string[],
+    cache: LRUCache<string, CardRate>,
+    normalize: (code: string) => string,
+): DenseTypedBuildResult {
+    const gcAvailable = forceGc();
+    const heapBeforeMb = heapUsedMb();
+    const matrix = createCardDenseMatrix(currencies, cache, normalize);
+    forceGc();
+    const heapAfterMb = heapUsedMb();
+    return {
+        rows: currencies.length,
+        cells: currencies.length ** 2,
+        gcAvailable,
+        retainedHeapMb: heapAfterMb - heapBeforeMb,
+    };
+}
+
 function measureJsonParseAccess(pairs: number) {
     const cellCount = pairs * pairs;
     const cache = new LRUCache<string, string>({ max: cellCount });
@@ -261,8 +290,11 @@ function measureTypedAccess(pairs: number) {
 export async function run(opts: CardHeapOptions) {
     const visa = new visaFXM();
     const mastercard = new mastercardFXM();
-    const visaCells = Object.keys(visa.fxRateList).length ** 2;
-    const mastercardCells = Object.keys(mastercard.fxRateList).length ** 2;
+    const visaCurrencies = Object.keys(visa.fxRateList);
+    const mastercardCurrencies = Object.keys(mastercard.fxRateList);
+    const visaCells = visaCurrencies.length ** 2;
+    const mastercardCells = mastercardCurrencies.length ** 2;
+    const normalize = (code: string): string => (code === 'CNH' ? 'CNY' : code);
 
     const sparseCellVisa = measureSparseCells(visaCells);
     const sparseCellMastercard = measureSparseCells(mastercardCells);
@@ -270,12 +302,24 @@ export async function run(opts: CardHeapOptions) {
     const sparseMastercard = measureSparseBuild(mastercard, opts.pairs);
     const denseVisa = measureDenseCells(visaCells);
     const denseMastercard = measureDenseCells(mastercardCells);
+    const denseTypedVisa = measureDenseTypedBuild(
+        visaCurrencies,
+        new LRUCache<string, CardRate>({ max: visaCells }),
+        normalize,
+    );
+    const denseTypedMastercard = measureDenseTypedBuild(
+        mastercardCurrencies,
+        new LRUCache<string, CardRate>({ max: mastercardCells }),
+        normalize,
+    );
 
     const baselineAccess = measureJsonParseAccess(opts.pairs);
     const candidateAccess = measureTypedAccess(opts.pairs);
 
     const denseMatrixHeapMb =
         denseVisa.retainedHeapMb + denseMastercard.retainedHeapMb;
+    const denseTypedMatrixHeapMb =
+        denseTypedVisa.retainedHeapMb + denseTypedMastercard.retainedHeapMb;
     const sparseCellShapeHeapMb =
         sparseCellVisa.retainedHeapMb + sparseCellMastercard.retainedHeapMb;
     const sparseOnDemandHeapMb =
@@ -308,8 +352,16 @@ export async function run(opts: CardHeapOptions) {
             },
             access: baselineAccess,
         },
+        denseTypedRollback: {
+            build: {
+                visa: denseTypedVisa,
+                mastercard: denseTypedMastercard,
+                totalRetainedHeapMb: denseTypedMatrixHeapMb,
+            },
+        },
         comparison: {
             denseMatrixHeapMb,
+            denseTypedMatrixHeapMb,
             sparseCellShapeHeapMb,
             sparseOnDemandHeapMb,
             cellShapeSavingMb: denseMatrixHeapMb - sparseCellShapeHeapMb,
@@ -322,6 +374,11 @@ export async function run(opts: CardHeapOptions) {
             onDemandSavingPct:
                 denseMatrixHeapMb > 0
                     ? (100 * (denseMatrixHeapMb - sparseOnDemandHeapMb)) /
+                      denseMatrixHeapMb
+                    : 0,
+            denseTypedVsDenseJsonSavingPct:
+                denseMatrixHeapMb > 0
+                    ? (100 * (denseMatrixHeapMb - denseTypedMatrixHeapMb)) /
                       denseMatrixHeapMb
                     : 0,
             baselineAccessOpsPerSec: baselineAccess.opsPerSec,

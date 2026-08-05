@@ -7,8 +7,9 @@ import { currency } from 'src/types.d';
 import { fetchTextViaChromium } from './chromiumFetcher';
 import {
     CardCoordinator,
+    createCardMatrix,
     createCardNegativeCache,
-    createCardSparseMatrix,
+    validateCardRate,
     type CardRate,
     type CardSparseStats,
 } from './cardCapacity';
@@ -295,16 +296,24 @@ export const visaCoordinator = new CardCoordinator<VisaPayload, CardRate>({
     // fxRateVisa 即「1 from = X to」（实测响应 originalValues.fromCurrency == from）。
     serialize: (payload) => {
         const value = fraction(Number(payload.originalValues?.fxRateVisa));
-        const updated = new Date(
-            (payload.originalValues?.lastUpdatedVisaRate ?? 0) * 1000,
-        );
+        // lastUpdatedVisaRate 缺失/非有限/非正数 → Invalid Date，由 validateStored 拒进
+        // 正缓存（绝不让缺失时间戳静默变成 epoch/当前时间）。
+        const ts = payload.originalValues?.lastUpdatedVisaRate;
+        const updated =
+            typeof ts === 'number' && Number.isFinite(ts) && ts > 0
+                ? new Date(ts * 1000)
+                : new Date(Number.NaN);
         return {
             middle: value,
             cash: value,
             remit: value,
-            updated: Number.isFinite(updated.getTime()) ? updated : new Date(),
+            updated,
         };
     },
+    // 最终校验门：写正缓存前对序列化后的 CardRate 把关——报价必须有限正数、
+    // updated 必须合法且非未来；畸形 payload（NaN/Infinity/Invalid Date/负价）抛错
+    // 进负缓存、绝不写正缓存。
+    validateStored: validateCardRate,
 });
 
 export default class visaFXM extends fxManager {
@@ -330,7 +339,7 @@ export default class visaFXM extends fxManager {
 
     public get fxRateList() {
         if (!this._sparseMatrix) {
-            this._sparseMatrix = createCardSparseMatrix(
+            this._sparseMatrix = createCardMatrix(
                 currenciesList,
                 cache,
                 normalizeCode,

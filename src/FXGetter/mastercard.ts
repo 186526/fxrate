@@ -6,8 +6,9 @@ import { currency } from 'src/types.d';
 
 import {
     CardCoordinator,
+    createCardMatrix,
     createCardNegativeCache,
-    createCardSparseMatrix,
+    validateCardRate,
     type CardRate,
     type CardSparseStats,
 } from './cardCapacity';
@@ -117,13 +118,24 @@ export const mastercardCoordinator = new CardCoordinator<
             fraction(data.data.transAmt),
             fraction(data.data.conversionRate),
         ) as Fraction;
+        // fxDate 缺失/空/非字符串 → Invalid Date（new Date(null) 会变 epoch，必须显式拒），
+        // 由 validateStored 拒进正缓存。
+        const fxDate = data.data?.fxDate;
+        const updated =
+            typeof fxDate === 'string' && fxDate.length > 0
+                ? new Date(fxDate)
+                : new Date(Number.NaN);
         return {
             middle: rate,
             cash: rate,
             remit: rate,
-            updated: new Date(data.data.fxDate),
+            updated,
         };
     },
+    // 最终校验门：写正缓存前对序列化后的 CardRate 把关——报价必须有限正数、
+    // updated 必须合法且非未来；畸形 payload（NaN/Infinity/Invalid Date/负价）抛错
+    // 进负缓存、绝不写正缓存。
+    validateStored: validateCardRate,
 });
 
 const currenciesList: string[] = [
@@ -286,6 +298,7 @@ export default class mastercardFXM extends fxManager {
 
     // 稀疏汇率矩阵（Phase 5）：行/单元格按需物化，绝不全量构建 N² 个 Proxy cell；
     // 单元格是 typed 正缓存（CardRate）的 live getter 视图，字段读取零 JSON.parse。
+    // FXRATE_CARD_DENSE_MATRIX=1 时回退全量 typed 密集矩阵（排查稀疏差异用）。
     private _sparseMatrix: {
         [from: string]: { [to: string]: FXRateType };
     } | null = null;
@@ -304,7 +317,7 @@ export default class mastercardFXM extends fxManager {
 
     public get fxRateList() {
         if (!this._sparseMatrix) {
-            this._sparseMatrix = createCardSparseMatrix(
+            this._sparseMatrix = createCardMatrix(
                 currenciesList,
                 cache,
                 normalizeCode,
