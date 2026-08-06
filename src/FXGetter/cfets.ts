@@ -32,8 +32,14 @@ const getCFETSFXRates = async (): Promise<FXRate[]> => {
 
     return data.records
         .map((r) => {
-            const [from, to] = r.vrtEName.split('/');
-            if (!from || !to) return null;
+            const [fromRaw, to] = r.vrtEName.split('/');
+            if (!fromRaw || !to) return null;
+            // 上游 JPY 行代码带单位前缀（"100JPY" 表示 100 JPY = X CNY）：
+            // 解析数字前缀为 unit、代码取 3 位 ISO 部分，否则严格校验拒绝整批。
+            const m = /^(\d*)([A-Z]{3})$/.exec(fromRaw.trim());
+            if (!m) return null;
+            const from = m[2];
+            const unit = m[1] ? Number(m[1]) : 1;
             const middle = parseFloat(r.price);
             if (!Number.isFinite(middle) || middle <= 0) return null;
             return {
@@ -44,7 +50,7 @@ const getCFETSFXRates = async (): Promise<FXRate[]> => {
                 rate: {
                     middle,
                 },
-                unit: 1,
+                unit: unit as FXRate['unit'],
                 updated: date,
             } as FXRate;
         })
