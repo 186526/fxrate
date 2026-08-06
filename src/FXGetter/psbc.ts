@@ -40,9 +40,30 @@ const getPSBCFXRates = async () => {
         res.data.replaceAll('empty(', '').replaceAll(')', ''),
     ).resultList;
 
+    // 上游所有报价字段都是字符串（如 "673.4300"，百单位口径，flag==2 为人民币兑外币
+    // 即购汇方向）：必须转 number，否则 Phase 3 严格校验整批拒绝。部分货币某些字段为
+    // 空串（如 fc_sell_prc）——任一映射字段缺失/非正数则跳过该行，避免单行坏数据
+    // 拖垮整源（旧实现整批失败导致该源 pending）。
+    const toNumber = (v: unknown): number | null => {
+        const n = Number(v);
+        return Number.isFinite(n) && n > 0 ? n : null;
+    };
+
     const answer = data
         .filter((k: psbcRateItem) => k.flag == 2)
         .map((fx: psbcRateItem) => {
+            const buyRemit = toNumber(fx.fe_buy_prc);
+            const buyCash = toNumber(fx.fc_buy_prc);
+            const sell = toNumber(fx.fe_sell_prc);
+            const middle = toNumber(fx.mid_prc);
+            if (
+                buyRemit == null ||
+                buyCash == null ||
+                sell == null ||
+                middle == null
+            ) {
+                return null;
+            }
             return {
                 currency: {
                     from: fx.cur as unknown as currency.unknown,
@@ -50,14 +71,14 @@ const getPSBCFXRates = async () => {
                 },
                 rate: {
                     buy: {
-                        remit: fx.fe_buy_prc,
-                        cash: fx.fc_buy_prc,
+                        remit: buyRemit,
+                        cash: buyCash,
                     },
                     sell: {
-                        remit: fx.fe_sell_prc,
-                        cash: fx.fe_sell_prc,
+                        remit: sell,
+                        cash: sell,
                     },
-                    middle: fx.mid_prc,
+                    middle,
                 },
                 unit: 100,
                 updated: parseYYYYMMDDHHmmss(
@@ -65,6 +86,7 @@ const getPSBCFXRates = async () => {
                 ),
             } as FXRate;
         })
+        .filter((fx): fx is FXRate => fx !== null)
         .sort();
 
     return answer;
