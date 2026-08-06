@@ -1,5 +1,13 @@
 import process from 'node:process';
 import http from 'node:http';
+import dns from 'node:dns';
+
+// 上游抓取统一走 IPv4 优先（Happy Eyeballs）：部分银行域名（如 www.bankcomm.com）
+// 的 AAAA 记录优先于 A 记录，而无 IPv6 出口的集群（k8s/K3s 常见）连接 IPv6 会
+// 一直超时到 axios 10s 上限——实测 bocom 上游在 pod 内解析到 IPv6 后 fetch 超时、
+// 本地解析到 IPv4 秒回。setDefaultResultOrder 影响全局默认解析顺序（node:http/
+// axios/undici 均生效），避免逐个 getter 打补丁。
+dns.setDefaultResultOrder('ipv4first');
 
 // 未捕获的 rejection/异常记录日志后以非零码退出（supervisor 语义：pm2/Docker 检测到
 // 退出码后自动重启），不再「只记录不退出」——后者会掩盖真实故障让进程带病存活。
