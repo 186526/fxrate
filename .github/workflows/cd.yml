@@ -73,6 +73,13 @@ jobs:
             type=sha
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') }}
 
+      # GHA cache export（--cache-to type=gha）需要 docker-container 驱动：
+      # runner 默认 docker 驱动会报 "Cache export is not supported for the docker driver"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
       # 只构建不推送（load 进本地 daemon 供 smoke），smoke 通过后对同一批 tag 逐个
       # docker push——同一构建产物，绝不二次构建。cache-from/to 加速热 runner 复建。
       - name: Build release image (no push)
