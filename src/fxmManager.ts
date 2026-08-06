@@ -984,9 +984,15 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                 ? fxm.hasUsableData()
                 : true;
         });
+        // 只有「关键源」降级才阻塞就绪：非关键源（如 hkma 月频滞后、jcb/ecb 日频
+        // 偶发陈旧）数据天然偏旧，标 degraded 是如实反映陈旧度，但不该让整个服务
+        // 永久 503——否则 /info 探针永远不绿。degraded 列表仍如实列出全部降级源。
+        const degradedCritical = degraded.filter((source) =>
+            criticalSources.includes(source),
+        );
         return {
             ready:
-                degraded.length === 0 &&
+                degradedCritical.length === 0 &&
                 missing.length === 0 &&
                 pending.length === 0,
             degraded,

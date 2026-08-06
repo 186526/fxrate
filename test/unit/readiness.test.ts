@@ -456,3 +456,29 @@ describe('lazy FXM readiness (hasUsableData contract)', () => {
         expect(res2.body['pending']).toEqual([]);
     });
 });
+
+describe('fxmManager readiness critical-only degraded policy', () => {
+    test('non-critical source stale-degraded does NOT block ready (e.g. hkma monthly)', () => {
+        const sources = makeSources();
+        sources['hkma'] = noopGetter;
+        const manager = makeManager(sources);
+        // 只有 hkma（非关键源）数据陈旧 → 标 degraded，但不阻塞就绪
+        manager.restoreSnapshot(
+            { hkma: rateCell(new Date(Date.now() - 40 * 24 * 3_600_000)) },
+            { staleRateAgeMs: 24 * 3_600_000 },
+        );
+        expect(manager.isDegraded('hkma')).toBe(true);
+        const report = manager.readiness();
+        expect(report.degraded).toEqual(['hkma']);
+        expect(report.ready).toBe(true);
+    });
+
+    test('critical source stale-degraded still blocks ready', () => {
+        const manager = makeManager();
+        manager.restoreSnapshot(
+            { boc: rateCell(new Date(Date.now() - 10 * 24 * 3_600_000)) },
+            { staleRateAgeMs: 24 * 3_600_000 },
+        );
+        expect(manager.readiness().ready).toBe(false);
+    });
+});
