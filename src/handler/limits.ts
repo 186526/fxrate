@@ -22,7 +22,7 @@ import { recordRpcRejection } from '../metrics';
 
 export const MAX_REQUEST_BODY_BYTES = 256 * 1024;
 
-export const RPC_MAX_BATCH_SIZE = 100;
+export const RPC_MAX_BATCH_SIZE = 150;
 export const RPC_MAX_EXPENSIVE_CARD_ITEMS = 20;
 export const RPC_EXPENSIVE_CARD_SOURCES = new Set(['visa', 'mastercard']);
 

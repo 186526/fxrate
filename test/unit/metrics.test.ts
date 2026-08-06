@@ -245,7 +245,7 @@ describe('GET /metrics', () => {
         const rejected = await postJson(
             port,
             '/v1/jsonrpc',
-            Array.from({ length: 101 }, (_, index) => ({
+            Array.from({ length: 151 }, (_, index) => ({
                 jsonrpc: '2.0',
                 id: index,
                 method: 'instanceInfo',
