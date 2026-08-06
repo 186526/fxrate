@@ -143,8 +143,10 @@ describe('fxManager.update strict input validation', () => {
             rate: makeRate({ rate: undefined as never }),
         },
         {
-            name: 'string middle',
-            rate: makeRate({ rate: { middle: '7.5' as never } }),
+            // 数字字符串已被 update() 归一接受（见 numeric-string normalization 用例）；
+            // 非数字字符串仍必须拒绝，保持原子回滚语义
+            name: 'non-numeric string middle',
+            rate: makeRate({ rate: { middle: 'abc' as never } }),
         },
     ];
 
@@ -396,5 +398,63 @@ describe('fxManager.update CNY/CNH alias write semantics', () => {
         const eur = m.fxRateList['EUR' as currency.EUR];
         expect(eur).toBeDefined();
         expect(Number(eur['CNH' as currency.CNH]?.middle)).toBeCloseTo(7.6, 10);
+    });
+});
+
+describe('fxManager.update numeric-string rate normalization', () => {
+    test('string quote values are coerced to numbers and stored correctly', () => {
+        const m = new fxManager([]);
+        // 上游银行 API 常返回字符串报价（如 "673.4300"），getter 可能未转 number
+        m.update(
+            makeRate({
+                rate: {
+                    buy: {
+                        cash: '6.85' as unknown as number,
+                        remit: '6.9' as unknown as number,
+                    },
+                    sell: {
+                        cash: '7.0' as unknown as number,
+                        remit: '7.05' as unknown as number,
+                    },
+                    middle: '6.95' as unknown as number,
+                },
+            }),
+        );
+        const usd = m.fxRateList['USD' as currency.USD];
+        expect(Number(usd['CNY' as currency.CNY]?.middle)).toBeCloseTo(
+            6.95,
+            10,
+        );
+        expect(Number(usd['CNY' as currency.CNY]?.cash)).toBeCloseTo(6.85, 10);
+        expect(Number(usd['CNY' as currency.CNY]?.remit)).toBeCloseTo(6.9, 10);
+    });
+
+    test('non-numeric strings are still rejected (validation not weakened)', () => {
+        const m = new fxManager([]);
+        const before = snapshotClone(m);
+        expect(() =>
+            m.update(
+                makeRate({
+                    rate: {
+                        buy: { cash: 'abc' as unknown as number },
+                        middle: 7,
+                    },
+                }),
+            ),
+        ).toThrow(/Invalid FXRate/);
+        expect(snapshotClone(m)).toEqual(before);
+    });
+
+    test('empty-string quote coerces to 0 and is rejected atomically', () => {
+        const m = new fxManager([]);
+        const before = snapshotClone(m);
+        expect(() =>
+            m.update(
+                makeRate({
+                    rate: { buy: { cash: '' as unknown as number }, middle: 7 },
+                }),
+            ),
+        ).toThrow(/Invalid FXRate/);
+        expect(snapshotClone(m)).toEqual(before);
     });
 });

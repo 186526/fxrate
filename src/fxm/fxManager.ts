@@ -203,6 +203,33 @@ export default class fxManager {
     public update(FXRate: FXRate): void {
         if (FXRate === null) return;
 
+        // 上游字符串价归一：多数银行 API 返回字符串报价（如 "673.4300"），部分 getter
+        // 未转 number。把 buy/sell/middle 中的数字字符串统一转 number 再走严格校验——
+        // 非数字字符串（NaN/字母/空串→0）仍会被 validateFXRate 拒绝，不弱化校验契约。
+        const normalizeNumeric = (v: unknown): unknown =>
+            typeof v === 'string' && Number.isFinite(Number(v)) ? Number(v) : v;
+        if (FXRate.rate) {
+            if (FXRate.rate.buy) {
+                FXRate.rate.buy.cash = normalizeNumeric(
+                    FXRate.rate.buy.cash,
+                ) as typeof FXRate.rate.buy.cash;
+                FXRate.rate.buy.remit = normalizeNumeric(
+                    FXRate.rate.buy.remit,
+                ) as typeof FXRate.rate.buy.remit;
+            }
+            if (FXRate.rate.sell) {
+                FXRate.rate.sell.cash = normalizeNumeric(
+                    FXRate.rate.sell.cash,
+                ) as typeof FXRate.rate.sell.cash;
+                FXRate.rate.sell.remit = normalizeNumeric(
+                    FXRate.rate.sell.remit,
+                ) as typeof FXRate.rate.sell.remit;
+            }
+            FXRate.rate.middle = normalizeNumeric(
+                FXRate.rate.middle,
+            ) as typeof FXRate.rate.middle;
+        }
+
         // 严格输入校验：任何非法数据在此抛错，尚未触碰 _fxRateList。
         this.validateFXRate(FXRate);
 
