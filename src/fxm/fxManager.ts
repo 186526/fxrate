@@ -508,6 +508,97 @@ export default class fxManager {
         return result;
     }
 
+    // 单次遍历枚举从 from 出发的全部可达目标及其路径（Phase 5 优化 #2 的核心 API）：
+    // listFXRates 的 bfs=1 全表由 handlerCurrencyAllFXRates 调用本方法一次，
+    // 得到全部目标的预解析路径后逐目标走 convertAlongPath，替代「每个目标重跑一次 BFS」。
+    // 语义与逐目标 getFXPath(from, to, allowBFS) 完全一致：
+    // - allowBFS=false：仅直连邻居（path=[to]），to==from 自环不返回；
+    // - allowBFS=true：单次 BFS（游标队列 + 前驱 Map，与 getFXPath 同遍历规则）枚举
+    //   全部可达节点，path 含 from 起点；起点别名（from 不在图但别名在，如 CNY→CNH）
+    //   与目标即起点别名（node 是 from 的别名时返回 path=[node]、alias=from，等价于
+    //   getFXPath 在起点即命中别名目标）均按 getFXPath 规则处理。
+    // oneWay 源（如 alipay 仅 CNY→USD）不写反向边，USD 出发不可达 CNY——
+    // 枚举天然不产生伪反向行（反向边不存在，BFS 无从经过）。
+    public async getAllReachable(
+        from: currency,
+        allowBFS: boolean = false,
+    ): Promise<{ [to: string]: FXPath }> {
+        const ALIAS_MAP: Partial<Record<string, currency>> = {
+            CNY: 'CNH' as currency.CNH,
+            CNH: 'CNY' as currency.CNY,
+        };
+
+        const result: { [to: string]: FXPath } = {};
+
+        // 起点别名（与 getFXPath 一级 fallback 相同）：from 不在图里但别名在。
+        const fromNode = this.fxRateList[from];
+        let startAlias: currency | undefined;
+        if (!(from in this.fxRateList)) {
+            startAlias = ALIAS_MAP[from as string];
+        }
+        // 直连邻居 = 解析后 from 节点的出边（Proxy get 别名 fallback 已解析）。
+        const neighbors = Object.keys(fromNode ?? {}) as currency[];
+
+        if (!allowBFS) {
+            for (const to of neighbors) {
+                if (to === from) continue;
+                const fxp: FXPath = { from, end: to, path: [to] };
+                if (startAlias) fxp.alias = startAlias;
+                result[to] = fxp;
+            }
+            return result;
+        }
+
+        const queue: currency[] = [from];
+        let head = 0;
+        const prev = new Map<currency, currency>();
+        prev.set(from, from);
+        const discovered: currency[] = [from];
+
+        while (head < queue.length) {
+            const current = queue[head];
+            head += 1;
+            const currentNeighbors = Object.keys(
+                this.fxRateList[current] ?? {},
+            ) as currency[];
+            for (const neighbor of currentNeighbors) {
+                if (neighbor === current) continue;
+                if (!prev.has(neighbor)) {
+                    prev.set(neighbor, current);
+                    queue.push(neighbor);
+                    discovered.push(neighbor);
+                }
+            }
+        }
+
+        for (const node of discovered) {
+            if (node === from) continue;
+            // 直连边：getFXPath 在 BFS 前就短路返回 path=[to]（无 from 前缀），
+            // 遍历同样归一——保证 bfs=1 全表的直连行 wire 输出与逐目标解析一致。
+            if (
+                fromNode &&
+                (node in fromNode || (await this.fxRateList[from][node]))
+            ) {
+                const fxp: FXPath = { from, end: node, path: [node] };
+                if (startAlias) fxp.alias = startAlias;
+                result[node] = fxp;
+                continue;
+            }
+            const path: currency[] = [];
+            let cur: currency = node;
+            while (cur !== from) {
+                path.push(cur);
+                cur = prev.get(cur) as currency;
+            }
+            path.push(from);
+            path.reverse();
+            const fxp: FXPath = { from, end: node, path };
+            if (startAlias) fxp.alias = startAlias;
+            result[node] = fxp;
+        }
+        return result;
+    }
+
     public async getUpdatedDate(from: currency, to: currency): Promise<Date> {
         if (!(await this.fxRateList[from][to])) {
             throw new Error(`FX Path from ${from} to ${to} not found`);

@@ -23,6 +23,7 @@ import {
     getConvert,
     getDetails,
     bodyToString,
+    sortObject,
 } from './handler/rest';
 import {
     countExpensiveCardItems,
@@ -141,22 +142,39 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
     public readonly snapshotWriter: SnapshotWriter;
     private stopping = false;
 
+    // JSON-RPC 直调领域方法（Phase 5 优化 #6）：不再经 useInternalRestAPI 的
+    // 合成 GET → REST 路由 → useJson sortObject → stringify → parse 往返，直接
+    // 构造带查询串的轻量 request 供 getDetails/getConvert 读取，并用 sortObject
+    // 复刻 REST 的键排序，保证 wire 形状与既有 RPC 完全一致（rpc-rest-parity 锁）。
+    // 单类型换算失败返回 null：v2ToHandler 把 falsy 顶层 result 转 null，
+    // 而 REST 单类型返回 "false" 纯文本——两传输语义各自保持（parity 测试锁定）。
     protected rpcHandlers = {
-        instanceInfo: () => useInternalRestAPI('info', this),
-
-        listCurrencies: ({ source }: { source: string }) => {
-            if (!source) throw new Error('source is required.');
-
-            return useInternalRestAPI(`${source}/`, this).then(
-                (k) =>
-                    new Object({
-                        currency: k.currency,
-                        date: k.date,
-                    }),
-            );
+        instanceInfo: () => {
+            const report = this.readiness();
+            return sortObject({
+                status: report.ready ? 'ok' : 'degraded',
+                ready: report.ready,
+                degraded: report.degraded,
+                missing: report.missing,
+                pending: report.pending,
+                sources: Object.keys(this.fxms),
+                version: `fxrate@${globalThis.GITBUILD || 'git'} ${globalThis.BUILDTIME || 'devlopment'}`,
+                apiVersion: 'v1',
+                environment: process.env.NODE_ENV || 'development',
+            });
         },
 
-        listFXRates: ({
+        listCurrencies: async ({ source }: { source: string }) => {
+            if (!source) throw new Error('source is required.');
+            if (!this.has(source)) return {};
+            const fxm = await this.requestFXManager(source);
+            return {
+                currency: Object.keys(fxm.fxRateList).sort(),
+                date: new Date().toUTCString(),
+            };
+        },
+
+        listFXRates: async ({
             source,
             from,
             precision = 2,
@@ -175,14 +193,51 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
         }) => {
             if (!source) throw new Error('source is required.');
             if (!from) throw new Error('from is required.');
-
-            return useInternalRestAPI(
-                `${source}/${from}?precision=${precision}&amount=${amount}&fees=${fees}${reverse ? '&reverse' : ''}${bfs ? '&bfs=1' : ''}`,
-                this,
+            if (!this.has(source)) throw new Error('Source not found');
+            const upper = from.toUpperCase();
+            const fxm = await this.requestFXManager(source);
+            if (!fxm.ableToGetAllFXRate) {
+                return {
+                    status: 'error',
+                    message: `Not able to get all FX rate with ${upper} on ${source}`,
+                };
+            }
+            // 与 REST handler 相同的查询串：getDetails 经 request.query 读取
+            // bfs/reverse/amount/fees/precision。
+            const req = new request(
+                'GET',
+                new URL(
+                    `http://this.internal/${source}/${upper}?precision=${precision}&amount=${amount}&fees=${fees}${reverse ? '&reverse' : ''}${bfs ? '&bfs=1' : ''}`,
+                ),
+                new interfaces.headers({}),
+                '',
+                {},
             );
+            const reachable = await fxm.getAllReachable(
+                upper as unknown as currency,
+                bfs,
+            );
+            const result: {
+                [to: string]:
+                    | string
+                    | {
+                          [type: string]: string | number | boolean | string[];
+                      };
+            } = {};
+            for (const to in reachable) {
+                if (to === upper) continue;
+                result[to] = await getDetails(
+                    upper as unknown as currency,
+                    to as unknown as currency,
+                    fxm,
+                    req,
+                    reachable[to],
+                );
+            }
+            return sortObject(result);
         },
 
-        getFXRate: ({
+        getFXRate: async ({
             source,
             from,
             to,
@@ -207,12 +262,42 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
             if (!from) throw new Error('from is required.');
             if (!to) throw new Error('to is required.');
             if (!type) throw new Error('type is required.');
-            if (type == 'all') type = '';
-
-            return useInternalRestAPI(
-                `${source}/${from}/${to}/${type}?precision=${precision}&fees=${fees}${reverse ? '&reverse' : ''}&amount=${amount}${bfs ? '&bfs=1' : ''}`,
-                this,
+            if (!this.has(source)) throw new Error('Source not found');
+            const upperFrom = from.toUpperCase();
+            const upperTo = to.toUpperCase();
+            const fxm = await this.requestFXManager(source);
+            const req = new request(
+                'GET',
+                new URL(
+                    `http://this.internal/${source}/${upperFrom}/${upperTo}/${type == 'all' ? '' : type}?precision=${precision}&fees=${fees}${reverse ? '&reverse' : ''}&amount=${amount}${bfs ? '&bfs=1' : ''}`,
+                ),
+                new interfaces.headers({}),
+                '',
+                {},
             );
+            if (type == 'all') {
+                const details = await getDetails(
+                    upperFrom as unknown as currency,
+                    upperTo as unknown as currency,
+                    fxm,
+                    req,
+                );
+                return sortObject(details);
+            }
+            try {
+                return await getConvert(
+                    upperFrom as unknown as currency,
+                    upperTo as unknown as currency,
+                    type as 'cash' | 'remit' | 'middle',
+                    fxm,
+                    req,
+                    amount,
+                    fees,
+                );
+            } catch {
+                // 换算失败：REST 返回 "false" 纯文本，JSON-RPC 顶层 falsy → null。
+                return null;
+            }
         },
     };
 
@@ -639,7 +724,8 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                           [type: string]: string | number | boolean | string[];
                       };
             } = {};
-            if (!(await this.requestFXManager(source)).ableToGetAllFXRate) {
+            const fxm = await this.requestFXManager(source);
+            if (!fxm.ableToGetAllFXRate) {
                 response.status = 403;
                 result['status'] = 'error';
                 result['message'] =
@@ -648,15 +734,24 @@ class fxmManager extends JSONRPCRouter<any, any, JSONRPCMethods> {
                 useJson(response, request);
                 return response;
             }
-            for (const to in (await this.requestFXManager(source)).fxRateList[
-                from
-            ]) {
+            // Phase 5 优化 #2：单次遍历枚举全部可达目标并预解析路径（bfs=1 全树 /
+            // bfs=0 仅直连），逐目标 getDetails 复用预解析路径，不再每个目标重跑 BFS。
+            // oneWay 源反向边不存在，枚举天然不产生伪反向行。
+            const allowBFS =
+                request.query.get('bfs') === '1' ||
+                request.query.get('bfs') === 'true';
+            const reachable = await fxm.getAllReachable(
+                from as unknown as currency,
+                allowBFS,
+            );
+            for (const to in reachable) {
                 if (to == from) continue;
                 result[to] = await getDetails(
                     from as unknown as currency,
                     to as unknown as currency,
-                    await this.requestFXManager(source),
+                    fxm,
                     request,
+                    reachable[to],
                 );
             }
             response.body = JSON.stringify(result);

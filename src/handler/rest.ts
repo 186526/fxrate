@@ -38,7 +38,7 @@ export const useBasic = (response: response<any>): void => {
     }
 };
 
-const sortObject = (obj: unknown): unknown => {
+export const sortObject = (obj: unknown): unknown => {
     if (obj instanceof Array) {
         // 数组元素有顺序语义（如 BFS 的 result.path），不参与 key 排序。
         return obj;
@@ -127,6 +127,7 @@ export const getDetails = async (
     to: currency,
     fxManager: fxManager,
     request: request<any>,
+    resolved?: FXPath,
 ) => {
     const result: {
         [type: string]: string | number | boolean | string[];
@@ -155,9 +156,31 @@ export const getDetails = async (
     const allowBFS =
         request.query.get('bfs') === '1' || request.query.get('bfs') === 'true';
 
-    let fxp: FXPath | undefined;
+    // resolved 由调用方（listFXRates 的 handlerCurrencyAllFXRates）经 getAllReachable
+    // 预解析传入（Phase 5 优化 #2）：同一 from 的全表只遍历一次，各目标复用预解析路径。
+    // 非 bfs 的预解析行保持既有输出形状——不追加 path/alias 字段，仅用于三价换算。
+    let fxp: FXPath | undefined = resolved;
     let hasPath = false;
-    if (allowBFS) {
+    if (fxp !== undefined) {
+        hasPath = fxp.path.length > 0;
+        if (allowBFS) {
+            result.path = fxp.path.map(String);
+            if (fxp.alias) result.alias = String(fxp.alias);
+            if (fxp.path.length > 1) {
+                try {
+                    result.updated = (
+                        await fxManager.getPathUpdatedDate(
+                            fxp.path[0] === from
+                                ? fxp.path
+                                : [from, ...fxp.path],
+                        )
+                    ).toUTCString();
+                } catch (_e) {
+                    // 路径边时间戳异常时保留默认 updated（当前时间）兜底
+                }
+            }
+        }
+    } else if (allowBFS) {
         try {
             fxp = await fxManager.getFXPath(from, to, true);
             hasPath = fxp.path.length > 0;

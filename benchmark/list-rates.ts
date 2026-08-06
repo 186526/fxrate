@@ -1,6 +1,10 @@
 // list-rates：listFXRates 全行（从 BASE 出发的全部目标）串行 getDetails 基准，离线合成图。
 // 复刻 handlerCurrencyAllFXRates 的串行循环；对每次 getDetails 计时并聚合整行耗时。
+// --candidate 复刻 Phase 5 优化 #2：getAllReachable 单次遍历枚举全部可达目标并预解析
+// 路径，逐目标 getDetails 复用（不再每个目标重跑 BFS/getFXPath）。
+// --bfs 开启 bfs=1 语义（无直连目标也要路径解析；默认仅直连）。
 // 用法：yarn tsx benchmark/list-rates.ts --nodes=12,50,100,168,200 --samples=200 --output=/tmp/fxrate-benchmark/list-baseline.json
+//       yarn tsx benchmark/list-rates.ts --candidate --bfs --nodes=12,50,100,168,200 --samples=200 --output=/tmp/fxrate-benchmark/list-candidate.json
 
 import esMain from 'es-main';
 import { parseArgs } from 'node:util';
@@ -23,6 +27,7 @@ export interface ListRatesOptions {
     topology: Topology;
     output: string;
     candidate: boolean;
+    bfs: boolean;
 }
 
 export function parseOptions(args: string[]): ListRatesOptions {
@@ -35,6 +40,7 @@ export function parseOptions(args: string[]): ListRatesOptions {
             topology: { type: 'string', default: 'star' },
             output: { type: 'string' },
             candidate: { type: 'boolean', default: false },
+            bfs: { type: 'boolean', default: false },
         },
     });
     return {
@@ -43,13 +49,14 @@ export function parseOptions(args: string[]): ListRatesOptions {
         topology: values.topology === 'mesh' ? 'mesh' : 'star',
         output: typeof values.output === 'string' ? values.output : '',
         candidate: values['candidate'] === true,
+        bfs: values['bfs'] === true,
     };
 }
 
-function makeRequest(): request<any> {
+function makeRequest(bfs: boolean): request<any> {
     return new request(
         'GET',
-        new URL('http://this.internal/mock'),
+        new URL(`http://this.internal/mock${bfs ? '?bfs=1' : ''}`),
         new interfaces.headers({}),
         '',
         {},
@@ -60,6 +67,8 @@ async function measureRow(
     manager: fxManager,
     targets: string[],
     req: request<any>,
+    candidate: boolean,
+    bfs: boolean,
 ): Promise<{
     targets: number;
     wallMs: number;
@@ -69,6 +78,30 @@ async function measureRow(
 }> {
     const perCallRaw: number[] = [];
     const start = process.hrtime.bigint();
+    if (candidate) {
+        // 单次遍历枚举 + 预解析路径，逐目标复用
+        const reachable = await manager.getAllReachable(BASE as never, bfs);
+        const resolved = Object.keys(reachable);
+        for (const to of resolved) {
+            const t0 = process.hrtime.bigint();
+            await getDetails(
+                BASE as never,
+                to as never,
+                manager,
+                req,
+                reachable[to],
+            );
+            perCallRaw.push(Number(process.hrtime.bigint() - t0) / 1e6);
+        }
+        const wallMs = Number(process.hrtime.bigint() - start) / 1e6;
+        return {
+            targets: resolved.length,
+            wallMs,
+            rowsPerSec: resolved.length / (wallMs / 1000),
+            perCall: summarize(perCallRaw),
+            perCallRaw,
+        };
+    }
     for (const to of targets) {
         const t0 = process.hrtime.bigint();
         await getDetails(BASE as never, to as never, manager, req);
@@ -103,11 +136,17 @@ export async function run(opts: ListRatesOptions) {
         const targets = Object.keys(manager.fxRateList).filter(
             (key) => key !== BASE,
         );
-        const req = makeRequest();
+        const req = makeRequest(opts.bfs);
         const rowTimes: number[] = [];
         const allPerCall: number[] = [];
         for (let i = 0; i < opts.samples; i += 1) {
-            const row = await measureRow(manager, targets, req);
+            const row = await measureRow(
+                manager,
+                targets,
+                req,
+                opts.candidate,
+                opts.bfs,
+            );
             rowTimes.push(row.wallMs);
             allPerCall.push(...row.perCallRaw);
         }
@@ -133,6 +172,7 @@ export async function run(opts: ListRatesOptions) {
             samples: opts.samples,
             topology: opts.topology,
             candidate: opts.candidate,
+            bfs: opts.bfs,
         },
         environment: environment(),
         results,
