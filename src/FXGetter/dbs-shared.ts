@@ -73,3 +73,31 @@ export const parseDBSRow = (
         updated: date,
     } as FXRate;
 };
+
+// DBS HK 专用：usdTT 是「1 USD = X 外币」口径（USD 行恒为 1.0），与 HKD 计价
+// 「1 外币 = X HKD」方向相反，必须取倒数生成「1 外币 = X USD」：
+//   rate.buy（银行买外币付 USD）= 1/银行卖 USD 收外币 = 1/usdTTBuy
+//   rate.sell（银行卖外币收 USD）= 1/银行买 USD 付外币 = 1/usdTTSell
+// 曾只对 CNY/CNH 取倒数、其他外币直接透传，导致 SGD 等行方向反了
+// （「1 USD = 1.29 SGD」被当「1 SGD = 1.29 USD」），2026-08 修复为全外币统一倒数。
+export const parseDBSHKUSDRow = (r: DBSRow, date: Date): FXRate | null => {
+    const usdBuy = parseFloat(r.usdTTBuy ?? '');
+    const usdSell = parseFloat(r.usdTTSell ?? '');
+    if (
+        !Number.isFinite(usdBuy) ||
+        !Number.isFinite(usdSell) ||
+        usdBuy <= 0 ||
+        usdSell <= 0
+    ) {
+        return null;
+    }
+    return parseDBSRow(
+        {
+            ...r,
+            ttBuy: String(1 / usdBuy),
+            ttSell: String(1 / usdSell),
+        },
+        'USD',
+        date,
+    );
+};
